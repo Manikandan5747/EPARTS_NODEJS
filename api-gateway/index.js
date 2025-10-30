@@ -18,7 +18,7 @@ app.use(cors({
     methods: ['GET', 'POST', 'PUT', 'DELETE'],
     credentials: true
   }));
-  
+
 // const allowedOrigins = [
 //   'http://localhost:4200',
 //   'https://10.33.30.5',
@@ -37,7 +37,7 @@ app.use(cors({
 // }));
 
 // Register route groups
-app.use('/users', UsersRoutes);
+app.use('/user', UsersRoutes);
 
 
 

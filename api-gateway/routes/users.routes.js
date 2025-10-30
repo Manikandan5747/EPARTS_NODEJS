@@ -3,7 +3,7 @@ const router = express.Router();
 const usersRequester = require('@libs/requesters/users-requester');
 const logger = require('@libs/logger/logger');
 // List all users
-router.get('/listallusers', async (req, res) => {
+router.get('/listalluser', async (req, res) => {
   try {
     console.log("listallusers");
     logger.info("list")

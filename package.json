@@ -5,14 +5,14 @@
   "main": "index.js",
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/dashersw/microservices-workshop.git"
+    "url": "https://github.com/Manikandan5747/EPARTS_NODEJS.git"
   },
-  "author": "Armagan Amcalar <armagan@amcalar.com>",
+  "author": "Mani",
   "license": "MIT",
   "bugs": {
-    "url": "https://github.com/dashersw/microservices-workshop/issues"
+    "url": ""
   },
-  "homepage": "https://github.com/dashersw/microservices-workshop#readme",
+  "homepage": "",
   "dependencies": {
     "body-parser": "^1.20.3",
     "cote": "^1.2.0",

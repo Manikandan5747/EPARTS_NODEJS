@@ -17,6 +17,7 @@ pipeline {
                         echo ===============================
 
                         cd ${WORKSPACE}
+                        npm install
                         docker-compose down
                         docker-compose build
                         docker-compose up -d

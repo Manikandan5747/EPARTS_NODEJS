@@ -1,10 +1,10 @@
 pipeline {
     agent any
 
-tools {
-    docker 'DockerPipeline'
-    nodejs 'NodeJS'
-}
+// tools {
+//     docker 'DockerPipeline'
+//     nodejs 'NodeJS'
+// }
 
     stages {
 

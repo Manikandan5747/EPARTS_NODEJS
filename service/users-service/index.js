@@ -31,11 +31,12 @@ responder.on('list', async (req, cb) => {
     const result = await pool.query('SELECT * FROM restaurants');
     console.log("✅ Sending result:", result.rows.length);
 
-    return Promise.resolve({
-      status: 1,
-      message: 'User list fetched successfully',
-      data: result.rows,
-    })
+    // return Promise.resolve({
+    //   status: 1,
+    //   message: 'User list fetched successfully',
+    //   data: result.rows,
+    // })
+    return Promise.resolve(result)
   } catch (err) {
     console.error("❌ Error fetching data:", err);
 

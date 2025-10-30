@@ -22,7 +22,7 @@ pipeline {
                     echo ================================
 
                     docker --version
-                    docker-compose --version
+                    docker compose version
 
                     echo ================================
                     echo ✅ Docker Environment Verified

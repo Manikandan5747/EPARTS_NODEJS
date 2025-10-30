@@ -22,7 +22,7 @@ pipeline {
                     echo ================================
 
                     docker --version
-                    docker compose version
+                    docker-compose --version
 
                     echo ================================
                     echo ✅ Docker Environment Verified
@@ -50,9 +50,9 @@ pipeline {
                     echo 🐳 Building & Starting Containers
                     echo ================================
                     cd ${WORKSPACE}
-                    docker compose down
-                    docker compose build
-                    docker compose up -d
+                    docker-compose down
+                    docker-compose build
+                    docker-compose up -d
                     docker ps
                     echo ================================
                     echo ✅ Docker Compose Completed

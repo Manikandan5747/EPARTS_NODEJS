@@ -1,46 +1,76 @@
 pipeline {
     agent any
 
+tools {
+    docker 'DockerPipeline'
+    nodejs 'NodeJS'
+}
+
     stages {
+
         stage('Checkout') {
             steps {
                 checkout scm
             }
         }
 
-        stage('Build & Run with Docker Compose') {
+        stage('Check Docker Environment') {
             steps {
-                script {
-                    bat """
-                        echo ===============================
-                        echo 🔧 Docker Compose Build Started
-                        echo ===============================
+                bat """
+                    echo ================================
+                    echo 🔍 Checking Docker Installation
+                    echo ================================
 
-                        cd ${WORKSPACE}
-                        npm install
-                        docker-compose down
-                        docker-compose build
-                        docker-compose up -d
-                        docker ps
+                    docker --version
+                    docker-compose --version
 
-                        echo ===============================
-                        echo ✅ Build & Run Completed
-                        echo ===============================
-                    """
-                }
+                    echo ================================
+                    echo ✅ Docker Environment Verified
+                    echo ================================
+                """
+            }
+        }
+
+        stage('Install Dependencies') {
+            steps {
+                bat """
+                    echo ================================
+                    echo 📦 Installing NPM Dependencies
+                    echo ================================
+                    cd ${WORKSPACE}
+                    npm install
+                """
+            }
+        }
+
+        stage('Docker Compose Build & Run') {
+            steps {
+                bat """
+                    echo ================================
+                    echo 🐳 Building & Starting Containers
+                    echo ================================
+                    cd ${WORKSPACE}
+                    docker-compose down
+                    docker-compose build
+                    docker-compose up -d
+                    docker ps
+                    echo ================================
+                    echo ✅ Docker Compose Completed
+                    echo ================================
+                """
             }
         }
     }
 
     post {
-        always {
-            echo 'Pipeline execution finished.'
+        success {
+            echo '✅ All services are up and running successfully!'
         }
         failure {
-            echo '❌ Build or container startup failed!'
+            echo '❌ Build failed! Please check the logs for details.'
         }
-        success {
-            echo '✅ All services running successfully!'
+        always {
+            echo 'Pipeline execution finished.'
         }
     }
 }

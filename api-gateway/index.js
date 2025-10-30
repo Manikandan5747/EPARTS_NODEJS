@@ -13,22 +13,28 @@ app.use(bodyParser.json());
 // Load all static directories automatically
 setupStaticFiles(app);
 
-const allowedOrigins = [
-  'http://localhost:4200',
-  'https://10.33.30.5',
-  'http://10.33.30.5/EpartsAdmin',
-];
-
 app.use(cors({
-  origin: function (origin, callback) {
-    if (!origin || allowedOrigins.includes(origin)) {
-      callback(null, true);
-    } else {
-      callback(new Error('Not allowed by CORS'));
-    }
-  },
-  credentials: true
-}));
+    origin: '*',      // allow Angular app
+    methods: ['GET', 'POST', 'PUT', 'DELETE'],
+    credentials: true
+  }));
+  
+// const allowedOrigins = [
+//   'http://localhost:4200',
+//   'https://10.33.30.5',
+//   'http://10.33.30.5/EpartsAdmin',
+// ];
+
+// app.use(cors({
+//   origin: function (origin, callback) {
+//     if (!origin || allowedOrigins.includes(origin)) {
+//       callback(null, true);
+//     } else {
+//       callback(new Error('Not allowed by CORS'));
+//     }
+//   },
+//   credentials: true
+// }));
 
 // Register route groups
 app.use('/users', UsersRoutes);

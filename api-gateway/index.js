@@ -16,6 +16,7 @@ setupStaticFiles(app);
 const allowedOrigins = [
   'http://localhost:4200',
   'https://10.33.30.5',
+  'http://10.33.30.5/EpartsAdmin',
 ];
 
 app.use(cors({

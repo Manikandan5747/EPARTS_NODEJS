@@ -4,7 +4,7 @@ pipeline {
     parameters {
         string(
             name: 'SERVICE_NAMES',
-            defaultValue: 'users-service,role-service',
+            defaultValue: 'role-service',
             description: 'Comma-separated list of microservices to build/deploy'
         )
     }

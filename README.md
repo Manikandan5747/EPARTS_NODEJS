@@ -8,7 +8,7 @@ Simple Node.js Project to show how microservices architecture can be built and d
 ```bash
 docker-compose up
 ```
-
+ <!-- docker-compose build --no-cache -->
 
 - Stop & remove all the docker instances by the following command:
 

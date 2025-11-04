@@ -67,3 +67,24 @@ responder.on('getById', async (req, cb) => {
       data: result.rows,
     });
 });
+
+
+
+
+// 🟢 Get user by ID
+responder.on('delete', async (req, cb) => {
+  let user_id = req.id;
+ 
+  const result = await pool.query(
+      'Delete * FROM users WHERE id = $1',
+      [user_id]
+    );
+    
+    console.log("✅ Sending result:", result.rows.length);
+
+    return Promise.resolve({
+      status: 1,
+      message: 'User deleted successfully',
+      data: result.rows,
+    });
+});

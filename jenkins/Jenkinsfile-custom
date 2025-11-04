@@ -1,0 +1,66 @@
+pipeline {
+    agent any
+
+    parameters {
+        string(
+            name: 'SERVICE_NAMES',
+            defaultValue: 'users-service,role-service',
+            description: 'Comma-separated list of microservices to build/deploy'
+        )
+    }
+
+    stages {
+        stage('Checkout Code') {
+            steps {
+                checkout scm
+            }
+        }
+
+        stage('Verify Docker Environment') {
+            steps {
+                bat """
+                    echo ================================
+                    echo 🔍 Checking Docker Installation
+                    echo ================================
+                    docker --version
+                    docker compose version
+                """
+            }
+        }
+
+        stage('Build & Deploy Selected Microservices') {
+            steps {
+                script {
+                    // Split comma-separated services into a list
+                    def services = params.SERVICE_NAMES.split(',').collect { it.trim() }
+                    echo "🚀 Services to deploy: ${services.join(', ')}"
+
+                    for (svc in services) {
+                        bat """
+                            echo ================================
+                            echo 🛠️  Building and Deploying ${svc}
+                            echo ================================
+                            cd ${WORKSPACE}
+                            docker compose build ${svc}
+                            docker compose up -d ${svc}
+                        """
+                    }
+
+                    bat "docker ps"
+                }
+            }
+        }
+    }
+
+    post {
+        success {
+            echo "✅ Deployment completed successfully for: ${params.SERVICE_NAMES}"
+        }
+        failure {
+            echo "❌ Deployment failed for: ${params.SERVICE_NAMES}"
+        }
+        always {
+            echo 'Pipeline execution finished.'
+        }
+    }
+}

@@ -3,6 +3,8 @@ require('module-alias/register');
 const express = require('express');
 const bodyParser = require('body-parser');
 const UsersRoutes = require('./routes/users.routes');
+const RoleRoutes = require('./routes/role.routes');
+
 const setupStaticFiles =  require('@libs/folders-paths/setup-static-files');
 const cors = require('cors');
 
@@ -38,6 +40,8 @@ app.use(cors({
 
 // Register route groups
 app.use('/user', UsersRoutes);
+
+app.use('/role', RoleRoutes);
 
 
 

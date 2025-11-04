@@ -23,6 +23,8 @@ router.get('/listalluser', async (req, res) => {
 // Get user by ID
 router.get('/usergetById/:id', async (req, res) => {
   try {
+      console.log("usergetById");
+    logger.info("usergetById")
     const user = await usersRequester.send({
       type: 'getById',
       id: req.params.id

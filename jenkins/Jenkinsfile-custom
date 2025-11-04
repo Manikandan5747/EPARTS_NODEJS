@@ -41,7 +41,7 @@ pipeline {
                             echo 🛠️  Building and Deploying ${svc}
                             echo ================================
                             cd ${WORKSPACE}
-                            docker-compose build --no-cache ${svc}
+                            docker-compose build ${svc}
                             docker-compose up -d ${svc}
                         """
                     }

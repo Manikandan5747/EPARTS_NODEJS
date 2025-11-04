@@ -54,6 +54,24 @@ router.get('/find/:id', async (req, res) => {
 
 
 
+
+// Get user by ID
+router.get('/test/:id', async (req, res) => {
+  try {
+      console.log("usergetById");
+    logger.info("usergetById")
+    const user = await usersRequester.send({
+      type: 'getById',
+      id: req.params.id
+    });
+    res.json(user);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+
+
 // delete user by ID
 router.get('/deleteById/:id', async (req, res) => {
   try {

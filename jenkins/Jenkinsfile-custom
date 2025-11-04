@@ -23,7 +23,7 @@ pipeline {
                     echo 🔍 Checking Docker Installation
                     echo ================================
                     docker --version
-                    docker compose version
+                    docker-compose --version
                 """
             }
         }
@@ -41,8 +41,8 @@ pipeline {
                             echo 🛠️  Building and Deploying ${svc}
                             echo ================================
                             cd ${WORKSPACE}
-                            docker compose build ${svc}
-                            docker compose up -d ${svc}
+                            docker-compose build ${svc}
+                            docker-compose up -d ${svc}
                         """
                     }
 

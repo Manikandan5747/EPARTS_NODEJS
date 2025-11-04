@@ -97,6 +97,6 @@ responder.on('delete', async (req, cb) => {
     return Promise.resolve({
       status: 1,
       message: 'User deleted successfully',
-      data: result.rows,
+      // data: result,
     });
 });

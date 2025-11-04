@@ -48,3 +48,22 @@ responder.on('list', async (req, cb) => {
     });
   }
 });
+
+
+// 🟢 Get user by ID
+responder.on('getById', async (req, cb) => {
+  let user_id = req.id;
+ 
+  const result = await pool.query(
+      'SELECT * FROM restaurants WHERE id = $1',
+      [user_id]
+    );
+    
+    console.log("✅ Sending result:", result.rows.length);
+
+    return Promise.resolve({
+      status: 1,
+      message: 'User list fetched successfully',
+      data: result.rows,
+    });
+});

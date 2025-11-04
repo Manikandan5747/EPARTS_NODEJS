@@ -23,7 +23,7 @@ const redisPort = process.env.COTE_DISCOVERY_REDIS_PORT || 6379;
 const responder = new cote.Responder({
   name: 'users responder',
   key: 'users',
- redis: {
+  redis: {
     host: redisHost,
     port: redisPort
   }
@@ -65,38 +65,51 @@ responder.on('list', async (req, cb) => {
 // 🟢 Get user by ID
 responder.on('getById', async (req, cb) => {
   let user_id = req.id;
- 
+
   const result = await pool.query(
-      'SELECT * FROM users WHERE id = $1',
+    'SELECT * FROM users WHERE id = $1',
+    [user_id]
+  );
+
+  console.log("✅ Sending result:", result.rows.length);
+
+  return Promise.resolve({
+    status: 1,
+    message: 'User list fetched successfully',
+    data: result.rows,
+  });
+});
+
+
+
+
+// 🟢 Delete user by ID
+responder.on('delete', async (req, cb) => {
+  try {
+    const user_id = req.id;
+
+    // Correct SQL syntax — no '*'
+    const result = await pool.query(
+      'DELETE FROM users WHERE id = $1 RETURNING *',
       [user_id]
     );
-    
-    console.log("✅ Sending result:", result.rows.length);
+
+    console.log(`✅ Deleted user ID: ${user_id}, Rows affected: ${result.rowCount}`);
 
     return Promise.resolve({
       status: 1,
-      message: 'User list fetched successfully',
+      message: result.rowCount > 0 ? 'User deleted successfully' : 'User not found',
       data: result.rows,
     });
-});
 
 
-
-
-// 🟢 Get user by ID
-responder.on('delete', async (req, cb) => {
-  let user_id = req.id;
- 
-  const result = await pool.query(
-      'Delete * FROM users WHERE id = $1',
-      [user_id]
-    );
-    
-    console.log("✅ Sending result:", result.rows.length);
-
-    return Promise.resolve({
-      status: 1,
-      message: 'User deleted successfully',
-      // data: result,
+  } catch (err) {
+    console.error('❌ Error deleting user:', err);
+    cb({
+      status: 0,
+      message: 'Database error while deleting user',
+      error: err.message,
     });
+  }
 });
+

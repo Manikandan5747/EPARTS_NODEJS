@@ -2,8 +2,8 @@ require('module-alias/register');
 
 const express = require('express');
 const bodyParser = require('body-parser');
-const UsersRoutes = require('./routes/users.routes');
-const RoleRoutes = require('./routes/role.routes');
+const UsersRoutes = require('../service/users-service/users.routes');
+const RoleRoutes = require('../service/role-service/role.routes');
 
 const setupStaticFiles =  require('@libs/folders-paths/setup-static-files');
 const cors = require('cors');

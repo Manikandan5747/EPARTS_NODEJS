@@ -90,16 +90,16 @@ responder.on('delete', async (req, cb) => {
 
     // Correct SQL syntax — no '*'
     const result = await pool.query(
-      'DELETE FROM users WHERE id = $1 RETURNING *',
+      'DELETE FROM users WHERE id = $1',
       [user_id]
     );
 
-    console.log(`✅ Deleted user ID: ${user_id}, Rows affected: ${result.rowCount}`);
+    // console.log(`✅ Deleted user ID: ${user_id}, Rows affected: ${result.rowCount}`);
 
     return Promise.resolve({
       status: 1,
-      message: result.rowCount > 0 ? 'User deleted successfully' : 'User not found',
-      data: result.rows,
+      message:  'User deleted successfully' ,
+      // data: result.rows,
     });
 
 

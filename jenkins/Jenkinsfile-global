@@ -1,68 +1,135 @@
+// pipeline {
+//     agent any
+
+//     stages {
+
+//         stage('Checkout') {
+//             steps {
+//                 checkout scm
+//             }
+//         }
+
+//         stage('Check Docker Environment') {
+//             steps {
+//                 bat """
+//                     echo ================================
+//                     echo 🔍 Checking Docker Installation
+//                     echo ================================
+
+//                     docker --version
+//                     docker-compose --version
+
+//                     echo ================================
+//                     echo ✅ Docker Environment Verified
+//                     echo ================================
+//                 """
+//             }
+//         }
+
+//         stage('Install Dependencies') {
+//             steps {
+//                 bat """
+//                     echo ================================
+//                     echo 📦 Installing NPM Dependencies
+//                     echo ================================
+//                     cd ${WORKSPACE}
+//                     npm install
+//                 """
+//             }
+//         }
+
+//         stage('Docker Compose Build & Run') {
+//             steps {
+//                 bat """
+//                     echo ================================
+//                     echo 🐳 Building & Starting Containers
+//                     echo ================================
+//                     cd ${WORKSPACE}
+//                     docker-compose down
+//                     docker-compose build
+//                     docker-compose up -d
+//                     docker ps
+//                     echo ================================
+//                     echo ✅ Docker Compose Completed
+//                     echo ================================
+//                 """
+//             }
+//         }
+//     }
+
+//     post {
+//         success {
+//             echo '✅ All services are up and running successfully!'
+//         }
+//         failure {
+//             echo '❌ Build failed! Please check the logs for details.'
+//         }
+//         always {
+//             echo 'Pipeline execution finished.'
+//         }
+//     }
+// }
+
 pipeline {
     agent any
 
-    stages {
+    parameters {
+        string(
+            name: 'SERVICE_NAMES',
+            defaultValue: 'role-service',
+            description: 'Comma-separated list of microservices to build/deploy'
+        )
+    }
 
-        stage('Checkout') {
+    stages {
+        stage('Checkout Code') {
             steps {
                 checkout scm
             }
         }
 
-        stage('Check Docker Environment') {
+        stage('Verify Docker Environment') {
             steps {
                 bat """
                     echo ================================
                     echo 🔍 Checking Docker Installation
                     echo ================================
-
                     docker --version
                     docker-compose --version
-
-                    echo ================================
-                    echo ✅ Docker Environment Verified
-                    echo ================================
                 """
             }
         }
 
-        stage('Install Dependencies') {
+        stage('Build & Deploy Selected Microservices') {
             steps {
-                bat """
-                    echo ================================
-                    echo 📦 Installing NPM Dependencies
-                    echo ================================
-                    cd ${WORKSPACE}
-                    npm install
-                """
-            }
-        }
+                script {
+                    // Split comma-separated services into a list
+                    def services = params.SERVICE_NAMES.split(',').collect { it.trim() }
+                    echo "🚀 Services to deploy: ${services.join(', ')}"
 
-        stage('Docker Compose Build & Run') {
-            steps {
-                bat """
-                    echo ================================
-                    echo 🐳 Building & Starting Containers
-                    echo ================================
-                    cd ${WORKSPACE}
-                    docker-compose down
-                    docker-compose build
-                    docker-compose up -d
-                    docker ps
-                    echo ================================
-                    echo ✅ Docker Compose Completed
-                    echo ================================
-                """
+                    for (svc in services) {
+                        bat """
+                            echo ================================
+                            echo 🛠️  Building and Deploying ${svc}
+                            echo ================================
+                            cd ${WORKSPACE}
+                            docker-compose build ${svc}
+                            docker-compose up -d ${svc}
+                        """
+                    }
+
+                    bat "docker ps"
+                }
             }
         }
     }
 
     post {
         success {
-            echo '✅ All services are up and running successfully!'
+            echo "✅ Deployment completed successfully for: ${params.SERVICE_NAMES}"
         }
         failure {
-            echo '❌ Build failed! Please check the logs for details.'
+            echo "❌ Deployment failed for: ${params.SERVICE_NAMES}"
         }
         always {
             echo 'Pipeline execution finished.'

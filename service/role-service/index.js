@@ -13,7 +13,14 @@ responder.on('list', async (req, cb) => {
   try {
     const result = await pool.query('SELECT * FROM roles');
     console.log("✅ Sending result:", result.rows.length);
-    return Promise.resolve(result)
+    // return Promise.resolve(result);
+
+
+     return Promise.resolve({
+      status: 1,
+      message: 'Role list fetched successfully',
+      data: result.rows,
+    })
   } catch (err) {
     console.error("❌ Error fetching data:", err);
 

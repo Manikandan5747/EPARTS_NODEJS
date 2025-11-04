@@ -5,7 +5,7 @@ const cote = require('cote');
 //   key: 'users'
 // });
 
-const redisHost = process.env.COTE_DISCOVERY_REDIS_HOST || '10.33.30.5';
+const redisHost = process.env.COTE_DISCOVERY_REDIS_HOST || '127.0.0.1';
 
 const usersRequester = new cote.Requester({
   name: 'users requester',

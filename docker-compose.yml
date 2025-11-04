@@ -86,6 +86,60 @@
 
 
 
+# version: '3'
+
+# services:
+#   api-gateway:
+#     build:
+#       context: .
+#       dockerfile: development.Dockerfile
+#     image: microservices-workshop/api-gateway:dev
+#     restart: on-failure
+#     environment:
+#       - VIRTUAL_HOST=api-gateway.app.com
+#       - COTE_DISCOVERY_REDIS_HOST=10.33.30.5   # 🔹 Redis on Windows host
+#     ports:
+#       - 3000:3000
+#     volumes:
+#       - ./api-gateway:C:\app\src
+#       - ./libs:C:\app\libs
+
+#   users-service:
+#     build:
+#       context: .
+#       dockerfile: development.Dockerfile
+#     image: microservices-workshop/users-service:dev
+#     restart: on-failure
+#     environment:
+#       DB_HOST: 10.33.30.5  # 🔹 your PostgreSQL on host
+#       DB_PORT: 5432
+#       DB_USER: postgres
+#       DB_PASSWORD: ExZ3naPw@32!perts
+#       DB_NAME: postgres
+#       COTE_DISCOVERY_REDIS_HOST: 10.33.30.5   # 🔹 Redis discovery same
+#     volumes:
+#       - ./service/users-service:C:\app\src
+#       - ./libs:C:\app\libs
+
+#   role-service:
+#     build:
+#       context: .
+#       dockerfile: development.Dockerfile
+#     image: microservices-workshop/role-service:dev
+#     restart: on-failure
+#     environment:
+#       DB_HOST: 10.33.30.5  # 🔹 your PostgreSQL on host
+#       DB_PORT: 5432
+#       DB_USER: postgres
+#       DB_PASSWORD: ExZ3naPw@32!perts
+#       DB_NAME: postgres
+#       COTE_DISCOVERY_REDIS_HOST: 10.33.30.5   # 🔹 Redis discovery same
+#     volumes:
+#       - ./service/role-service:C:\app\src
+#       - ./libs:C:\app\libs      
+
+
+
 version: '3'
 
 services:
@@ -97,12 +151,16 @@ services:
     restart: on-failure
     environment:
       - VIRTUAL_HOST=api-gateway.app.com
-      - COTE_DISCOVERY_REDIS_HOST=10.33.30.5   # 🔹 Redis on Windows host
+      - COTE_DISCOVERY_REDIS_HOST=10.33.30.5      # 🔹 Redis running on your Windows host
+      - COTE_DISCOVERY_REDIS_PORT=6379             # 🔹 Explicit Redis port (recommended)
     ports:
-      - 3000:3000
+      - "3000:3000"
     volumes:
       - ./api-gateway:C:\app\src
       - ./libs:C:\app\libs
+    depends_on:
+      - users-service
+      - role-service
 
   users-service:
     build:
@@ -111,12 +169,13 @@ services:
     image: microservices-workshop/users-service:dev
     restart: on-failure
     environment:
-      DB_HOST: 10.33.30.5  # 🔹 your PostgreSQL on host
+      DB_HOST: 10.33.30.5          # 🔹 PostgreSQL running on Windows host
       DB_PORT: 5432
       DB_USER: postgres
       DB_PASSWORD: ExZ3naPw@32!perts
       DB_NAME: postgres
-      COTE_DISCOVERY_REDIS_HOST: 10.33.30.5   # 🔹 Redis discovery same
+      COTE_DISCOVERY_REDIS_HOST: 10.33.30.5
+      COTE_DISCOVERY_REDIS_PORT: 6379
     volumes:
       - ./service/users-service:C:\app\src
       - ./libs:C:\app\libs
@@ -128,12 +187,13 @@ services:
     image: microservices-workshop/role-service:dev
     restart: on-failure
     environment:
-      DB_HOST: 10.33.30.5  # 🔹 your PostgreSQL on host
+      DB_HOST: 10.33.30.5
       DB_PORT: 5432
       DB_USER: postgres
       DB_PASSWORD: ExZ3naPw@32!perts
       DB_NAME: postgres
-      COTE_DISCOVERY_REDIS_HOST: 10.33.30.5   # 🔹 Redis discovery same
+      COTE_DISCOVERY_REDIS_HOST: 10.33.30.5
+      COTE_DISCOVERY_REDIS_PORT: 6379
     volumes:
       - ./service/role-service:C:\app\src
-      - ./libs:C:\app\libs      
+      - ./libs:C:\app\libs

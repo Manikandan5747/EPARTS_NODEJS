@@ -5,7 +5,7 @@ const logger = require('@libs/logger/logger');
 
 // List all role
 router.get('/listallrole', async (req, res) => {
-  try {
+  try { logger.info("listallrole")
     const roles = await roleRequester.send({ type: 'list' });
     logger.info("roles",roles)
     res.send(roles);

@@ -28,7 +28,7 @@ responder.on('list', async (req, cb) => {
   console.log("📥 Received request: list");
 
   try {
-    const result = await pool.query('SELECT * FROM restaurants');
+    const result = await pool.query('SELECT * FROM users');
     console.log("✅ Sending result:", result.rows.length);
 
     // return Promise.resolve({
@@ -55,7 +55,7 @@ responder.on('getById', async (req, cb) => {
   let user_id = req.id;
  
   const result = await pool.query(
-      'SELECT * FROM restaurants WHERE id = $1',
+      'SELECT * FROM users WHERE id = $1',
       [user_id]
     );
     

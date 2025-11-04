@@ -9,7 +9,7 @@ router.get('/listalluser', async (req, res) => {
     logger.info("list")
     
     const users = await usersRequester.send({ type: 'list' });
-      console.log("createusers",users);
+      // console.log("createusers",users);
     res.send(users);
   } catch (err) {
     res.status(500).json({ error: err.message });

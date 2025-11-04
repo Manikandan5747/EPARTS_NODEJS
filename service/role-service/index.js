@@ -11,7 +11,7 @@ responder.on('list', async (req, cb) => {
   console.log("📥 Received request: list");
 
   try {
-    const result = await pool.query('SELECT * FROM role');
+    const result = await pool.query('SELECT * FROM roles');
     console.log("✅ Sending result:", result.rows.length);
     return Promise.resolve(result)
   } catch (err) {

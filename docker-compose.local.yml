@@ -1,0 +1,24 @@
+version: '3'
+services:
+ 
+  api-gateway:
+    build:
+      context: .
+      dockerfile: local.Dockerfile
+    image: microservices-workshop/api-gateway:dev
+    restart: on-failure
+    environment:
+      - VIRTUAL_HOST=api-gateway.app.com
+    ports:
+      - 3000:3000
+    volumes:
+      - ./api-gateway:/app/src
+
+  users-service:
+    build:
+      context: .
+      dockerfile: local.Dockerfile
+    image: microservices-workshop/users-service:dev
+    restart: on-failure
+    volumes:
+      - ./service/users-service:/app/src

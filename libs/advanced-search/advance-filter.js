@@ -144,7 +144,7 @@ async function buildAdvancedSearchQuery({
     return {
         page,
         pageSize,
-        total,
+        totalRecords:total,
         totalPages,
         data: rows
     };

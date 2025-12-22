@@ -8,108 +8,15 @@ const jwt = require("jsonwebtoken");
 const { saveLoginLog, sendmail } = require('@libs/common/common-util');
 const APP_CONFIG = require('@libs/config/config.prod');
 
-// REDIS CONNECTION & COTE RESPONDER SETUP
 const redisHost = process.env.COTE_DISCOVERY_REDIS_HOST || '127.0.0.1';
 const redisPort = process.env.COTE_DISCOVERY_REDIS_PORT || 6379;
 
 const responder = new cote.Responder({
-    name: 'admin-users responder',
-    key: 'admin-users',
+    name: 'buyer-users responder',
+    key: 'buyer-users',
     redis: { host: redisHost, port: redisPort }
 });
 
-
-// --------------------------------------------------
-// CREATE USER
-// --------------------------------------------------
-responder.on('create-users', async (req, cb) => {
-    try {
-        const {
-            username, full_name,
-            email,
-            password,
-            phone_number,
-            role_id,
-            created_by
-        } = req.body;
-
-        // --------------------------------------------------
-        // VALIDATION
-        // --------------------------------------------------
-        if (!username?.trim()) {
-            return cb(null, { status: false, code: 2001, error: "Username is required" });
-        }
-        if (!password?.trim()) {
-            return cb(null, { status: false, code: 2001, error: "Password is required" });
-        }
-
-        const usernameTrim = username.trim();
-
-        // --------------------------------------------------
-        // DUPLICATE CHECK (username / email / phone)
-        // --------------------------------------------------
-        const duplicateQuery = {
-            text: `
-                SELECT user_id FROM users 
-                WHERE 
-                    (username = $1 
-                     OR email = $2 
-                     OR phone_number = $3)
-                AND is_deleted = FALSE
-            `,
-            values: [usernameTrim, email, phone_number]
-        };
-
-        const duplicateCheck = await pool.query(duplicateQuery);
-
-        if (duplicateCheck.rowCount > 0) {
-            return cb(null, {
-                status: false, code: 2002,
-                error: "User already exists (username/email/phone)"
-            });
-        }
-
-        // --------------------------------------------------
-        // HASH PASSWORD
-        // --------------------------------------------------
-
-        const password_hash = await bcrypt.hash(password, 10);
-
-        // --------------------------------------------------
-        // INSERT USER
-        // --------------------------------------------------
-        const insertQuery = {
-            text: `
-                INSERT INTO users 
-                    (username,full_name, email, password_hash, phone_number, role_id, created_by)
-                VALUES 
-                    ($1, $2, $3, $4, $5, $6,$7)
-                RETURNING 
-                    user_id, user_uuid, username, email, phone_number, role_id, is_active
-            `,
-            values: [
-                usernameTrim, full_name,
-                email,
-                password_hash,
-                phone_number,
-                role_id,
-                created_by
-            ]
-        };
-
-        const insert = await pool.query(insertQuery);
-
-        return cb(null, {
-            status: true, code: 1000,
-            message: "User created successfully",
-            data: insert.rows[0]
-        });
-
-    } catch (err) {
-        logger.error("Responder Error (create user):", err);
-        return cb(null, { status: false, code: 2004, error: err.message });
-    }
-});
 
 // --------------------------------------------------
 // LIST USERS
@@ -119,8 +26,8 @@ responder.on('list-users', async (req, cb) => {
 
         const query = `
             SELECT 
-                u.user_id,
-                u.user_uuid,
+                u.portal_user_id,
+                u.portal_user_uuid,
                 u.username,u.full_name,
                 u.email,
                 u.phone_number,
@@ -146,13 +53,13 @@ responder.on('list-users', async (req, cb) => {
                 r.role_name,
                 r.role_uuid
 
-            FROM users u
+            FROM portal_users u
 
-            LEFT JOIN users creators 
-                ON u.created_by = creators.user_uuid
+            LEFT JOIN portal_users creators 
+                ON u.created_by = creators.portal_user_uuid
 
-            LEFT JOIN users updaters 
-                ON u.modified_by = updaters.user_uuid
+            LEFT JOIN portal_users updaters 
+                ON u.modified_by = updaters.portal_user_uuid
 
             LEFT JOIN user_role r
                 ON u.role_id = r.role_id
@@ -179,279 +86,6 @@ responder.on('list-users', async (req, cb) => {
     }
 });
 
-
-// --------------------------------------------------
-// GET USER BY ID
-// --------------------------------------------------
-responder.on('getById-users', async (req, cb) => {
-    try {
-        const { user_uuid } = req;
-
-        if (!user_uuid) {
-            return cb(null, { status: false, code: 2001, error: "User UUID is required" });
-        }
-
-        const result = await pool.query(
-            `
-            SELECT 
-                u.user_id,
-                u.user_uuid,
-                u.username,
-                u.full_name,
-                u.email,
-                u.phone_number,
-               -- u.role_id,
-                u.profile_icon,
-                u.is_online,
-                u.force_logout,
-                u.last_login,
-                u.is_active,
-                u.created_at,
-                u.created_by,
-                u.modified_at,
-                u.modified_by,
-                u.deleted_at,
-                u.deleted_by,
-                u.is_deleted,
-
-                r.role_name,
-                r.role_uuid,
-
-                creators.username AS createdByName,
-                updaters.username AS updatedByName
-
-            FROM users u
-            LEFT JOIN user_role r 
-                ON u.role_id = r.role_id
-            LEFT JOIN users creators 
-                ON u.created_by = creators.user_uuid
-            LEFT JOIN users updaters 
-                ON u.modified_by = updaters.user_uuid
-
-            WHERE 
-                u.user_uuid = $1
-                AND u.is_deleted = FALSE
-            `,
-            [user_uuid]
-        );
-
-        if (result.rowCount === 0) {
-            return cb(null, { status: false, code: 2003, error: "User not found" });
-        }
-
-        return cb(null, { status: true, code: 1000, data: result.rows[0] });
-
-    } catch (err) {
-        logger.error("Responder Error (getById user):", err);
-        return cb(null, { status: false, code: 2004, error: err.message });
-    }
-});
-
-
-// --------------------------------------------------
-// UPDATE USER
-// --------------------------------------------------
-responder.on('update-users', async (req, cb) => {
-    try {
-        const { user_uuid, body } = req;
-
-        const {
-            username, full_name,
-            email,
-            phone_number,
-            role_id,
-            modified_by
-        } = body;
-
-        if (!user_uuid) {
-            return cb(null, { status: false, code: 2001, error: "User UUID is required" });
-        }
-
-        if (!username || !username.trim()) {
-            return cb(null, { status: false, code: 2001, error: "Username is required" });
-        }
-
-        const usernameTrim = username.trim();
-
-        // --------------------------------------------------
-        // CHECK DUPLICATE (username, email, phone)
-        // excluding this user
-        // --------------------------------------------------
-        const duplicateQuery = {
-            text: `
-                SELECT user_id FROM users 
-                WHERE 
-                    (username = $1 
-                     OR email = $2 
-                     OR phone_number = $3)
-                AND is_deleted = FALSE
-                AND user_uuid != $4
-            `,
-            values: [usernameTrim, email, phone_number, user_uuid]
-        };
-
-        const duplicate = await pool.query(duplicateQuery);
-
-        if (duplicate.rowCount > 0) {
-            return cb(null, {
-                status: false, code: 2002,
-                error: "Username, email, or phone already exists"
-            });
-        }
-
-        // --------------------------------------------------
-        // UPDATE USER
-        // --------------------------------------------------
-        const updateQuery = `
-            UPDATE users
-            SET 
-                username = $1,
-                email = $2,
-                phone_number = $3,
-                role_id = $4,
-                modified_by = $5,
-                modified_at = NOW(),
-                full_name = $7
-            WHERE user_uuid = $6
-            RETURNING 
-                user_id, user_uuid, username, email, phone_number, role_id,
-                is_active, created_at, modified_at,full_name
-        `;
-
-        const update = await pool.query(updateQuery, [
-            usernameTrim,
-            email,
-            phone_number,
-            role_id,
-            modified_by,
-            user_uuid,
-            full_name
-        ]);
-
-        return cb(null, {
-            status: true, code: 1000,
-            message: "User updated successfully",
-            data: update.rows[0]
-        });
-
-    } catch (err) {
-        logger.error("Responder Error (update user):", err);
-        return cb(null, { status: false, code: 2004, error: err.message });
-    }
-});
-
-
-// --------------------------------------------------
-// DELETE USER (SOFT DELETE)
-// --------------------------------------------------
-responder.on('delete-users', async (req, cb) => {
-    try {
-        const user_uuid = req.user_uuid;
-        const deleted_by = req.body.deleted_by;
-
-        if (!user_uuid) {
-            return cb(null, { status: false, code: 2001, error: "User UUID is required" });
-        }
-
-        // --------------------------------------------------
-        // CHECK IF USER EXISTS
-        // --------------------------------------------------
-        const check = await pool.query(
-            `SELECT user_id FROM users 
-             WHERE user_uuid = $1 AND is_deleted = FALSE`,
-            [user_uuid]
-        );
-
-        if (check.rowCount === 0) {
-            return cb(null, { status: false, code: 2003, error: "User not found" });
-        }
-
-        // --------------------------------------------------
-        // SOFT DELETE USER
-        // --------------------------------------------------
-        await pool.query(
-            `
-            UPDATE users
-            SET 
-                is_deleted = TRUE,
-                is_active = FALSE,
-                deleted_by = $1,
-                deleted_at = NOW()
-            WHERE user_uuid = $2
-            `,
-            [deleted_by, user_uuid]
-        );
-
-        return cb(null, {
-            status: true, code: 1000,
-            message: "User deleted successfully"
-        });
-
-    } catch (err) {
-        logger.error("Responder Error (delete user):", err);
-        return cb(null, { status: false, code: 2004, error: err.message });
-    }
-});
-
-
-// --------------------------------------------------
-// UPDATE USER STATUS (ACTIVE / INACTIVE)
-// --------------------------------------------------
-responder.on('status-users', async (req, cb) => {
-    try {
-        const user_uuid = req.user_uuid;
-        const modified_by = req.body.modified_by;
-
-        if (!user_uuid) {
-            return cb(null, { status: false, code: 2001, error: "User UUID is required" });
-        }
-
-        // --------------------------------------------------
-        // CHECK USER
-        // --------------------------------------------------
-        const check = await pool.query(
-            `
-            SELECT user_id, is_active 
-            FROM users 
-            WHERE user_uuid = $1 AND is_deleted = FALSE
-            `,
-            [user_uuid]
-        );
-
-        if (check.rowCount === 0) {
-            return cb(null, { status: false, code: 2003, error: "User not found" });
-        }
-
-        const currentStatus = check.rows[0].is_active;
-        const newStatus = !currentStatus; // Toggle active/inactive
-
-        // --------------------------------------------------
-        // UPDATE STATUS
-        // --------------------------------------------------
-        await pool.query(
-            `
-            UPDATE users
-            SET 
-                is_active = $1,
-                modified_by = $2,
-                modified_at = NOW()
-            WHERE user_uuid = $3
-            `,
-            [newStatus, modified_by, user_uuid]
-        );
-
-        return cb(null, {
-            status: true, code: 1000,
-            message: newStatus ? "User activated successfully" : "User deactivated successfully"
-        });
-
-    } catch (err) {
-        logger.error("Responder Error (status user):", err);
-        return cb(null, { status: false, code: 2004, error: err.message });
-    }
-});
-
-
 // --------------------------------------------------
 // ADVANCED FILTER — USERS
 // --------------------------------------------------
@@ -463,14 +97,14 @@ responder.on('advancefilter-users', async (req, cb) => {
             reqBody: req.body,
 
             /* ---------------- Table & Alias ---------------- */
-            table: 'users',
+            table: 'portal_users',
             alias: 'U',
             defaultSort: 'created_at',
 
             /* ---------------- Joins ---------------- */
             joinSql: `
-                LEFT JOIN users creators ON U.created_by = creators.user_uuid
-                LEFT JOIN users updaters ON U.modified_by = updaters.user_uuid
+                LEFT JOIN portal_users creators ON U.created_by = creators.portal_user_uuid
+                LEFT JOIN portal_users updaters ON U.modified_by = updaters.portal_user_uuid
                 LEFT JOIN user_role R ON U.role_id = R.role_id
             `,
 
@@ -519,72 +153,51 @@ responder.on('advancefilter-users', async (req, cb) => {
 });
 
 
-// --------------------------------------------------
-// CLONE USER
-// --------------------------------------------------
-responder.on('clone-users', async (req, cb) => {
+responder.on('forgotpassword-users', async (req, cb) => {
     try {
-        const { user_uuid } = req;
-        const { created_by } = req.body;  // user performing clone
+        const { email } = req.body;
 
-        if (!user_uuid) {
-            return cb(null, { status: false, code: 2001, error: "User UUID is required" });
+        if (!email) {
+            return cb(null, { status: false, error: "Email is required" });
         }
 
-        // 1. Fetch existing user
-        const fetchSQL = `
-            SELECT 
-                username, email, phone_number, role_id, profile_icon,
-                is_active
-            FROM users
-            WHERE user_uuid = $1 AND is_deleted = FALSE;
-        `;
+        // 1. Check user exist
+        const checkUser = await pool.query(
+            `SELECT portal_user_uuid, email FROM users 
+             WHERE email = $1 AND is_active = TRUE AND is_deleted = FALSE`,
+            [email]
+        );
 
-        const fetchResult = await pool.query(fetchSQL, [user_uuid]);
-
-        if (fetchResult.rowCount === 0) {
-            return cb(null, { status: false, code: 2003, error: "Original user not found" });
+        if (checkUser.rowCount === 0) {
+            return cb(null, { status: false, error: "User not found" });
         }
 
-        const user = fetchResult.rows[0];
-        const password_hash = await bcrypt.hash("Password123", 10);
-        // 2. Insert cloned user
-        const cloneSQL = `
-    INSERT INTO users 
-    (username, password_hash, email, phone_number, role_id, profile_icon,
-     is_online, force_logout, is_active,
-     created_by, created_at)
-    VALUES 
-    ($1, $2, $3, $4, $5, $6,
-     FALSE, FALSE, $7,
-     $8, NOW())
-    RETURNING user_id, user_uuid, username, email, phone_number, role_id, is_active;
-`;
+        const user = checkUser.rows[0];
 
+        // 2. Generate OTP (6 digits)
+        const otp = Math.floor(100000 + Math.random() * 900000);
 
-        const cloneValues = [
-            user.username + " (Copy)",  // $1 username
-            password_hash,              // $2 password_hash
-            null,                       // $3 email (not cloned)
-            null,                       // $4 phone_number (not cloned)
-            user.role_id,               // $5 role_id
-            user.profile_icon,          // $6 profile_icon
-            user.is_active,             // $7 is_active
-            created_by || null          // $8 created_by
-        ];
+        // 3. Save OTP in DB
+        await pool.query(
+            `UPDATE users SET 
+                reset_otp = $1,
+                reset_otp_expiry = NOW() + INTERVAL '10 minutes'
+             WHERE portal_user_uuid = $2`,
+            [otp, user.portal_user_uuid]
+        );
 
-
-        const cloneResult = await pool.query(cloneSQL, cloneValues);
+        // 4. Send Email (Optional - add your mail code)
+        // await sendEmail(email, "Your Password Reset OTP", `Your OTP is: ${otp}`);
 
         return cb(null, {
-            status: true, code: 1000,
-            message: "User cloned successfully",
-            data: cloneResult.rows[0]
+            status: true,
+            message: "OTP sent to your email",
+            otp        // ❗ remove this in production
         });
 
     } catch (err) {
-        console.error("clone-users error:", err);
-        return cb(null, { status: false, code: 2004, error: err.message });
+        logger.error("Responder Error (forgotpassword-users):", err);
+        return cb(null, { status: false, error: err.message });
     }
 });
 
@@ -593,7 +206,7 @@ responder.on('clone-users', async (req, cb) => {
 // LOGIN API
 // --------------------------------------------------
 
-responder.on("admin-login", async (req, cb) => {
+responder.on("buyer-login", async (req, cb) => {
     try {
         const { username, password, device_detail, browser_used } = req.body;
 
@@ -609,32 +222,31 @@ responder.on("admin-login", async (req, cb) => {
 
         const usernameTrim = username.trim();
 
-        // -----------------------------
-        // FIND USER
-        // -----------------------------
         const query = {
             text: `
                 SELECT 
-                u.user_id,u.is_online,
-                u.user_uuid,
+                u.portal_user_id,
+                u.portal_user_uuid,
                 u.username,
                 u.email,
                 u.phone_number,
                 u.password_hash,
                 u.is_active,
 
-                ul.login_id
-                FROM users u
+                ul.login_id,
+                ul.login_uuid
+                FROM portal_users u
                 LEFT JOIN users_login ul
-                ON ul.user_id = u.user_id
+                ON ul.portal_user_id = u.portal_user_id
                 WHERE
-                u.username = $1 AND u.is_deleted = FALSE
+                (u.username = $1 OR u.email = $1 OR u.phone_number = $1)
+                AND u.is_deleted = FALSE
             `,
             values: [usernameTrim]
         };
 
         const result = await pool.query(query);
-        console.log("result", result);
+
 
         if (result.rowCount === 0) {
             return cb(null, { status: false, code: 2003, error: "User not found" });
@@ -650,6 +262,7 @@ responder.on("admin-login", async (req, cb) => {
             });
         }
 
+
         // -----------------------------
         // PASSWORD CHECK
         // -----------------------------
@@ -658,41 +271,41 @@ responder.on("admin-login", async (req, cb) => {
             return cb(null, { status: false, code: 2001, error: "Invalid password" });
         }
 
+        delete user.password_hash;
+
         // -------------------------
         // Update users table → Online Status
         // -------------------------
         const userUpdateQuery = `
-        UPDATE users
-        SET is_online = true WHERE user_id = $1 AND is_deleted = false`;
+        UPDATE portal_users
+        SET is_online = true WHERE portal_user_id = $1 AND is_deleted = false`;
 
-        await pool.query(userUpdateQuery, [user.user_id]);
+        await pool.query(userUpdateQuery, [user.portal_user_id]);
 
         // Log login details
         const loginDetails = await saveLoginLog({
-            user_id: user.user_id,
-            portal_user_id: null,
+            user_id: null,
+            portal_user_id: user.portal_user_id,
             device_detail: device_detail,
             browser_used: browser_used,
-            created_by: user.user_uuid
+            created_by: user.portal_user_uuid
         });
 
         // ADD LOGINID IN OBJECT
         user.login_id = loginDetails.data.login_id
+
 
         // -----------------------------------------
         // CHECK ACTIVE ACCESS TOKEN
         // -----------------------------------------
         const sessionCheck = await pool.query(
             `SELECT * FROM user_access_tokens 
-             WHERE user_id = $1 AND is_active = true ORDER BY created_at DESC LIMIT 1`,
-            [user.user_id]
+             WHERE portal_user_id = $1 AND is_active = true ORDER BY created_at DESC LIMIT 1`,
+            [user.portal_user_id]
         );
 
         let finalAccessToken = null;
         let finalRefreshToken = null;
-
-        console.log("sessionCheck", sessionCheck.rowCount);
-
 
         if (sessionCheck.rowCount > 0) {
             const lastSession = sessionCheck.rows[0];
@@ -726,12 +339,12 @@ responder.on("admin-login", async (req, cb) => {
         // -----------------------------------------
         await createUserSession(
             loginDetails.data.login_id,
-            user.user_uuid,
+            user.portal_user_uuid,
             finalAccessToken,
             device_detail || browser_used || "login"
         );
 
-        delete user.password_hash;
+
 
         return cb(null, {
             status: true,
@@ -739,7 +352,8 @@ responder.on("admin-login", async (req, cb) => {
             message: "Login successful",
             data: {
                 ...user,
-                accessToken: finalAccessToken
+                accessToken: finalAccessToken,
+                // refreshToken: finalRefreshToken
             }
         });
 
@@ -759,12 +373,12 @@ async function storeUserToken(user, refreshToken) {
             `
             SELECT user_token_id, expires_at
             FROM user_tokens
-            WHERE user_id = $1
+            WHERE portal_user_id = $1
               AND is_active = true
               AND expires_at > NOW()
             LIMIT 1
             `,
-            [user.user_id]
+            [user.portal_user_id]
         );
 
         // 2. If valid token already exists, no need to insert
@@ -779,10 +393,10 @@ async function storeUserToken(user, refreshToken) {
             SET is_active = false,
                 modified_by = $1,
                 modified_at = NOW()
-            WHERE user_id = $2
+            WHERE portal_user_id = $2
               AND is_active = true
             `,
-            [user.user_uuid, user.user_id]
+            [user.portal_user_uuid, user.portal_user_id]
         );
 
         // 4. Insert new token
@@ -791,11 +405,11 @@ async function storeUserToken(user, refreshToken) {
         const result = await pool.query(
             `
             INSERT INTO user_tokens
-            (user_id, refresh_token, is_active, expires_at, created_by, created_at)
+            (portal_user_id, refresh_token, is_active, expires_at, created_by, created_at)
             VALUES ($1, $2, true, $3, $4, NOW())
             RETURNING user_token_id
             `,
-            [user.user_id, refreshToken, expiresAt, user.user_uuid]
+            [user.portal_user_id, refreshToken, expiresAt, user.portal_user_uuid]
         );
 
         return result.rows[0];
@@ -806,7 +420,6 @@ async function storeUserToken(user, refreshToken) {
     }
 }
 
-
 // --------------------------------------------------
 // Store Access Token
 // --------------------------------------------------
@@ -815,17 +428,17 @@ async function storeAccessToken(user, accessToken, user_token_id) {
         await pool.query(
             `UPDATE user_access_tokens
              SET is_active = false, modified_by = $1, modified_at = NOW()
-             WHERE user_id = $2 AND is_active = true`,
-            [user.user_uuid, user.user_id]
+             WHERE portal_user_id = $2 AND is_active = true`,
+            [user.portal_user_uuid, user.portal_user_id]
         );
 
         const expiresAt = new Date(Date.now() + 48 * 60 * 60 * 1000);
 
         await pool.query(
             `INSERT INTO user_access_tokens
-             (user_id, access_token, is_active, expires_at, created_by, created_at, user_token_id)
+             (portal_user_id, access_token, is_active, expires_at, created_by, created_at, user_token_id)
              VALUES ($1, $2, true, $3, $4, NOW(), $5)`,
-            [user.user_id, accessToken, expiresAt, user.user_uuid, user_token_id]
+            [user.portal_user_id, accessToken, expiresAt, user.portal_user_uuid, user_token_id]
         );
 
     } catch (err) {
@@ -837,7 +450,7 @@ async function storeAccessToken(user, accessToken, user_token_id) {
 // --------------------------------------------------
 // Create User Session
 // --------------------------------------------------
-async function createUserSession(login_id, user_uuid, accessToken, device_detail) {
+async function createUserSession(login_id, portal_user_uuid, accessToken, device_detail) {
     try {
         // Close previous active sessions
         await pool.query(
@@ -851,7 +464,7 @@ async function createUserSession(login_id, user_uuid, accessToken, device_detail
             `INSERT INTO user_session
              (login_id, device_detail, is_active, created_by, created_at, access_token)
              VALUES ($1, $2, true, $3, NOW(), $4)`,
-            [login_id, device_detail, user_uuid, accessToken]
+            [login_id, device_detail, portal_user_uuid, accessToken]
         );
 
     } catch (err) {
@@ -866,13 +479,13 @@ async function createUserSession(login_id, user_uuid, accessToken, device_detail
 function generateTokens(user) {
 
     const accessToken = jwt.sign(
-        { user_id: user.user_id, user_uuid: user.user_uuid, username: user.username, login_id: user.login_id },
+        { portal_user_id: user.portal_user_id, portal_user_uuid: user.portal_user_uuid, username: user.username },
         'a4db08b7-5729-4ba9-8c08-f2df493465a1',
         { expiresIn: process.env.ACCESS_TOKEN_EXPIRES_IN || "24h" }
     );
 
     const refreshToken = jwt.sign(
-        { user_id: user.user_id },
+        { portal_user_id: user.portal_user_id },
         'a4db08b7-5729-4ba9-8c08-f2df493465a1',
         { expiresIn: process.env.REFRESH_TOKEN_EXPIRES_IN || "48h" }
     );
@@ -884,20 +497,20 @@ function generateTokens(user) {
 // --------------------------------------------------
 // LOGOUT USER
 // --------------------------------------------------
-responder.on("logout", async (req, cb) => {
-    const { user_id, access_token, } = req.body;
-    const updated_by = req.body.user_uuid;
+responder.on("buyer-logout", async (req, cb) => {
+    const { portal_user_id, access_token, } = req.body;
+    const updated_by = req.body.portal_user_uuid;
 
     try {
-        if (!user_id || !access_token) {
+        if (!portal_user_id || !access_token) {
             return cb(null, { status: false, code: 2001, error: "Missing required fields" });
         }
 
         // 1. Check Users Login Details
         const checkUser = await pool.query(
-            `SELECT login_uuid,user_id, login_id FROM users_login 
-             WHERE user_id = $1 AND is_active = TRUE AND is_deleted = FALSE`,
-            [user_id]
+            `SELECT login_uuid,portal_user_id, login_id FROM users_login 
+             WHERE portal_user_id = $1 AND is_active = TRUE AND is_deleted = FALSE`,
+            [portal_user_id]
         );
 
         if (checkUser.rowCount === 0) {
@@ -932,24 +545,24 @@ responder.on("logout", async (req, cb) => {
         // Update users table → Offline
         // -------------------------
         const userUpdateQuery = `
-            UPDATE users
+            UPDATE portal_users
             SET 
                 is_online = false,
                 force_logout = false,
                 modified_at = NOW(),
                 modified_by = $2
-            WHERE user_id = $1
+            WHERE portal_user_id = $1
               AND is_deleted = false
         `;
 
-        await pool.query(userUpdateQuery, [user_id, updated_by]);
+        await pool.query(userUpdateQuery, [portal_user_id, updated_by]);
 
         // Update last active login row
         await pool.query(
             `UPDATE users_login
                  SET logout_time = NOW(), is_active = false
-                 WHERE user_id = $1 AND is_active = true`,
-            [user_id]
+                 WHERE portal_user_id = $1 AND is_active = true`,
+            [portal_user_id]
         );
 
         // -------------------------
@@ -973,7 +586,7 @@ responder.on("logout", async (req, cb) => {
 // --------------------------------------------------
 // FORGOT PASSWORD USER
 // --------------------------------------------------
-responder.on('forgotpassword-users', async (req, cb) => {
+responder.on('forgotpassword-buyer', async (req, cb) => {
     try {
         const { username } = req.body;
 
@@ -983,7 +596,7 @@ responder.on('forgotpassword-users', async (req, cb) => {
 
         // 1. Check user exist
         const checkUser = await pool.query(
-            `SELECT user_uuid, username FROM users 
+            `SELECT portal_user_uuid, username FROM portal_users 
              WHERE username = $1 AND is_active = TRUE AND is_deleted = FALSE`,
             [username]
         );
@@ -997,7 +610,7 @@ responder.on('forgotpassword-users', async (req, cb) => {
         var commonURL = APP_CONFIG.AngularRedirectURL;
 
         // encrypting
-        var encrypted_loginID = user.user_uuid;
+        var encrypted_loginID = user.portal_user_uuid;
         var encrypted_username = username;
 
 
@@ -1030,19 +643,17 @@ responder.on('forgotpassword-users', async (req, cb) => {
     }
 });
 
-
-
 // --------------------------------------------------
 // CHANGE PASSWORD USER
 // --------------------------------------------------
-responder.on('changepassword-users', async (req, cb) => {
+responder.on('changepassword-buyer', async (req, cb) => {
     try {
-        const { user_uuid, old_password, new_password, confirm_password } = req.body;
+        const { portal_user_uuid, old_password, new_password, confirm_password } = req.body;
 
         // -----------------------------
         // VALIDATION
         // -----------------------------
-        if (!user_uuid) {
+        if (!portal_user_uuid) {
             return cb(null, { status: false, code: 2001, error: 'User UUID required' });
         }
 
@@ -1058,10 +669,10 @@ responder.on('changepassword-users', async (req, cb) => {
         // FETCH USER
         // -----------------------------
         const userResult = await pool.query(
-            `SELECT user_id, password_hash,username, is_active 
-             FROM users 
-             WHERE user_uuid = $1 AND is_deleted = false`,
-            [user_uuid]
+            `SELECT portal_user_id, password_hash,username, is_active 
+             FROM portal_users 
+             WHERE portal_user_uuid = $1 AND is_deleted = false`,
+            [portal_user_uuid]
         );
 
         if (userResult.rowCount === 0) {
@@ -1091,17 +702,17 @@ responder.on('changepassword-users', async (req, cb) => {
         // UPDATE PASSWORD
         // -----------------------------
         await pool.query(
-            `UPDATE users 
+            `UPDATE portal_users 
              SET password_hash = $1, modified_at = now() 
-             WHERE user_id = $2`,
-            [newPasswordHash, user.user_id]
+             WHERE portal_user_id = $2`,
+            [newPasswordHash, user.portal_user_id]
         );
 
         // 1. Check Users Login Details
         const checkUser = await pool.query(
-            `SELECT login_uuid,user_id, login_id FROM users_login 
-             WHERE user_id = $1 AND is_active = TRUE AND is_deleted = FALSE`,
-            [user.user_id]
+            `SELECT login_uuid,portal_user_id, login_id FROM users_login 
+             WHERE portal_user_id = $1 AND is_active = TRUE AND is_deleted = FALSE`,
+            [user.portal_user_id]
         );
         const sessionuser = checkUser.rows[0];
 
@@ -1114,8 +725,8 @@ responder.on('changepassword-users', async (req, cb) => {
         );
 
         await pool.query(
-            `UPDATE users SET is_online = false WHERE user_id = $1`,
-            [user.user_id]
+            `UPDATE portal_users SET is_online = false WHERE portal_user_id = $1`,
+            [user.portal_user_id]
         );
 
 
@@ -1154,6 +765,7 @@ responder.on('changepassword-users', async (req, cb) => {
         });
     }
 });
+
 
 
 

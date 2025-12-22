@@ -3,8 +3,8 @@ const cote = require('cote');
 const pool = require('@libs/db/postgresql_index');
 const logger = require('@libs/logger/logger');
 const { buildAdvancedSearchQuery } = require('@libs/advanced-search/advance-filter');
-const { saveErrorLog } = require('@libs/common/common-util');
 
+// REDIS CONNECTION & COTE RESPONDER SETUP
 const redisHost = process.env.COTE_DISCOVERY_REDIS_HOST || '127.0.0.1';
 const redisPort = process.env.COTE_DISCOVERY_REDIS_PORT || 6379;
 
@@ -16,7 +16,7 @@ const responder = new cote.Responder({
 
 
 // --------------------------------------------------
-// CREATE ROLE (Corrected)
+// CREATE ROLE 
 // --------------------------------------------------
 responder.on('create-role', async (req, cb) => {
     try {
@@ -29,15 +29,6 @@ responder.on('create-role', async (req, cb) => {
         const role_name = req.body?.role_name?.trim() || null;
 
         if (!role_name) {
-            // Save log to table
-            await saveErrorLog(pool, {
-                api_name: 'create-role',
-                method: 'POST',
-                payload: req.body,
-                message: "Role name is required",
-                stack: null,
-                error_code: 2001
-            });
             return cb(null, { status: false, code: 2001, error: "Role name is required" });
         }
 
@@ -63,16 +54,6 @@ responder.on('create-role', async (req, cb) => {
 
         // CHECK FOR DUPLICATE
         if (check.rowCount > 0) {
-            // Save log to table
-            await saveErrorLog(pool, {
-                api_name: 'create-role',
-                method: 'POST',
-                payload: req.body,
-                message: "Role name already exists",
-                stack: null,
-                error_code: 2002
-            });
-
             return cb(null, { status: false, code: 2002, error: "Role name already exists" });
         }
 
@@ -98,15 +79,7 @@ responder.on('create-role', async (req, cb) => {
 
     } catch (err) {
         logger.error("Responder Error (create role):", err);
-        // Save log to table
-        await saveErrorLog(pool, {
-            api_name: 'create-role',
-            method: 'POST',
-            payload: req.body,
-            message: err.message,
-            stack: err.stack,
-            error_code: 2004
-        });
+
         return cb(null, { status: false, code: 2004, error: err.message });
     }
 });
@@ -156,20 +129,12 @@ responder.on('list-role', async (req, cb) => {
 
     } catch (err) {
         logger.error("Responder Error (list roles):", err);
-        // Save log to table
-        await saveErrorLog(pool, {
-            api_name: 'list-role',
-            method: 'GET',
-            payload: null,
-            message: err.message,
-            stack: err.stack,
-            error_code: 2004
-        });
         return cb(null, { status: false, code: 2004, error: err.message });
     }
 });
 
 responder.on('getById-role', async (req, cb) => {
+
     try {
         const { role_uuid } = req;
 
@@ -181,15 +146,6 @@ responder.on('getById-role', async (req, cb) => {
         );
 
         if (result.rowCount === 0) {
-            // Save log to table
-            await saveErrorLog(pool, {
-                api_name: 'getById-role',  // the API name
-                method: 'GET',
-                payload: { role_uuid: role_uuid },  // or req body/query params
-                message: "Role not found",
-                stack: null,
-                error_code: 2003
-            });
             return cb(null, { status: false, code: 2003, error: "Role not found" });
         }
 
@@ -197,15 +153,6 @@ responder.on('getById-role', async (req, cb) => {
 
     } catch (err) {
         logger.error("Responder Error (getById role):", err);
-        // Save log to table
-        await saveErrorLog(pool, {
-            api_name: 'getById-role',
-            method: 'GET',
-            payload: { role_uuid: role_uuid },
-            message: err.message,
-            stack: err.stack,
-            error_code: 2004
-        });
         return cb(null, { status: false, code: 2004, error: err.message });
     }
 });
@@ -216,29 +163,10 @@ responder.on('update-role', async (req, cb) => {
         const { role_name, dept_id, cmp_id, modified_by } = body;
 
         if (!role_uuid) {
-            // Save log to table
-            await saveErrorLog(pool, {
-                api_name: 'update-role',
-                method: 'POST',
-                payload: req.body,
-                message: "Role ID is required",
-                stack: null,
-                error_code: 2001
-            });
-
             return cb(null, { status: false, code: 2001, error: "Role ID is required" });
         }
 
         if (!role_name || !role_name.trim()) {
-            // Save log to table
-            await saveErrorLog(pool, {
-                api_name: 'update-role',
-                method: 'POST',
-                payload: req.body,
-                message: "Role name is required",
-                stack: null,
-                error_code: 2001
-            });
             return cb(null, { status: false, code: 2001, error: "Role name is required" });
         }
 
@@ -266,14 +194,6 @@ responder.on('update-role', async (req, cb) => {
         const duplicate = await pool.query(checkQuery);
 
         if (duplicate.rowCount > 0) {
-            await saveErrorLog(pool, {
-                api_name: 'update-role',
-                method: 'POST',
-                payload: req.body,
-                message: "Role name already exists",
-                stack: null,
-                error_code: 2002
-            });
             return cb(null, { status: false, code: 2002, error: "Role name already exists" });
         }
 
@@ -308,19 +228,14 @@ responder.on('update-role', async (req, cb) => {
 
     } catch (err) {
         logger.error("Responder Error (update role):", err);
-        // Save log to table
-        await saveErrorLog(pool, {
-            api_name: 'update-role',
-            method: 'POST',
-            payload: req.body,
-            message: err.message,
-            stack: err.stack,
-            error_code: 2004
-        });
         return cb(null, { status: false, code: 2004, error: err.message });
     }
 });
 
+
+// --------------------------------------------------
+// DELETE ROLE (SOFT DELETE) IS_DELETE STATUS CHANGES ONLY
+// --------------------------------------------------
 responder.on('delete-role', async (req, cb) => {
     try {
         const role_uuid = req.role_uuid;
@@ -332,15 +247,6 @@ responder.on('delete-role', async (req, cb) => {
         );
 
         if (check.rowCount === 0) {
-            // Save log to table
-            await saveErrorLog(pool, {
-                api_name: 'delete-role',  // the API name
-                method: 'POST',
-                payload: req.body,  // or req body/query params
-                message: "Role not found",
-                stack: null,
-                error_code: 2003
-            });
             return cb(null, { status: false, code: 2003, error: "Role not found" });
         }
 
@@ -360,20 +266,15 @@ responder.on('delete-role', async (req, cb) => {
 
     } catch (err) {
         logger.error("Responder Error (delete role):", err);
-        // Save log to table
-        await saveErrorLog(pool, {
-            api_name: 'delete-role',
-            method: 'POST',
-            payload: req.body,
-            message: err.message,
-            stack: err.stack,
-            error_code: 2004
-        });
-
         return cb(null, { status: false, code: 2004, error: err.message });
     }
 });
 
+
+
+// --------------------------------------------------
+// UPDATE ROLE STATUS (ACTIVE / INACTIVE)
+// --------------------------------------------------
 responder.on('status-role', async (req, cb) => {
     try {
         const role_uuid = req.role_uuid;
@@ -385,15 +286,6 @@ responder.on('status-role', async (req, cb) => {
         );
 
         if (check.rowCount === 0) {
-            // Save log to table
-            await saveErrorLog(pool, {
-                api_name: 'status-role',  // the API name
-                method: 'GET',
-                payload: req.body,  // or req body/query params
-                message: "Role not found",
-                stack: null,
-                error_code: 2003
-            });
             return cb(null, { status: false, code: 2003, error: "Role not found" });
         }
 
@@ -413,20 +305,14 @@ responder.on('status-role', async (req, cb) => {
 
     } catch (err) {
         logger.error("Responder Error (delete role):", err);
-        // Save log to table
-        await saveErrorLog(pool, {
-            api_name: 'status-role',
-            method: 'POST',
-            payload: req.body,
-            message: err.message,
-            stack: err.stack,
-            error_code: 2004
-        });
-
         return cb(null, { status: false, code: 2004, error: err.message });
     }
 });
 
+
+// --------------------------------------------------
+// ADVANCED FILTER — ROLESS
+// --------------------------------------------------
 responder.on('advancefilter-role', async (req, cb) => {
     try {
         /* ----------------- RUN DYNAMIC QUERY ----------------- */
@@ -481,20 +367,14 @@ responder.on('advancefilter-role', async (req, cb) => {
 
     } catch (err) {
         console.error('[userroleReportNew] error:', err);
-        // Save log to table
-        await saveErrorLog(pool, {
-            api_name: 'advancefilter-role',
-            method: 'POST',
-            payload: req.body,
-            message: err.message,
-            stack: err.stack,
-            error_code: 2004
-        });
-
         return cb(null, { code: 2004, status: false, error: err.message });
     }
 });
 
+
+// --------------------------------------------------
+// CLONE ROLES
+// --------------------------------------------------
 responder.on('clone-role', async (req, cb) => {
     try {
         const { role_uuid } = req.role_uuid;
@@ -510,17 +390,7 @@ responder.on('clone-role', async (req, cb) => {
         const { rows } = await pool.query(fetchSQL, [role_uuid]);
 
         if (!rows.length) {
-            // Save log to table
-            await saveErrorLog(pool, {
-                api_name: 'clone-role',  // the API name
-                method: 'GET',
-                payload: req.body,  // or req body/query params
-                message: "Original role not found",
-                stack: null,
-                error_code: 2003
-            });
             return cb(null, { status: false, code: 2003, error: "Original Role not found" });
-
         }
 
         const role = rows[0];
@@ -551,20 +421,15 @@ responder.on('clone-role', async (req, cb) => {
 
     } catch (err) {
         console.error("cloneRole error:", err);
-
-        // Save log to table
-        await saveErrorLog(pool, {
-            api_name: 'clone-role',
-            method: 'POST',
-            payload: req.body,
-            message: err.message,
-            stack: err.stack,
-            error_code: 2004
-        });
-
         return cb(null, { status: false, code: 2004, error: err.message });
     }
 });
+
+
+
+
+
+
 
 
 

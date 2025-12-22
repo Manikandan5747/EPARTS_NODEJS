@@ -1,0 +1,329 @@
+require('module-alias/register');
+const cote = require('cote');
+const pool = require('@libs/db/postgresql_index');
+const logger = require('@libs/logger/logger');
+const { buildAdvancedSearchQuery } = require('@libs/advanced-search/advance-filter');
+
+// REDIS CONNECTION & COTE RESPONDER SETUP
+const redisHost = process.env.COTE_DISCOVERY_REDIS_HOST || '127.0.0.1';
+const redisPort = process.env.COTE_DISCOVERY_REDIS_PORT || 6379;
+
+const responder = new cote.Responder({
+    name: 'states responder',
+    key: 'states',
+    redis: { host: redisHost, port: redisPort }
+});
+
+// --------------------------------------------------
+// CREATE STATE
+// --------------------------------------------------
+responder.on('create-state', async (req, cb) => {
+    try {
+        const { country_id, name, created_by } = req.body;
+
+        if (!name || !name.trim()) {
+            return cb(null, { status: false, code: 2001, error: 'State name is required' });
+        }
+
+        const stateName = name.trim();
+
+        const duplicate = await pool.query(
+            `SELECT state_id FROM states
+             WHERE UPPER(name) = UPPER($1)
+             AND country_id = $2
+             AND is_deleted = FALSE`,
+            [stateName, country_id]
+        );
+
+        if (duplicate.rowCount > 0) {
+            return cb(null, { status: false, code: 2002, error: 'State already exists' });
+        }
+
+        const insert = await pool.query(
+            `INSERT INTO states (state_uuid, country_id, name, created_by)
+             VALUES (gen_random_uuid(), $1, $2, $3)
+             RETURNING *`,
+            [country_id, stateName, created_by]
+        );
+
+        return cb(null, {
+            status: true,
+            code: 1000,
+            message: 'State created successfully',
+            data: insert.rows[0]
+        });
+
+    } catch (err) {
+        logger.error('Responder Error (create state):', err);
+        return cb(null, { status: false, code: 2004, error: err.message });
+    }
+});
+
+// --------------------------------------------------
+// LIST STATES
+// --------------------------------------------------
+responder.on('list-state', async (req, cb) => {
+    try {
+        const result = await pool.query(
+            `SELECT * FROM states
+             WHERE is_deleted = FALSE
+             ORDER BY created_at ASC`
+        );
+
+        return cb(null, {
+            status: true,
+            code: 1000,
+            count: result.rowCount,
+            data: result.rows
+        });
+
+    } catch (err) {
+        logger.error('Responder Error (list state):', err);
+        return cb(null, { status: false, code: 2004, error: err.message });
+    }
+});
+
+// --------------------------------------------------
+// GET STATE BY UUID
+// --------------------------------------------------
+responder.on('getById-state', async (req, cb) => {
+    try {
+        const { state_uuid } = req;
+
+        const result = await pool.query(
+            `SELECT * FROM states
+             WHERE state_uuid = $1 AND is_deleted = FALSE`,
+            [state_uuid]
+        );
+
+        if (result.rowCount === 0) {
+            return cb(null, { status: false, code: 2003, error: 'State not found' });
+        }
+
+        return cb(null, { status: true, code: 1000, data: result.rows[0] });
+
+    } catch (err) {
+        logger.error('Responder Error (getById state):', err);
+        return cb(null, { status: false, code: 2004, error: err.message });
+    }
+});
+
+// --------------------------------------------------
+// UPDATE STATE
+// --------------------------------------------------
+responder.on('update-state', async (req, cb) => {
+    try {
+        const { state_uuid, body } = req;
+        const { name, country_id, modified_by } = body;
+
+        if (!name || !name.trim()) {
+            return cb(null, { status: false, code: 2001, error: 'State name is required' });
+        }
+
+        const duplicate = await pool.query(
+            `SELECT state_uuid FROM states
+             WHERE UPPER(name) = UPPER($1)
+             AND country_id = $2
+             AND is_deleted = FALSE
+             AND state_uuid != $3`,
+            [name.trim(), country_id, state_uuid]
+        );
+
+        if (duplicate.rowCount > 0) {
+            return cb(null, { status: false, code: 2002, error: 'State already exists' });
+        }
+
+        const update = await pool.query(
+            `UPDATE states SET
+                name = $1,
+                country_id = $2,
+                modified_by = $3,
+                modified_at = NOW()
+             WHERE state_uuid = $4
+             RETURNING *`,
+            [name.trim(), country_id, modified_by, state_uuid]
+        );
+
+        return cb(null, {
+            status: true,
+            code: 1000,
+            message: 'State updated successfully',
+            data: update.rows[0]
+        });
+
+    } catch (err) {
+        logger.error('Responder Error (update state):', err);
+        return cb(null, { status: false, code: 2004, error: err.message });
+    }
+});
+
+// --------------------------------------------------
+// DELETE STATE (SOFT DELETE)
+// --------------------------------------------------
+responder.on('delete-state', async (req, cb) => {
+    try {
+        const { state_uuid } = req;
+        const { deleted_by } = req.body;
+
+        await pool.query(
+            `UPDATE states SET
+                is_deleted = TRUE,
+                is_active = FALSE,
+                deleted_by = $1,
+                deleted_at = NOW()
+             WHERE state_uuid = $2`,
+            [deleted_by, state_uuid]
+        );
+
+        return cb(null, {
+            status: true,
+            code: 1000,
+            message: 'State deleted successfully'
+        });
+
+    } catch (err) {
+        logger.error('Responder Error (delete state):', err);
+        return cb(null, { status: false, code: 2004, error: err.message });
+    }
+});
+
+// --------------------------------------------------
+// STATE STATUS CHANGE
+// --------------------------------------------------
+responder.on('status-state', async (req, cb) => {
+    try {
+        const { state_uuid } = req;
+        const { modified_by, is_active } = req.body;
+
+        await pool.query(
+            `UPDATE states SET
+                is_active = $1,
+                modified_by = $2,
+                modified_at = NOW()
+             WHERE state_uuid = $3`,
+            [is_active, modified_by, state_uuid]
+        );
+
+        return cb(null, {
+            status: true,
+            code: 1000,
+            message: 'State status updated successfully'
+        });
+
+    } catch (err) {
+        logger.error('Responder Error (status state):', err);
+        return cb(null, { status: false, code: 2004, error: err.message });
+    }
+});
+
+// --------------------------------------------------
+// ADVANCE FILTER — STATES
+// --------------------------------------------------
+responder.on('advancefilter-state', async (req, cb) => {
+    try {
+
+        const result = await buildAdvancedSearchQuery({
+            pool,
+            reqBody: req.body,
+
+            /* ---------------- Table & Alias ---------------- */
+            table: 'states',
+            alias: 'ST',
+            defaultSort: 'created_at',
+
+            /* ---------------- Joins ---------------- */
+            joinSql: `
+                LEFT JOIN countries C ON ST.country_id = C.country_id
+                LEFT JOIN users creators ON ST.created_by = creators.user_uuid
+                LEFT JOIN users updaters ON ST.modified_by = updaters.user_uuid
+            `,
+
+            /* ---------------- Allowed Search/Sort Fields ---------------- */
+            allowedFields: [
+                'name',
+                'country_id',
+                'country_name',
+                'is_active',
+                'created_at',
+                'modified_at',
+                'createdByName',
+                'updatedByName'
+            ],
+
+            /* ---------------- Custom Joined Fields ---------------- */
+            customFields: {
+                country_name: {
+                    select: 'C.name',
+                    search: 'C.name',
+                    sort: 'C.name'
+                },
+                createdByName: {
+                    select: 'creators.username',
+                    search: 'creators.username',
+                    sort: 'creators.username'
+                },
+                updatedByName: {
+                    select: 'updaters.username',
+                    search: 'updaters.username',
+                    sort: 'updaters.username'
+                }
+            },
+
+            /* ---------------- Base Where ---------------- */
+            baseWhere: `
+                ST.is_deleted = FALSE
+            `
+        });
+
+        return cb(null, {
+            status: true,
+            code: 1000,
+            result
+        });
+
+    } catch (err) {
+        console.error('[advancefilter-state] error:', err);
+        return cb(null, { status: false, code: 2004, error: err.message });
+    }
+});
+
+
+// --------------------------------------------------
+// CLONE STATE
+// --------------------------------------------------
+responder.on('clone-state', async (req, cb) => {
+    try {
+        const { state_uuid } = req;
+        const { created_by } = req.body;
+
+        const { rows } = await pool.query(
+            `SELECT country_id, name, is_active FROM states
+             WHERE state_uuid = $1 AND is_deleted = FALSE`,
+            [state_uuid]
+        );
+
+        if (!rows.length) {
+            return cb(null, { status: false, code: 2003, error: 'Original state not found' });
+        }
+
+        const state = rows[0];
+
+        const clone = await pool.query(
+            `INSERT INTO states (state_uuid, country_id, name, is_active, created_by)
+             VALUES (gen_random_uuid(), $1, $2, $3, $4)
+             RETURNING *`,
+            [state.country_id, state.name + ' (Copy)', state.is_active, created_by]
+        );
+
+        return cb(null, {
+            status: true,
+            code: 1000,
+            message: 'State cloned successfully',
+            data: clone.rows[0]
+        });
+
+    } catch (err) {
+        return cb(null, { status: false, code: 2004, error: err.message });
+    }
+});
+

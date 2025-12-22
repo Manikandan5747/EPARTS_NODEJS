@@ -4,6 +4,7 @@ const pool = require('@libs/db/postgresql_index');
 const logger = require('@libs/logger/logger');
 const { buildAdvancedSearchQuery } = require('@libs/advanced-search/advance-filter');
 
+// REDIS CONNECTION & COTE RESPONDER SETUP
 const redisHost = process.env.COTE_DISCOVERY_REDIS_HOST || '127.0.0.1';
 const redisPort = process.env.COTE_DISCOVERY_REDIS_PORT || 6379;
 
@@ -80,6 +81,10 @@ responder.on('create-usertype', async (req, cb) => {
     }
 });
 
+
+// --------------------------------------------------
+// LIST USER TYPE
+// --------------------------------------------------
 responder.on('list-usertype', async (req, cb) => {
     try {
 
@@ -129,6 +134,10 @@ responder.on('list-usertype', async (req, cb) => {
     }
 });
 
+
+// --------------------------------------------------
+// GET USER TYPE BY ID
+// --------------------------------------------------
 responder.on('getById-usertype', async (req, cb) => {
     try {
         const { role_uuid } = req;
@@ -152,6 +161,10 @@ responder.on('getById-usertype', async (req, cb) => {
     }
 });
 
+
+// --------------------------------------------------
+// UPDATE USER TYPE
+// --------------------------------------------------
 responder.on('update-usertype', async (req, cb) => {
     try {
         const { role_uuid, body } = req;
@@ -227,6 +240,10 @@ responder.on('update-usertype', async (req, cb) => {
     }
 });
 
+
+// --------------------------------------------------
+// DELETE USER (SOFT DELETE) IS_DELETE STATUS CHANGES ONLY
+// --------------------------------------------------
 responder.on('delete-usertype', async (req, cb) => {
     try {
         const role_uuid = req.role_uuid;
@@ -261,6 +278,9 @@ responder.on('delete-usertype', async (req, cb) => {
     }
 });
 
+// --------------------------------------------------
+// UPDATE USER TYPE STATUS (ACTIVE / INACTIVE)
+// --------------------------------------------------
 responder.on('status-usertype', async (req, cb) => {
     try {
         const role_uuid = req.role_uuid;
@@ -295,6 +315,10 @@ responder.on('status-usertype', async (req, cb) => {
     }
 });
 
+
+// --------------------------------------------------
+// ADVANCED FILTER — USERS TYPE
+// --------------------------------------------------
 responder.on('advancefilter-usertype', async (req, cb) => {
     try {
         /* ----------------- RUN DYNAMIC QUERY ----------------- */
@@ -353,6 +377,10 @@ responder.on('advancefilter-usertype', async (req, cb) => {
     }
 });
 
+
+// --------------------------------------------------
+// CLONE USER TYPE
+// --------------------------------------------------
 responder.on('clone-usertype', async (req, cb) => {
     try {
         const { role_uuid } = req.role_uuid;

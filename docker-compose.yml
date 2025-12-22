@@ -16,6 +16,7 @@ services:
     volumes:
       - ./api-gateway:C:\app\src
       - ./libs:C:\app\libs
+      - C:/Mani/logfile:/app/logs  
     depends_on:
       - admin-service
 
@@ -36,5 +37,44 @@ services:
     volumes:
       - ./service/admin-service:C:\app\src
       - ./libs:C:\app\libs
+      - C:/Mani/logfile:/app/logs  
+
+    buyer-service:
+    build:
+      context: .
+      dockerfile: development.Dockerfile
+    image: microservices-workshop/buyer-service:dev
+    restart: on-failure
+    environment:
+      DB_HOST: 10.33.30.5          # 🔹 PostgreSQL running on Windows host
+      DB_PORT: 5432
+      DB_USER: postgres
+      DB_PASSWORD: ExZ3naPw@32!perts
+      DB_NAME: eparts_core
+      COTE_DISCOVERY_REDIS_HOST: 10.33.30.5
+      COTE_DISCOVERY_REDIS_PORT: 6379
+    volumes:
+      - ./service/buyer-service:C:\app\src
+      - ./libs:C:\app\libs
+      - C:/Mani/logfile:/app/logs  
+
+    seller-service:
+    build:
+      context: .
+      dockerfile: development.Dockerfile
+    image: microservices-workshop/seller-service:dev
+    restart: on-failure
+    environment:
+      DB_HOST: 10.33.30.5          # 🔹 PostgreSQL running on Windows host
+      DB_PORT: 5432
+      DB_USER: postgres
+      DB_PASSWORD: ExZ3naPw@32!perts
+      DB_NAME: eparts_core
+      COTE_DISCOVERY_REDIS_HOST: 10.33.30.5
+      COTE_DISCOVERY_REDIS_PORT: 6379
+    volumes:
+      - ./service/seller-service:C:\app\src
+      - ./libs:C:\app\libs
+      - C:/Mani/logfile:/app/logs  
 
  

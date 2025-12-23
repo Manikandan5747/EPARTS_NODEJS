@@ -45,8 +45,8 @@ pipeline {
                     echo 🐳 Building & Starting Containers
                     echo ================================
                     cd ${WORKSPACE}
-                    docker-compose down
-                    docker-compose build
+                    docker-compose down --remove-orphans
+                    docker-compose build --no-cache
                     docker-compose up -d
                     docker ps
                     echo ================================

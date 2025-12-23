@@ -9,7 +9,7 @@ const multipart = require("connect-multiparty");
 const path = require('path');
 const fs = require('fs');
 
-const uploadDir = path.join('/app/logs', 'upload-files');
+const uploadDir = path.join('/app/logs', 'countries');
 
 if (!fs.existsSync(uploadDir)) {
     fs.mkdirSync(uploadDir, { recursive: true });

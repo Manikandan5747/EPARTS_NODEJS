@@ -68,8 +68,8 @@ app.use('/seller', checkApiKey,  SellerRoutes);
 
 
 app.use(
-  '/upload-files',
-  express.static(path.join('/app/logs', 'upload-files'))
+  '/countries',
+  express.static(path.join('/app/logs', 'countries'))
 );
 
 

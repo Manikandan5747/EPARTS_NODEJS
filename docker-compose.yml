@@ -9,15 +9,15 @@ services:
     restart: on-failure
     environment:
       - VIRTUAL_HOST=api-gateway.app.com
-      - COTE_DISCOVERY_REDIS_HOST=10.33.30.5
-      - COTE_DISCOVERY_REDIS_PORT=6379
+      - COTE_DISCOVERY_REDIS_HOST=10.33.30.5      # 🔹 Redis running on your Windows host
+      - COTE_DISCOVERY_REDIS_PORT=6379             # 🔹 Explicit Redis port (recommended)
     ports:
       - "3000:3000"
     volumes:
-      - "./api-gateway:/app/src"
-      - "./libs:/app/libs"
-      - "/mnt/c/EPARTS/eparts_dev_files/logfile:/app/logs"
-      - "/mnt/c/EPARTS/eparts_dev_files/assets:/app/assets"
+      - ./api-gateway:C:\app\src
+      - ./libs:C:\app\libs
+      - C:/EPARTS/eparts_dev_files/logfile:/app/logs
+      - C:/EPARTS/eparts_dev_files/assets:/app/assets
     depends_on:
       - admin-service
 
@@ -28,7 +28,7 @@ services:
     image: microservices-workshop/admin-service:dev
     restart: on-failure
     environment:
-      DB_HOST: 10.33.30.5
+      DB_HOST: 10.33.30.5          # 🔹 PostgreSQL running on Windows host
       DB_PORT: 5432
       DB_USER: postgres
       DB_PASSWORD: ExZ3naPw@32!perts
@@ -36,19 +36,19 @@ services:
       COTE_DISCOVERY_REDIS_HOST: 10.33.30.5
       COTE_DISCOVERY_REDIS_PORT: 6379
     volumes:
-      - "./service/admin-service:/app/src"
-      - "./libs:/app/libs"
-      - "/mnt/c/EPARTS/eparts_dev_files/logfile:/app/logs"
-      - "/mnt/c/EPARTS/eparts_dev_files/assets:/app/assets"
+      - ./service/admin-service:C:\app\src
+      - ./libs:C:\app\libs
+      - C:/EPARTS/eparts_dev_files/logfile:/app/logs
+      - C:/EPARTS/eparts_dev_files/assets:/app/assets
 
-  buyer-service:
+    buyer-service:
     build:
       context: .
       dockerfile: development.Dockerfile
     image: microservices-workshop/buyer-service:dev
     restart: on-failure
     environment:
-      DB_HOST: 10.33.30.5
+      DB_HOST: 10.33.30.5          # 🔹 PostgreSQL running on Windows host
       DB_PORT: 5432
       DB_USER: postgres
       DB_PASSWORD: ExZ3naPw@32!perts
@@ -56,19 +56,19 @@ services:
       COTE_DISCOVERY_REDIS_HOST: 10.33.30.5
       COTE_DISCOVERY_REDIS_PORT: 6379
     volumes:
-      - "./service/buyer-service:/app/src"
-      - "./libs:/app/libs"
-      - "/mnt/c/EPARTS/eparts_dev_files/logfile:/app/logs"
-      - "/mnt/c/EPARTS/eparts_dev_files/assets:/app/assets"
+      - ./service/buyer-service:C:\app\src
+      - ./libs:C:\app\libs
+      - C:/EPARTS/eparts_dev_files/logfile:/app/logs
+      - C:/EPARTS/eparts_dev_files/assets:/app/assets
 
-  seller-service:
+    seller-service:
     build:
       context: .
       dockerfile: development.Dockerfile
     image: microservices-workshop/seller-service:dev
     restart: on-failure
     environment:
-      DB_HOST: 10.33.30.5
+      DB_HOST: 10.33.30.5          # 🔹 PostgreSQL running on Windows host
       DB_PORT: 5432
       DB_USER: postgres
       DB_PASSWORD: ExZ3naPw@32!perts
@@ -76,7 +76,9 @@ services:
       COTE_DISCOVERY_REDIS_HOST: 10.33.30.5
       COTE_DISCOVERY_REDIS_PORT: 6379
     volumes:
-      - "./service/seller-service:/app/src"
-      - "./libs:/app/libs"
-      - "/mnt/c/EPARTS/eparts_dev_files/logfile:/app/logs"
-      - "/mnt/c/EPARTS/eparts_dev_files/assets:/app/assets"
+      - ./service/seller-service:C:\app\src
+      - ./libs:C:\app\libs
+      - C:/EPARTS/eparts_dev_files/logfile:/app/logs
+      - C:/EPARTS/eparts_dev_files/assets:/app/assets
+
+ 

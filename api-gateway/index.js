@@ -54,10 +54,17 @@ app.use('/seller', checkApiKey, SellerPublicRoutes);
 // /* -------------------------------
 //    PROTECTED ROUTES wITH ACCESSTOKEN 
 // -------------------------------- */
-app.use('/api', checkApiKey, AdminStartAuthApi, AdminRoutes);
-app.use('/buyer', checkApiKey, BuyerStartAuthApi, BuyerRoutes);
-app.use('/seller', checkApiKey, SellerStartAuthApi, SellerRoutes);
+// app.use('/api', checkApiKey, AdminStartAuthApi, AdminRoutes);
+// app.use('/buyer', checkApiKey, BuyerStartAuthApi, BuyerRoutes);
+// app.use('/seller', checkApiKey, SellerStartAuthApi, SellerRoutes);
 
+
+// /* -------------------------------
+//    PROTECTED ROUTES wITH ACCESSTOKEN 
+// -------------------------------- */
+app.use('/api', checkApiKey,  AdminRoutes);
+app.use('/buyer', checkApiKey,  BuyerRoutes);
+app.use('/seller', checkApiKey,  SellerRoutes);
 
 
 app.use(

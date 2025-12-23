@@ -16,8 +16,8 @@ services:
     volumes:
       - "./api-gateway:/app/src"
       - "./libs:/app/libs"
-      - logs-data:/app/logs
-      - assets-data:/app/assets
+      - "/mnt/c/EPARTS/eparts_dev_files/logfile:/app/logs"
+      - "/mnt/c/EPARTS/eparts_dev_files/assets:/app/assets"
     depends_on:
       - admin-service
 
@@ -38,8 +38,8 @@ services:
     volumes:
       - "./service/admin-service:/app/src"
       - "./libs:/app/libs"
-      - logs-data:/app/logs
-      - assets-data:/app/assets
+      - "/mnt/c/EPARTS/eparts_dev_files/logfile:/app/logs"
+      - "/mnt/c/EPARTS/eparts_dev_files/assets:/app/assets"
 
   buyer-service:
     build:
@@ -58,8 +58,8 @@ services:
     volumes:
       - "./service/buyer-service:/app/src"
       - "./libs:/app/libs"
-      - logs-data:/app/logs
-      - assets-data:/app/assets
+      - "/mnt/c/EPARTS/eparts_dev_files/logfile:/app/logs"
+      - "/mnt/c/EPARTS/eparts_dev_files/assets:/app/assets"
 
   seller-service:
     build:
@@ -78,9 +78,5 @@ services:
     volumes:
       - "./service/seller-service:/app/src"
       - "./libs:/app/libs"
-      - logs-data:/app/logs
-      - assets-data:/app/assets
-
-volumes:
-  logs-data:
-  assets-data:
+      - "/mnt/c/EPARTS/eparts_dev_files/logfile:/app/logs"
+      - "/mnt/c/EPARTS/eparts_dev_files/assets:/app/assets"

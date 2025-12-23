@@ -16,6 +16,7 @@ services:
     volumes:
       - ./api-gateway:C:/app/src
       - ./libs:C:/app/libs
+      - C:/inetpub/wwwroot/EPARTS/PRODUCTION_FILES/LOG_FILES:/app/logs 
  
     depends_on:
       - admin-service
@@ -37,6 +38,7 @@ services:
     volumes:
       - ./service/admin-service:C:/app/src
       - ./libs:C:/app/libs 
+      - C:/inetpub/wwwroot/EPARTS/PRODUCTION_FILES/LOG_FILES:/app/logs 
 
   buyer-service:
     build:
@@ -55,6 +57,7 @@ services:
     volumes:
       - ./service/buyer-service:C:/app/src
       - ./libs:C:/app/libs
+      - C:/inetpub/wwwroot/EPARTS/PRODUCTION_FILES/LOG_FILES:/app/logs 
 
   seller-service:
     build:
@@ -73,5 +76,7 @@ services:
     volumes:
       - ./service/seller-service:C:/app/src
       - ./libs:C:/app/libs
+      - C:/inetpub/wwwroot/EPARTS/PRODUCTION_FILES/LOG_FILES:/app/logs 
+
 
  

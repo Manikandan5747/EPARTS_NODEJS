@@ -23,7 +23,7 @@ responder.on('create-role', async (req, cb) => {
         const {
             dept_id,
             cmp_id,
-            created_by
+            created_by,hierarchy_level
         } = req.body;
 
         const role_name = req.body?.role_name?.trim() || null;
@@ -63,10 +63,9 @@ responder.on('create-role', async (req, cb) => {
         // --------------------------------------------------
         const insert = await pool.query(
             `INSERT INTO user_role 
-                    (role_name, dept_id, cmp_id, created_by)
-                VALUES ($1, $2, $3, $4)
-                RETURNING role_id, role_name, dept_id, cmp_id, is_active`,
-            [role_name, dept_id, cmp_id, created_by]
+                    (role_name, dept_id, cmp_id,hierarchy_level, created_by)
+                VALUES ($1, $2, $3, $4,$5)`,
+            [role_name, dept_id, cmp_id,hierarchy_level, created_by]
         );
 
         const result = {
@@ -84,6 +83,10 @@ responder.on('create-role', async (req, cb) => {
     }
 });
 
+
+// --------------------------------------------------
+// LIST ROLES 
+// --------------------------------------------------
 responder.on('list-role', async (req, cb) => {
     try {
 
@@ -92,6 +95,7 @@ responder.on('list-role', async (req, cb) => {
                 r.role_id,
                 r.role_uuid,
                 r.role_name,
+                r.hierarchy_level,
                 r.dept_id,
                 r.cmp_id,
                 r.is_active,
@@ -133,13 +137,16 @@ responder.on('list-role', async (req, cb) => {
     }
 });
 
+// --------------------------------------------------
+// LIST ROLES BY ID
+// --------------------------------------------------
 responder.on('getById-role', async (req, cb) => {
 
     try {
         const { role_uuid } = req;
 
         const result = await pool.query(
-            `SELECT role_id,role_uuid,role_name, dept_id,is_deleted,deleted_at,deleted_by, cmp_id, is_active
+            `SELECT role_id,role_uuid,role_name,hierarchy_level, dept_id,is_deleted,deleted_at,deleted_by, cmp_id, is_active
              FROM user_role
              WHERE role_uuid = $1 AND is_deleted = FALSE`,
             [role_uuid]
@@ -157,10 +164,14 @@ responder.on('getById-role', async (req, cb) => {
     }
 });
 
+
+// --------------------------------------------------
+// UPDATE ROLE
+// --------------------------------------------------
 responder.on('update-role', async (req, cb) => {
     try {
         const { role_uuid, body } = req;
-        const { role_name, dept_id, cmp_id, modified_by } = body;
+        const { role_name, dept_id, cmp_id, modified_by,hierarchy_level } = body;
 
         if (!role_uuid) {
             return cb(null, { status: false, code: 2001, error: "Role ID is required" });
@@ -207,8 +218,9 @@ responder.on('update-role', async (req, cb) => {
                 dept_id = $2,
                 cmp_id = $3,
                 modified_by = $4,
+                hierarchy_level = $5,
                 modified_at = NOW()
-            WHERE role_uuid = $5
+            WHERE role_uuid = $6
             RETURNING *
         `;
 
@@ -217,6 +229,7 @@ responder.on('update-role', async (req, cb) => {
             dept_id,
             cmp_id,
             modified_by,
+            hierarchy_level,
             role_uuid
         ]);
 
@@ -231,7 +244,6 @@ responder.on('update-role', async (req, cb) => {
         return cb(null, { status: false, code: 2004, error: err.message });
     }
 });
-
 
 // --------------------------------------------------
 // DELETE ROLE (SOFT DELETE) IS_DELETE STATUS CHANGES ONLY
@@ -332,7 +344,7 @@ responder.on('advancefilter-role', async (req, cb) => {
 
             /* -------------- Fields user can search/sort -------------- */
             allowedFields: [
-                'role_name', 'dept_id', 'cmp_id',
+                'role_name', 'dept_id', 'cmp_id','hierarchy_level',
                 'is_active', 'created_at', 'modified_at',
                 'createdByName', 'updatedByName'
             ],
@@ -382,7 +394,7 @@ responder.on('clone-role', async (req, cb) => {
 
         // 1. Fetch existing role
         const fetchSQL = `
-            SELECT role_name, dept_id, cmp_id, is_active
+            SELECT role_name, dept_id, cmp_id,hierarchy_level, is_active
             FROM user_role
             WHERE role_uuid = $1 AND is_deleted = FALSE;
         `;
@@ -398,8 +410,8 @@ responder.on('clone-role', async (req, cb) => {
         // 2. Insert new cloned role
         const cloneSQL = `
             INSERT INTO user_role 
-            (role_name, dept_id, cmp_id, is_active, created_by)
-            VALUES ($1, $2, $3, $4, $5)
+            (role_name, dept_id, cmp_id, is_active,hierarchy_level, created_by)
+            VALUES ($1, $2, $3, $4, $5,$6)
             RETURNING *;
         `;
 
@@ -408,6 +420,7 @@ responder.on('clone-role', async (req, cb) => {
             role.dept_id,
             role.cmp_id,
             role.is_active,
+            role.hierarchy_level,
             created_by || null
         ];
 

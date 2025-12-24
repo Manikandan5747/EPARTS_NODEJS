@@ -30,7 +30,7 @@ responder.on('create-users', async (req, cb) => {
             password,
             phone_number,
             role_id,
-            created_by
+            created_by, reporting_to
         } = req.body;
 
         // --------------------------------------------------
@@ -42,23 +42,36 @@ responder.on('create-users', async (req, cb) => {
         if (!password?.trim()) {
             return cb(null, { status: false, code: 2001, error: "Password is required" });
         }
-
-        const usernameTrim = username.trim();
-
         // --------------------------------------------------
         // DUPLICATE CHECK (username / email / phone)
         // --------------------------------------------------
+        const usernameTrim = username.trim();
+        const usernameUpper = usernameTrim.toUpperCase();
+        const usernameLower = usernameTrim.toLowerCase();
+
         const duplicateQuery = {
             text: `
-                SELECT user_id FROM users 
-                WHERE 
-                    (username = $1 
-                     OR email = $2 
-                     OR phone_number = $3)
-                AND is_deleted = FALSE
-            `,
-            values: [usernameTrim, email, phone_number]
+            SELECT user_id 
+            FROM users 
+            WHERE 
+            (
+                username = $1
+                OR LOWER(username) = $2
+                OR UPPER(username) = $3
+                OR LOWER(email) = LOWER($4)
+                OR phone_number = $5
+            )
+            AND is_deleted = FALSE
+        `,
+            values: [
+                usernameTrim,
+                usernameLower,
+                usernameUpper,
+                email.trim(),
+                phone_number
+            ]
         };
+
 
         const duplicateCheck = await pool.query(duplicateQuery);
 
@@ -81,7 +94,7 @@ responder.on('create-users', async (req, cb) => {
         const insertQuery = {
             text: `
                 INSERT INTO users 
-                    (username,full_name, email, password_hash, phone_number, role_id, created_by)
+                    (username,full_name, email, password_hash, phone_number, role_id,reporting_to, created_by)
                 VALUES 
                     ($1, $2, $3, $4, $5, $6,$7)
                 RETURNING 
@@ -92,8 +105,8 @@ responder.on('create-users', async (req, cb) => {
                 email,
                 password_hash,
                 phone_number,
-                role_id,
-                created_by
+                role_id,reporting_to,
+                created_by,
             ]
         };
 
@@ -124,7 +137,7 @@ responder.on('list-users', async (req, cb) => {
                 u.username,u.full_name,
                 u.email,
                 u.phone_number,
-                -- u.role_id,
+                u.reporting_to,
                 u.profile_icon,
                 u.is_online,
                 u.force_logout,
@@ -200,7 +213,7 @@ responder.on('getById-users', async (req, cb) => {
                 u.full_name,
                 u.email,
                 u.phone_number,
-               -- u.role_id,
+                u.reporting_to,
                 u.profile_icon,
                 u.is_online,
                 u.force_logout,
@@ -260,7 +273,7 @@ responder.on('update-users', async (req, cb) => {
             email,
             phone_number,
             role_id,
-            modified_by
+            modified_by,reporting_to
         } = body;
 
         if (!user_uuid) {
@@ -271,24 +284,39 @@ responder.on('update-users', async (req, cb) => {
             return cb(null, { status: false, code: 2001, error: "Username is required" });
         }
 
-        const usernameTrim = username.trim();
-
         // --------------------------------------------------
         // CHECK DUPLICATE (username, email, phone)
         // excluding this user
         // --------------------------------------------------
+        const usernameTrim = username.trim();
+        const usernameUpper = usernameTrim.toUpperCase();
+        const usernameLower = usernameTrim.toLowerCase();
+
         const duplicateQuery = {
             text: `
-                SELECT user_id FROM users 
-                WHERE 
-                    (username = $1 
-                     OR email = $2 
-                     OR phone_number = $3)
-                AND is_deleted = FALSE
-                AND user_uuid != $4
-            `,
-            values: [usernameTrim, email, phone_number, user_uuid]
+            SELECT user_id 
+            FROM users 
+            WHERE 
+            (
+                username = $1
+                OR LOWER(username) = $2
+                OR UPPER(username) = $3
+                OR LOWER(email) = LOWER($4)
+                OR phone_number = $5
+            )
+            AND is_deleted = FALSE
+            AND user_uuid != $6
+        `,
+            values: [
+                usernameTrim,
+                usernameLower,
+                usernameUpper,
+                email.trim(),
+                phone_number,
+                user_uuid
+            ]
         };
+
 
         const duplicate = await pool.query(duplicateQuery);
 
@@ -311,11 +339,12 @@ responder.on('update-users', async (req, cb) => {
                 role_id = $4,
                 modified_by = $5,
                 modified_at = NOW(),
-                full_name = $7
+                full_name = $7,
+                reporting_to = $8,
             WHERE user_uuid = $6
             RETURNING 
                 user_id, user_uuid, username, email, phone_number, role_id,
-                is_active, created_at, modified_at,full_name
+                is_active, created_at, modified_at,full_name,reporting_to
         `;
 
         const update = await pool.query(updateQuery, [
@@ -325,7 +354,7 @@ responder.on('update-users', async (req, cb) => {
             role_id,
             modified_by,
             user_uuid,
-            full_name
+            full_name,reporting_to
         ]);
 
         return cb(null, {
@@ -471,15 +500,16 @@ responder.on('advancefilter-users', async (req, cb) => {
             joinSql: `
                 LEFT JOIN users creators ON U.created_by = creators.user_uuid
                 LEFT JOIN users updaters ON U.modified_by = updaters.user_uuid
+                LEFT JOIN users reto ON U.reporting_to = reto.user_id
                 LEFT JOIN user_role R ON U.role_id = R.role_id
             `,
 
             /* ---------------- Allowed Search/Sort Fields ---------------- */
             allowedFields: [
                 'username', 'email', 'phone_number',
-                'role_id', 'role_name', 'owner_id',
+                'role_id', 'role_name', 'owner_id','reporting_to',
                 'is_active', 'created_at', 'modified_at',
-                'createdByName', 'updatedByName', 'full_name'
+                'createdByName', 'updatedByName', 'full_name','reporting_to_name'
             ],
 
             /* ---------------- Custom Joined Fields ---------------- */
@@ -498,6 +528,11 @@ responder.on('advancefilter-users', async (req, cb) => {
                     select: 'updaters.username',
                     search: 'updaters.username',
                     sort: 'updaters.username'
+                },
+                 reporting_to_name: {
+                    select: 'reto.username',
+                    search: 'reto.username',
+                    sort: 'reto.username'
                 }
             },
 

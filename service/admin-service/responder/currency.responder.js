@@ -1,7 +1,7 @@
 const cote = require('cote');
 const pool = require('@libs/db/postgresql_index');
 const logger = require('@libs/logger/logger');
-const { buildAdvancedSearchQuery } = require('@libs/common/advanced-filter');
+const { buildAdvancedSearchQuery } = require('@libs/advanced-search/advance-filter');
 
 const responder = new cote.Responder({
     name: 'currency responder',

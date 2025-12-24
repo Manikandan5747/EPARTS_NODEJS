@@ -1,5 +1,5 @@
 const cote = require('cote');
-const { pool } = require('@libs/db/postgres');
+const pool = require('@libs/db/postgresql_index');
 const logger = require('@libs/logger/logger');
 const { buildAdvancedSearchQuery } = require('@libs/common/advanced-filter');
 

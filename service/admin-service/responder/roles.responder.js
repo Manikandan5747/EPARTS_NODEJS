@@ -171,7 +171,7 @@ responder.on('getById-role', async (req, cb) => {
 responder.on('update-role', async (req, cb) => {
     try {
         const { role_uuid, body } = req;
-        const { role_name, dept_id, cmp_id, modified_by,hierarchy_level } = body;
+        const { role_name, dept_id, cmp_id, modified_by,hierarchy_level,is_active } = body;
 
         if (!role_uuid) {
             return cb(null, { status: false, code: 2001, error: "Role ID is required" });
@@ -219,8 +219,9 @@ responder.on('update-role', async (req, cb) => {
                 cmp_id = $3,
                 modified_by = $4,
                 hierarchy_level = $5,
+                is_active = $6,
                 modified_at = NOW()
-            WHERE role_uuid = $6
+            WHERE role_uuid = $7
             RETURNING *
         `;
 
@@ -230,6 +231,7 @@ responder.on('update-role', async (req, cb) => {
             cmp_id,
             modified_by,
             hierarchy_level,
+            is_active,
             role_uuid
         ]);
 

@@ -16,11 +16,15 @@
   "dependencies": {
     "bcryptjs": "^3.0.3",
     "body-parser": "^1.20.3",
+    "connect-multiparty": "^2.2.0",
+    "cors": "^2.8.5",
     "cote": "^1.2.0",
     "crypto-js": "^4.2.0",
     "express": "^4.21.2",
     "ioredis": "^5.8.2",
+    "jsonwebtoken": "^9.0.3",
     "module-alias": "^2.2.3",
+    "nodemailer": "^7.0.12",
     "pg": "^8.16.3",
     "winston": "^3.18.3"
   },

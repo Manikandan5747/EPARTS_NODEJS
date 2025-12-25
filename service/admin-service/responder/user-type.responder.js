@@ -140,13 +140,13 @@ responder.on('list-usertype', async (req, cb) => {
 // --------------------------------------------------
 responder.on('getById-usertype', async (req, cb) => {
     try {
-        const { role_uuid } = req;
+        const { user_type_uuid } = req;
 
         const result = await pool.query(
-            `SELECT user_type_id,role_uuid,name, code,is_deleted,deleted_at,deleted_by, description, is_active
+            `SELECT user_type_id,user_type_uuid,name, code,is_deleted,deleted_at,deleted_by, description, is_active
              FROM user_types
-             WHERE role_uuid = $1 AND is_deleted = FALSE`,
-            [role_uuid]
+             WHERE user_type_uuid = $1 AND is_deleted = FALSE`,
+            [user_type_uuid]
         );
 
         if (result.rowCount === 0) {
@@ -167,10 +167,10 @@ responder.on('getById-usertype', async (req, cb) => {
 // --------------------------------------------------
 responder.on('update-usertype', async (req, cb) => {
     try {
-        const { role_uuid, body } = req;
+        const { user_type_uuid, body } = req;
         const { name, code, description, modified_by } = body;
 
-        if (!role_uuid) {
+        if (!user_type_uuid) {
             return cb(null, { status: false, code: 2001, error: "User Type ID is required" });
         }
 
@@ -187,16 +187,16 @@ responder.on('update-usertype', async (req, cb) => {
         // --------------------------------------------------
         const checkQuery = {
             text: `
-                SELECT role_uuid  FROM user_types 
+                SELECT user_type_uuid  FROM user_types 
                 WHERE (
                     UPPER(name) = $1
                     OR LOWER(name) = $2
                     OR name = $3
                 )
                 AND is_deleted = FALSE
-                AND role_uuid  != $4
+                AND user_type_uuid  != $4
             `,
-            values: [roleUpper, roleLower, roleName, role_uuid]
+            values: [roleUpper, roleLower, roleName, user_type_uuid]
         };
 
         const duplicate = await pool.query(checkQuery);
@@ -216,7 +216,7 @@ responder.on('update-usertype', async (req, cb) => {
                 description = $3,
                 modified_by = $4,
                 modified_at = NOW()
-            WHERE role_uuid = $5
+            WHERE user_type_uuid = $5
             RETURNING *
         `;
 
@@ -225,7 +225,7 @@ responder.on('update-usertype', async (req, cb) => {
             code,
             description,
             modified_by,
-            role_uuid
+            user_type_uuid
         ]);
 
         return cb(null, {
@@ -246,12 +246,12 @@ responder.on('update-usertype', async (req, cb) => {
 // --------------------------------------------------
 responder.on('delete-usertype', async (req, cb) => {
     try {
-        const role_uuid = req.role_uuid;
+        const user_type_uuid = req.user_type_uuid;
         const deleted_by = req.body.deleted_by;
 
         const check = await pool.query(
-            `SELECT user_type_id FROM user_types WHERE role_uuid = $1 AND is_deleted = FALSE`,
-            [role_uuid]
+            `SELECT user_type_id FROM user_types WHERE user_type_uuid = $1 AND is_deleted = FALSE`,
+            [user_type_uuid]
         );
 
         if (check.rowCount === 0) {
@@ -263,8 +263,8 @@ responder.on('delete-usertype', async (req, cb) => {
              SET is_deleted = TRUE,is_active = false,
                  deleted_by = $1,
                  deleted_at = NOW()
-             WHERE role_uuid = $2`,
-            [deleted_by, role_uuid]
+             WHERE user_type_uuid = $2`,
+            [deleted_by, user_type_uuid]
         );
 
         return cb(null, {
@@ -283,12 +283,12 @@ responder.on('delete-usertype', async (req, cb) => {
 // --------------------------------------------------
 responder.on('status-usertype', async (req, cb) => {
     try {
-        const role_uuid = req.role_uuid;
+        const user_type_uuid = req.user_type_uuid;
         const modified_by = req.body.modified_by;
 
         const check = await pool.query(
-            `SELECT user_type_id FROM user_types WHERE role_uuid = $1 AND is_active = TRUE`,
-            [role_uuid]
+            `SELECT user_type_id FROM user_types WHERE user_type_uuid = $1 AND is_active = TRUE`,
+            [user_type_uuid]
         );
 
         if (check.rowCount === 0) {
@@ -300,8 +300,8 @@ responder.on('status-usertype', async (req, cb) => {
              SET is_active = false,
                  modified_by = $1,
                  modified_at = NOW()
-             WHERE role_uuid = $2`,
-            [modified_by, role_uuid]
+             WHERE user_type_uuid = $2`,
+            [modified_by, user_type_uuid]
         );
 
         return cb(null, {
@@ -383,17 +383,17 @@ responder.on('advancefilter-usertype', async (req, cb) => {
 // --------------------------------------------------
 responder.on('clone-usertype', async (req, cb) => {
     try {
-        const { role_uuid } = req.role_uuid;
+        const { user_type_uuid } = req.user_type_uuid;
         const { created_by } = req.body;   // user who is cloning (optional)
 
         // 1. Fetch existing User Type
         const fetchSQL = `
             SELECT name, code, description, is_active
             FROM user_types
-            WHERE role_uuid = $1 AND is_deleted = FALSE;
+            WHERE user_type_uuid = $1 AND is_deleted = FALSE;
         `;
 
-        const { rows } = await pool.query(fetchSQL, [role_uuid]);
+        const { rows } = await pool.query(fetchSQL, [user_type_uuid]);
 
         if (!rows.length) {
             return res.status(404).json({ message: "Original User Type not found", code: 2003 });

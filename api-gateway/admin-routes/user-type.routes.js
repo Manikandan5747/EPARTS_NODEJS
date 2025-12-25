@@ -75,7 +75,7 @@ router.get('/findbyid/:id', async (req, res) => {
     try {
         const result = await usertypeRequester.send({
             type: 'getById-usertype',
-            role_uuid: req.params.id
+            user_type_uuid: req.params.id
         });
 
         if (!result.status) {
@@ -83,7 +83,7 @@ router.get('/findbyid/:id', async (req, res) => {
             await saveErrorLog({
                 api_name: 'getById-usertype',
                 method: 'GET',
-                payload: { role_uuid: req.params.id },
+                payload: { user_type_uuid: req.params.id },
                 message: result.error,
                 stack: result.stack || '',
                 error_code: result.code || 2004
@@ -107,7 +107,7 @@ router.post('/update/:id', async (req, res) => {
     try {
         const result = await usertypeRequester.send({
             type: 'update-usertype',
-            role_uuid: req.params.id,
+            user_type_uuid: req.params.id,
             body: req.body
         });
 
@@ -140,7 +140,7 @@ router.post('/delete/:id', async (req, res) => {
     try {
         const result = await usertypeRequester.send({
             type: 'delete-usertype',
-            role_uuid: req.params.id,
+            user_type_uuid: req.params.id,
             body: req.body
         });
 
@@ -173,7 +173,7 @@ router.post('/status/:id', async (req, res) => {
     try {
         const result = await usertypeRequester.send({
             type: 'status-usertype',
-            role_uuid: req.params.id,
+            user_type_uuid: req.params.id,
             body: req.body
         });
 
@@ -237,7 +237,7 @@ router.post('/clone/:id', async (req, res) => {
     try {
         const result = await usertypeRequester.send({
             type: 'clone-usertype',
-            role_uuid: req.params.id,
+            user_type_uuid: req.params.id,
             body: req.body
         });
 

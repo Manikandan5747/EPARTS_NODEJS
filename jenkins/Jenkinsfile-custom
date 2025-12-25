@@ -11,15 +11,30 @@ pipeline {
 
     stages {
 
-        stage('Cleanup Workspace') {
+        stage('Force Unlock & Cleanup Workspace') {
             steps {
+                bat '''
+                    echo ================================
+                    echo 🔐 Releasing Locked Processes
+                    echo ================================
+                    taskkill /F /IM node.exe >NUL 2>&1
+                    taskkill /F /IM docker.exe >NUL 2>&1
+                    taskkill /F /IM docker-compose.exe >NUL 2>&1
+                '''
+
+                echo "🧹 Cleaning Workspace..."
                 cleanWs deleteDirs: true, disableDeferredWipeout: true
             }
         }
 
         stage('Checkout Code') {
             steps {
-                checkout scm
+                checkout([
+                    $class: 'GitSCM',
+                    branches: scm.branches,
+                    userRemoteConfigs: scm.userRemoteConfigs,
+                    extensions: [[$class: 'WipeWorkspace']]
+                ])
             }
         }
 
@@ -44,7 +59,7 @@ pipeline {
                     for (svc in services) {
                         bat """
                             echo ================================
-                            echo 🛠️  Building and Deploying ${svc}
+                            echo 🛠️ Building and Deploying ${svc}
                             echo ================================
                             cd ${WORKSPACE}
                             docker-compose build ${svc}
@@ -54,7 +69,7 @@ pipeline {
 
                     bat "docker ps"
 
-                    // 🧹 Clean dangling images
+                    // 🧹 Remove dangling images only
                     bat "docker image prune -f"
                 }
             }

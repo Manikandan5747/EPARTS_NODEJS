@@ -26,14 +26,14 @@ responder.on('create-usertype', async (req, cb) => {
             created_by
         } = req.body;
 
-        const user_type_name = req.body?.user_type_name?.trim() || null;
+        const name = req.body?.name?.trim() || null;
 
-        if (!user_type_name) {
+        if (!name) {
             return cb(null, { status: false, code: 2001, error: "User Type name is required" });
         }
 
-        const Upper = user_type_name.toUpperCase();
-        const Lower = user_type_name.toLowerCase();
+        const Upper = name.toUpperCase();
+        const Lower = name.toLowerCase();
 
         // --------------------------------------------------
         // CHECK FOR DUPLICATE USER TYPE NAME (Corrected table + columns)
@@ -42,12 +42,12 @@ responder.on('create-usertype', async (req, cb) => {
             text: `
                 SELECT user_type_id FROM user_types 
                 WHERE (
-                    UPPER(user_type_name) = $1 
-                    OR LOWER(user_type_name) = $2 
-                    OR user_type_name = $3
+                    UPPER(name) = $1 
+                    OR LOWER(name) = $2 
+                    OR name = $3
                 ) AND is_deleted = FALSE
             `,
-            values: [Upper, Lower, user_type_name]
+            values: [Upper, Lower, name]
         };
 
         const check = await pool.query(checkQuery);
@@ -61,10 +61,10 @@ responder.on('create-usertype', async (req, cb) => {
         // --------------------------------------------------
         const insert = await pool.query(
             `INSERT INTO user_types 
-                (user_type_name, code, description, created_by)
+                (name, code, description, created_by)
              VALUES ($1, $2, $3, $4)
-             RETURNING user_type_id, user_type_name, code, description, is_active`,
-            [user_type_name, code, description, created_by]
+             RETURNING user_type_id, name, code, description, is_active`,
+            [name, code, description, created_by]
         );
 
         const result = {
@@ -92,7 +92,7 @@ responder.on('list-usertype', async (req, cb) => {
             SELECT 
                 r.user_type_id,
                 r.user_type_uuid,
-                r.user_type_name,
+                r.name,
                 r.code,
                 r.description,
                 r.is_active,
@@ -143,7 +143,7 @@ responder.on('getById-usertype', async (req, cb) => {
         const { role_uuid } = req;
 
         const result = await pool.query(
-            `SELECT user_type_id,role_uuid,user_type_name, code,is_deleted,deleted_at,deleted_by, description, is_active
+            `SELECT user_type_id,role_uuid,name, code,is_deleted,deleted_at,deleted_by, description, is_active
              FROM user_types
              WHERE role_uuid = $1 AND is_deleted = FALSE`,
             [role_uuid]
@@ -168,17 +168,17 @@ responder.on('getById-usertype', async (req, cb) => {
 responder.on('update-usertype', async (req, cb) => {
     try {
         const { role_uuid, body } = req;
-        const { user_type_name, code, description, modified_by } = body;
+        const { name, code, description, modified_by } = body;
 
         if (!role_uuid) {
             return cb(null, { status: false, code: 2001, error: "User Type ID is required" });
         }
 
-        if (!user_type_name || !user_type_name.trim()) {
+        if (!name || !name.trim()) {
             return cb(null, { status: false, code: 2001, error: "User Type name is required" });
         }
 
-        const roleName = user_type_name.trim();
+        const roleName = name.trim();
         const roleUpper = roleName.toUpperCase();
         const roleLower = roleName.toLowerCase();
 
@@ -189,9 +189,9 @@ responder.on('update-usertype', async (req, cb) => {
             text: `
                 SELECT role_uuid  FROM user_types 
                 WHERE (
-                    UPPER(user_type_name) = $1
-                    OR LOWER(user_type_name) = $2
-                    OR user_type_name = $3
+                    UPPER(name) = $1
+                    OR LOWER(name) = $2
+                    OR name = $3
                 )
                 AND is_deleted = FALSE
                 AND role_uuid  != $4
@@ -211,7 +211,7 @@ responder.on('update-usertype', async (req, cb) => {
         const updateQuery = `
             UPDATE user_types
             SET 
-                user_type_name = $1,
+                name = $1,
                 code = $2,
                 description = $3,
                 modified_by = $4,
@@ -338,7 +338,7 @@ responder.on('advancefilter-usertype', async (req, cb) => {
 
             /* -------------- Fields user can search/sort -------------- */
             allowedFields: [
-                'user_type_name', 'code', 'description',
+                'name', 'code', 'description',
                 'is_active', 'created_at', 'modified_at',
                 'createdByName', 'updatedByName'
             ],
@@ -388,7 +388,7 @@ responder.on('clone-usertype', async (req, cb) => {
 
         // 1. Fetch existing User Type
         const fetchSQL = `
-            SELECT user_type_name, code, description, is_active
+            SELECT name, code, description, is_active
             FROM user_types
             WHERE role_uuid = $1 AND is_deleted = FALSE;
         `;
@@ -404,13 +404,13 @@ responder.on('clone-usertype', async (req, cb) => {
         // 2. Insert new cloned UserType
         const cloneSQL = `
             INSERT INTO user_types 
-            (user_type_name, code, description, is_active, created_by)
+            (name, code, description, is_active, created_by)
             VALUES ($1, $2, $3, $4, $5)
             RETURNING *;
         `;
 
         const values = [
-            UserType.user_type_name + " (Copy)",  // Optional rename
+            UserType.name + " (Copy)",  // Optional rename
             UserType.code,
             UserType.description,
             UserType.is_active,

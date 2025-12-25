@@ -8,7 +8,18 @@ const { saveErrorLog } = require('@libs/common/common-util');
 const multipart = require("connect-multiparty");
 const path = require('path');
 
-const uploadDir = path.join('/app/assets', 'countries');
+// const uploadDir = path.join('/app/assets', 'countries');
+// const multipartMiddleware = multipart({ uploadDir });
+
+const uploadDir = path.join(
+  'C:',
+  'inetpub',
+  'wwwroot',
+  'EPARTS',
+  'PRODUCTION_FILES',
+  'countries_files'
+);
+
 const multipartMiddleware = multipart({ uploadDir });
 
 // --------------------------------------

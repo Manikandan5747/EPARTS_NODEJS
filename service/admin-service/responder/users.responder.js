@@ -96,7 +96,7 @@ responder.on('create-users', async (req, cb) => {
                 INSERT INTO users 
                     (username,fullname, email, password_hash, phone_number, role_id,reporting_to, created_by)
                 VALUES 
-                    ($1, $2, $3, $4, $5, $6,$7)
+                    ($1, $2, $3, $4, $5, $6,$7,$8)
                 RETURNING 
                     user_id, user_uuid, username, email, phone_number, role_id, is_active
             `,
@@ -273,7 +273,7 @@ responder.on('update-users', async (req, cb) => {
             email,
             phone_number,
             role_id,
-            modified_by,reporting_to,is_active,
+            modified_by,reporting_to
         } = body;
 
         if (!user_uuid) {
@@ -341,7 +341,6 @@ responder.on('update-users', async (req, cb) => {
                 modified_at = NOW(),
                 fullname = $7,
                 reporting_to = $8,
-                is_active=$9
             WHERE user_uuid = $6
             RETURNING 
                 user_id, user_uuid, username, email, phone_number, role_id,
@@ -355,8 +354,7 @@ responder.on('update-users', async (req, cb) => {
             role_id,
             modified_by,
             user_uuid,
-            fullname,reporting_to,
-            is_active
+            fullname,reporting_to
         ]);
 
         return cb(null, {

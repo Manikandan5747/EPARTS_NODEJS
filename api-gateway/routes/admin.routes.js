@@ -14,8 +14,15 @@ router.use('/state', (req, res, next) => require('../admin-routes/states.routes.
 
 router.use('/city', (req, res, next) => require('../admin-routes/cities.routes.js')(req, res, next));
 
+router.use('/currency', (req, res, next) => require('../admin-routes/currency.routes.js')(req, res, next));
 
-router.use('/product-types', (req, res, next) => require('../admin-routes/product-types.routes.js')(req, res, next));
+router.use('/setting', (req, res, next) => require('../admin-routes/settings.routes.js')(req, res, next));
+
+router.use('/trading-type', (req, res, next) => require('../admin-routes/trading-types.routes.js')(req, res, next));
+
+router.use('/trading-type', (req, res, next) => require('../admin-routes/trading-types.routes.js')(req, res, next));
+
+router.use('/payment-mode', (req, res, next) => require('../admin-routes/payment-modes.routes.js')(req, res, next));
 
 // Testing
 router.use('/dynamic-report', (req, res, next) => require('../admin-routes/report.routes.js')(req, res, next));

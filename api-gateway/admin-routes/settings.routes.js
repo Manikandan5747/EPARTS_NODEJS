@@ -2,27 +2,24 @@ require('module-alias/register');
 
 const express = require('express');
 const router = express.Router();
-const stateRequester = require('@libs/requesters/admin-requesters/states-requester');
+const settingsRequester = require('@libs/requesters/admin-requesters/settings-requester');
 const logger = require('@libs/logger/logger');
 const { saveErrorLog } = require('@libs/common/common-util');
 
 
-
-
 // --------------------------------------
-// CREATE STATE
+// CREATE SETTING
 // --------------------------------------
-router.post('/create',async (req, res) => {
+router.post('/create', async (req, res) => {
     try {
-      
-        const result = await stateRequester.send({
-            type: 'create-state',
-             body: req.body
+        const result = await settingsRequester.send({
+            type: 'create-setting',
+            body: req.body
         });
 
         if (!result.status) {
             await saveErrorLog({
-                api_name: 'create-state',
+                api_name: 'create-setting',
                 method: 'POST',
                 payload: req.body,
                 message: result.error,
@@ -31,23 +28,26 @@ router.post('/create',async (req, res) => {
             });
             return res.status(500).json(result);
         }
-        res.status(201).send(result);
+
+        res.status(201).json(result);
+
     } catch (err) {
-        logger.error('Error in states/create:', err.message);
+        logger.error('Error in settings/create:', err.message);
         res.status(500).json({ error: err.message });
     }
 });
 
+
 // --------------------------------------
-// LIST ALL STATES
+// LIST SETTINGS
 // --------------------------------------
 router.get('/list', async (req, res) => {
     try {
-        const result = await stateRequester.send({ type: 'list-state' });
+        const result = await settingsRequester.send({ type: 'list-setting' });
 
         if (!result.status) {
             await saveErrorLog({
-                api_name: 'list-state',
+                api_name: 'list-setting',
                 method: 'GET',
                 payload: null,
                 message: result.error,
@@ -56,55 +56,61 @@ router.get('/list', async (req, res) => {
             });
             return res.status(500).json(result);
         }
-        res.send(result);
+
+        res.json(result);
+
     } catch (err) {
-        logger.error('Error in states/list:', err.message);
+        logger.error('Error in settings/list:', err.message);
         res.status(500).json({ error: err.message });
     }
 });
 
+
 // --------------------------------------
-// FIND STATE BY ID
+// FIND SETTING BY ID
 // --------------------------------------
 router.get('/findbyid/:id', async (req, res) => {
     try {
-        const result = await stateRequester.send({
-            type: 'getById-state',
-            state_uuid: req.params.id
+        const result = await settingsRequester.send({
+            type: 'getById-setting',
+            setting_id: req.params.id
         });
 
         if (!result.status) {
             await saveErrorLog({
-                api_name: 'getById-state',
+                api_name: 'getById-setting',
                 method: 'GET',
-                payload: { state_uuid: req.params.id },
+                payload: { setting_id: req.params.id },
                 message: result.error,
                 stack: result.stack || '',
                 error_code: result.code || 2004
             });
             return res.status(500).json(result);
         }
+
         res.json(result);
+
     } catch (err) {
-        logger.error('Error in states/findbyid:', err.message);
+        logger.error('Error in settings/findbyid:', err.message);
         res.status(500).json({ error: err.message });
     }
 });
 
+
 // --------------------------------------
-// UPDATE STATE
+// UPDATE SETTING
 // --------------------------------------
 router.post('/update/:id', async (req, res) => {
     try {
-        const result = await stateRequester.send({
-            type: 'update-state',
-            state_uuid: req.params.id,
+        const result = await settingsRequester.send({
+            type: 'update-setting',
+            setting_id: req.params.id,
             body: req.body
         });
 
         if (!result.status) {
             await saveErrorLog({
-                api_name: 'update-state',
+                api_name: 'update-setting',
                 method: 'POST',
                 payload: req.body,
                 message: result.error,
@@ -113,27 +119,30 @@ router.post('/update/:id', async (req, res) => {
             });
             return res.status(500).json(result);
         }
-        res.send(result);
+
+        res.json(result);
+
     } catch (err) {
-        logger.error('Error in states/update:', err.message);
+        logger.error('Error in settings/update:', err.message);
         res.status(500).json({ error: err.message });
     }
 });
 
+
 // --------------------------------------
-// DELETE STATE
+// DELETE SETTING (SOFT DELETE)
 // --------------------------------------
 router.post('/delete/:id', async (req, res) => {
     try {
-        const result = await stateRequester.send({
-            type: 'delete-state',
-            state_uuid: req.params.id,
+        const result = await settingsRequester.send({
+            type: 'delete-setting',
+            setting_id: req.params.id,
             body: req.body
         });
 
         if (!result.status) {
             await saveErrorLog({
-                api_name: 'delete-state',
+                api_name: 'delete-setting',
                 method: 'POST',
                 payload: req.body,
                 message: result.error,
@@ -142,27 +151,30 @@ router.post('/delete/:id', async (req, res) => {
             });
             return res.status(500).json(result);
         }
-        res.send(result);
+
+        res.json(result);
+
     } catch (err) {
-        logger.error('Error in states/delete:', err.message);
+        logger.error('Error in settings/delete:', err.message);
         res.status(500).json({ error: err.message });
     }
 });
+
 
 // --------------------------------------
 // STATUS CHANGE
 // --------------------------------------
 router.post('/status/:id', async (req, res) => {
     try {
-        const result = await stateRequester.send({
-            type: 'status-state',
-            state_uuid: req.params.id,
+        const result = await settingsRequester.send({
+            type: 'status-setting',
+            setting_id: req.params.id,
             body: req.body
         });
 
         if (!result.status) {
             await saveErrorLog({
-                api_name: 'status-state',
+                api_name: 'status-setting',
                 method: 'POST',
                 payload: req.body,
                 message: result.error,
@@ -171,26 +183,29 @@ router.post('/status/:id', async (req, res) => {
             });
             return res.status(500).json(result);
         }
-        res.send(result);
+
+        res.json(result);
+
     } catch (err) {
-        logger.error('Error in states/status:', err.message);
+        logger.error('Error in settings/status:', err.message);
         res.status(500).json({ error: err.message });
     }
 });
 
+
 // --------------------------------------
-// ADVANCE FILTER LIST API
+// ADVANCE FILTER LIST
 // --------------------------------------
 router.post('/pagination-list', async (req, res) => {
     try {
-        const result = await stateRequester.send({
-            type: 'advancefilter-state',
+        const result = await settingsRequester.send({
+            type: 'advancefilter-setting',
             body: req.body
         });
 
         if (!result.status) {
             await saveErrorLog({
-                api_name: 'advancefilter-state',
+                api_name: 'advancefilter-setting',
                 method: 'POST',
                 payload: req.body,
                 message: result.error,
@@ -199,38 +214,11 @@ router.post('/pagination-list', async (req, res) => {
             });
             return res.status(500).json(result);
         }
+
         res.json(result);
-    } catch (err) {
-        logger.error('Error in states/pagination-list:', err.message);
-        res.status(500).json({ error: err.message });
-    }
-});
 
-// --------------------------------------
-// CLONE STATE
-// --------------------------------------
-router.post('/clone/:id', async (req, res) => {
-    try {
-        const result = await stateRequester.send({
-            type: 'clone-state',
-            state_uuid: req.params.id,
-            body: req.body
-        });
-
-        if (!result.status) {
-            await saveErrorLog({
-                api_name: 'clone-state',
-                method: 'POST',
-                payload: req.body,
-                message: result.error,
-                stack: result.stack || '',
-                error_code: result.code || 2004
-            });
-            return res.status(500).json(result);
-        }
-        res.send(result);
     } catch (err) {
-        logger.error('Error in states/clone:', err.message);
+        logger.error('Error in settings/pagination-list:', err.message);
         res.status(500).json({ error: err.message });
     }
 });

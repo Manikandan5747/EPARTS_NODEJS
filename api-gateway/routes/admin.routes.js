@@ -14,6 +14,9 @@ router.use('/state', (req, res, next) => require('../admin-routes/states.routes.
 
 router.use('/city', (req, res, next) => require('../admin-routes/cities.routes.js')(req, res, next));
 
+
+router.use('/product-types', (req, res, next) => require('../admin-routes/product-types.routes.js')(req, res, next));
+
 // Testing
 router.use('/dynamic-report', (req, res, next) => require('../admin-routes/report.routes.js')(req, res, next));
 

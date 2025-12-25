@@ -3,6 +3,12 @@ pipeline {
 
     stages {
 
+        stage('Cleanup Workspace') {
+            steps {
+                cleanWs deleteDirs: true, disableDeferredWipeout: true
+            }
+        }
+
         stage('Checkout') {
             steps {
                 checkout scm

@@ -500,7 +500,7 @@ responder.on('advancefilter-users', async (req, cb) => {
             joinSql: `
                 LEFT JOIN users creators ON U.created_by = creators.user_uuid
                 LEFT JOIN users updaters ON U.modified_by = updaters.user_uuid
-                LEFT JOIN users reto ON U.reporting_to = reto.user_id
+                LEFT JOIN users reto ON U.reporting_to = reto.user_uuid
                 LEFT JOIN user_role R ON U.role_id = R.role_id
             `,
 

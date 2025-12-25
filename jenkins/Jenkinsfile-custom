@@ -47,6 +47,10 @@ pipeline {
                     }
 
                     bat "docker ps"
+
+                    // 🧹 Clean dangling images
+                    bat "docker image prune -f"
+                    
                 }
             }
         }

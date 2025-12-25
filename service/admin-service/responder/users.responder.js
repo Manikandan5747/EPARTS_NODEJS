@@ -25,7 +25,7 @@ const responder = new cote.Responder({
 responder.on('create-users', async (req, cb) => {
     try {
         const {
-            username, full_name,
+            username, fullname,
             email,
             password,
             phone_number,
@@ -94,14 +94,14 @@ responder.on('create-users', async (req, cb) => {
         const insertQuery = {
             text: `
                 INSERT INTO users 
-                    (username,full_name, email, password_hash, phone_number, role_id,reporting_to, created_by)
+                    (username,fullname, email, password_hash, phone_number, role_id,reporting_to, created_by)
                 VALUES 
                     ($1, $2, $3, $4, $5, $6,$7)
                 RETURNING 
                     user_id, user_uuid, username, email, phone_number, role_id, is_active
             `,
             values: [
-                usernameTrim, full_name,
+                usernameTrim, fullname,
                 email,
                 password_hash,
                 phone_number,
@@ -134,7 +134,7 @@ responder.on('list-users', async (req, cb) => {
             SELECT 
                 u.user_id,
                 u.user_uuid,
-                u.username,u.full_name,
+                u.username,u.fullname,
                 u.email,
                 u.phone_number,
                 u.reporting_to,
@@ -210,7 +210,7 @@ responder.on('getById-users', async (req, cb) => {
                 u.user_id,
                 u.user_uuid,
                 u.username,
-                u.full_name,
+                u.fullname,
                 u.email,
                 u.phone_number,
                 u.reporting_to,
@@ -269,11 +269,11 @@ responder.on('update-users', async (req, cb) => {
         const { user_uuid, body } = req;
 
         const {
-            username, full_name,
+            username, fullname,
             email,
             phone_number,
             role_id,
-            modified_by,reporting_to
+            modified_by,reporting_to,is_active,
         } = body;
 
         if (!user_uuid) {
@@ -339,12 +339,13 @@ responder.on('update-users', async (req, cb) => {
                 role_id = $4,
                 modified_by = $5,
                 modified_at = NOW(),
-                full_name = $7,
+                fullname = $7,
                 reporting_to = $8,
+                is_active=$9
             WHERE user_uuid = $6
             RETURNING 
                 user_id, user_uuid, username, email, phone_number, role_id,
-                is_active, created_at, modified_at,full_name,reporting_to
+                is_active, created_at, modified_at,fullname,reporting_to
         `;
 
         const update = await pool.query(updateQuery, [
@@ -354,7 +355,8 @@ responder.on('update-users', async (req, cb) => {
             role_id,
             modified_by,
             user_uuid,
-            full_name,reporting_to
+            fullname,reporting_to,
+            is_active
         ]);
 
         return cb(null, {
@@ -509,7 +511,7 @@ responder.on('advancefilter-users', async (req, cb) => {
                 'username', 'email', 'phone_number',
                 'role_id', 'role_name', 'owner_id','reporting_to',
                 'is_active', 'created_at', 'modified_at',
-                'createdByName', 'updatedByName', 'full_name','reporting_to_name'
+                'createdByName', 'updatedByName', 'fullname','reporting_to_name'
             ],
 
             /* ---------------- Custom Joined Fields ---------------- */

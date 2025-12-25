@@ -10,6 +10,13 @@ pipeline {
     }
 
     stages {
+
+        stage('Cleanup Workspace') {
+            steps {
+                cleanWs deleteDirs: true, disableDeferredWipeout: true
+            }
+        }
+
         stage('Checkout Code') {
             steps {
                 checkout scm
@@ -31,7 +38,6 @@ pipeline {
         stage('Build & Deploy Selected Microservices') {
             steps {
                 script {
-                    // Split comma-separated services into a list
                     def services = params.SERVICE_NAMES.split(',').collect { it.trim() }
                     echo "🚀 Services to deploy: ${services.join(', ')}"
 
@@ -50,7 +56,6 @@ pipeline {
 
                     // 🧹 Clean dangling images
                     bat "docker image prune -f"
-                    
                 }
             }
         }

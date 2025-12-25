@@ -168,7 +168,7 @@ responder.on('getById-usertype', async (req, cb) => {
 responder.on('update-usertype', async (req, cb) => {
     try {
         const { user_type_uuid, body } = req;
-        const { name, code, description, modified_by } = body;
+        const { name, code, description, modified_by,is_active } = body;
 
         if (!user_type_uuid) {
             return cb(null, { status: false, code: 2001, error: "User Type ID is required" });
@@ -215,8 +215,9 @@ responder.on('update-usertype', async (req, cb) => {
                 code = $2,
                 description = $3,
                 modified_by = $4,
-                modified_at = NOW()
-            WHERE user_type_uuid = $5
+                modified_at = NOW(),
+                is_active= $5
+            WHERE user_type_uuid = $6
             RETURNING *
         `;
 
@@ -225,6 +226,7 @@ responder.on('update-usertype', async (req, cb) => {
             code,
             description,
             modified_by,
+            is_active,
             user_type_uuid
         ]);
 

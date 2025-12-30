@@ -39,6 +39,10 @@ app.use(cors({
 }));
 
 
+// Also handle OPTIONS globally
+app.options('*', cors());
+
+
 // PUBLIC ROUTES
 const AdminPublicRoutes = require('./routes/admin.public.routes');
 const BuyerPublicRoutes = require('./routes/buyer.public.routes');

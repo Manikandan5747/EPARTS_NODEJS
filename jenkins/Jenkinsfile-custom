@@ -81,7 +81,7 @@ pipeline {
     parameters {
         string(
             name: 'SERVICE_NAMES',
-            defaultValue: 'admin-service',
+            defaultValue: 'api-gateway,admin-service',
             description: 'Comma-separated list of microservices to build/deploy'
         )
     }

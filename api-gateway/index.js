@@ -15,32 +15,32 @@ const cors = require('cors');
 const AdminStartAuthApi = require("@libs/JWT/admin-auth-api");
 const BuyerStartAuthApi = require("@libs/JWT/buyer-auth-api");
 const SellerStartAuthApi = require("@libs/JWT/seller-auth-api");
+app.use(cors()); // Enables CORS for all origins and all routes
+
+// // --------------------------------------
+// // ENABLE CORS FOR SPECIFIC ORIGINS
+// // --------------------------------------
+// const allowedOrigins = [
+//    'http://localhost:3000',
+//    'http://localhost:4000',
+//    'http://10.33.30.5:3000',
+// ];
+
+// app.use(cors({
+//    origin: function (origin, callback) {
+//       if (!origin || allowedOrigins.includes(origin)) {
+//          callback(null, true);
+//       } else {
+//          callback(new Error('Not allowed by CORS'));
+//       }
+//    },
+//    methods: ['GET', 'POST', 'PUT', 'DELETE'],
+//    credentials: true
+// }));
 
 
-// --------------------------------------
-// ENABLE CORS FOR SPECIFIC ORIGINS
-// --------------------------------------
-const allowedOrigins = [
-   'http://localhost:3000',
-   'http://localhost:4000',
-   'http://10.33.30.5:3000',
-];
-
-app.use(cors({
-   origin: function (origin, callback) {
-      if (!origin || allowedOrigins.includes(origin)) {
-         callback(null, true);
-      } else {
-         callback(new Error('Not allowed by CORS'));
-      }
-   },
-   methods: ['GET', 'POST', 'PUT', 'DELETE'],
-   credentials: true
-}));
-
-
-// Also handle OPTIONS globally
-app.options('*', cors());
+// // Also handle OPTIONS globally
+// app.options('*', cors());
 
 
 // PUBLIC ROUTES

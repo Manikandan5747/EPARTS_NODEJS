@@ -114,7 +114,7 @@ responder.on('getById-state', async (req, cb) => {
 responder.on('update-state', async (req, cb) => {
     try {
         const { state_uuid, body } = req;
-        const { name, country_id, modified_by } = body;
+        const { name, country_id, modified_by,is_active } = body;
 
         if (!name || !name.trim()) {
             return cb(null, { status: false, code: 2001, error: 'State name is required' });
@@ -137,11 +137,11 @@ responder.on('update-state', async (req, cb) => {
             `UPDATE states SET
                 name = $1,
                 country_id = $2,
-                modified_by = $3,
+                modified_by = $3,is_active=$4,
                 modified_at = NOW()
-             WHERE state_uuid = $4
+             WHERE state_uuid = $5
              RETURNING *`,
-            [name.trim(), country_id, modified_by, state_uuid]
+            [name.trim(), country_id, modified_by, is_active,state_uuid]
         );
 
         return cb(null, {
@@ -323,6 +323,56 @@ responder.on('clone-state', async (req, cb) => {
         });
 
     } catch (err) {
+        return cb(null, { status: false, code: 2004, error: err.message });
+    }
+});
+
+
+
+// --------------------------------------------------
+//  FIND STATES BY COUNTRY UUID
+// --------------------------------------------------
+responder.on('getById-countryid', async (req, cb) => {
+    try {
+        const { country_uuid } = req;
+
+        if (!country_uuid) {
+            return cb(null, { status: false, code: 2001, error: 'Country UUID is required' });
+        }
+
+        // 🔹 Get country_id from countries table
+        const countryResult = await pool.query(
+            `SELECT country_id FROM countries
+             WHERE country_uuid = $1 AND is_deleted = FALSE`,
+            [country_uuid]
+        );
+
+        if (countryResult.rowCount === 0) {
+            return cb(null, { status: false, code: 2003, error: 'Country not found' });
+        }
+
+        const country_id = countryResult.rows[0].country_id;
+
+        // 🔹 Get states by country_id
+        const result = await pool.query(
+            `SELECT * FROM states
+             WHERE country_id = $1 AND is_deleted = FALSE`,
+            [country_id]
+        );
+
+        if (result.rowCount === 0) {
+            return cb(null, { status: false, code: 2003, error: 'State not found' });
+        }
+
+        return cb(null, {
+            status: true,
+            code: 1000,
+            count: result.rowCount,
+            data: result.rows
+        });
+
+    } catch (err) {
+        logger.error('Responder Error (getById countryid):', err);
         return cb(null, { status: false, code: 2004, error: err.message });
     }
 });

@@ -2,7 +2,7 @@ require('module-alias/register');
 
 const express = require('express');
 const router = express.Router();
-const tradingTypeRequester = require('@libs/requesters/admin-requesters/tradingType-requester');
+const tradingTypeRequester = require('@libs/requesters/admin-requesters/trading-type-requester');
 const logger = require('@libs/logger/logger');
 const { saveErrorLog } = require('@libs/common/common-util');
 

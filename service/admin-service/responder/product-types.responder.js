@@ -15,6 +15,7 @@ const responder = new cote.Responder({
 registerMasterResponder({
     responder,
     pool,
+    key:'product-types',
     table: 'product_types',
     alias: 'PT',
     uuidColumn: 'product_type_uuid',

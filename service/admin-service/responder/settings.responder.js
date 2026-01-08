@@ -78,37 +78,54 @@ responder.on('create-setting', async (req, cb) => {
 
 
 // --------------------------------------------------
-// LIST SETTINGS (AUTO EXPIRE)
+// LIST SETTINGS
 // --------------------------------------------------
 responder.on('list-setting', async (req, cb) => {
-    try {
-        // AUTO DEACTIVATE EXPIRED SETTINGS
-        await pool.query(`
-            UPDATE settings
-            SET is_active = FALSE
-            WHERE settingexpirydate IS NOT NULL
-              AND settingexpirydate < NOW()
-        `);
+  try {
+    const query = `
+      SELECT 
+        s.setting_id,
+        s.setting_uuid,
+        s.setcategory,
+        s.setparameter,
+        s.setparametervalue,
+        s.settingdate,
+        s.settingexpirydate,
+        s.is_active,
+        s.assigned_to,
+        s.assigned_at,
+        s.created_at,
+        s.created_by,
+        s.modified_at,
+        s.modified_by,
+        s.deleted_at,
+        s.deleted_by,
+        s.is_deleted,
+        creators.username AS createdByName,
+        updaters.username AS updatedByName
+      FROM settings s
+      LEFT JOIN users creators ON s.created_by = creators.user_uuid
+      LEFT JOIN users updaters ON s.modified_by = updaters.user_uuid
+      WHERE s.is_deleted = FALSE
+      ORDER BY s.created_at ASC
+    `;
 
-        const result = await pool.query(`
-            SELECT *
-            FROM settings
-            WHERE is_deleted = FALSE
-            ORDER BY created_at DESC
-        `);
+    const result = await pool.query(query);
 
-        cb(null, {
-            status: true,
-            code: 1000,
-            count: result.rowCount,
-            data: result.rows
-        });
+    return cb(null, {
+      status: true,
+      code: 1000,
+      message: "Settings list fetched successfully",
+      count: result.rowCount,
+      data: result.rows
+    });
 
-    } catch (err) {
-        logger.error('Responder Error (list-setting):', err);
-        cb(null, { status: false, code: 2004, error: err.message });
-    }
+  } catch (err) {
+    logger.error("Responder Error (list settings):", err);
+    return cb(null, { status: false, code: 2004, error: err.message });
+  }
 });
+
 
 
 // --------------------------------------------------
@@ -116,14 +133,14 @@ responder.on('list-setting', async (req, cb) => {
 // --------------------------------------------------
 responder.on('getById-setting', async (req, cb) => {
     try {
-        const { setting_id } = req;
+        const { setting_uuid } = req;
 
         const result = await pool.query(`
             SELECT *
             FROM settings
-            WHERE setting_id=$1
+            WHERE setting_uuid=$1
               AND is_deleted=FALSE
-        `, [setting_id]);
+        `, [setting_uuid]);
 
         if (result.rowCount === 0) {
             return cb(null, { status: false, code: 2003, error: 'Setting not found' });
@@ -147,7 +164,7 @@ responder.on('getById-setting', async (req, cb) => {
 // --------------------------------------------------
 responder.on('update-setting', async (req, cb) => {
     try {
-        const { setting_id, body } = req;
+        const { setting_uuid, body } = req;
         const {
             setcategory,
             setparameter,
@@ -159,13 +176,13 @@ responder.on('update-setting', async (req, cb) => {
 
         // DUPLICATE CHECK (EXCLUDE CURRENT)
         const check = await pool.query(`
-            SELECT setting_id
+            SELECT setting_uuid
             FROM settings
             WHERE setcategory=$1
               AND setparameter=$2
               AND is_deleted=FALSE
-              AND setting_id != $3
-        `, [setcategory, setparameter, setting_id]);
+              AND setting_uuid != $3
+        `, [setcategory, setparameter, setting_uuid]);
 
         if (check.rowCount > 0) {
             return cb(null, { status: false, code: 2002, error: 'Setting already exists' });
@@ -180,7 +197,7 @@ responder.on('update-setting', async (req, cb) => {
                 settingexpirydate=$5,
                 modified_by=$6,
                 modified_at=NOW()
-            WHERE setting_id=$7
+            WHERE setting_uuid=$7
             RETURNING *
         `, [
             setcategory,
@@ -189,7 +206,7 @@ responder.on('update-setting', async (req, cb) => {
             settingdate,
             settingexpirydate,
             modified_by,
-            setting_id
+            setting_uuid
         ]);
 
         cb(null, {
@@ -211,7 +228,7 @@ responder.on('update-setting', async (req, cb) => {
 // --------------------------------------------------
 responder.on('delete-setting', async (req, cb) => {
     try {
-        const { setting_id } = req;
+        const { setting_uuid } = req;
         const { deleted_by } = req.body;
 
         await pool.query(`
@@ -220,8 +237,8 @@ responder.on('delete-setting', async (req, cb) => {
                 is_active=FALSE,
                 deleted_at=NOW(),
                 deleted_by=$1
-            WHERE setting_id=$2
-        `, [deleted_by, setting_id]);
+            WHERE setting_uuid=$2
+        `, [deleted_by, setting_uuid]);
 
         cb(null, {
             status: true,
@@ -241,7 +258,7 @@ responder.on('delete-setting', async (req, cb) => {
 // --------------------------------------------------
 responder.on('status-setting', async (req, cb) => {
     try {
-        const { setting_id } = req;
+        const { setting_uuid } = req;
         const { is_active, modified_by } = req.body;
 
         await pool.query(`
@@ -249,8 +266,8 @@ responder.on('status-setting', async (req, cb) => {
             SET is_active=$1,
                 modified_by=$2,
                 modified_at=NOW()
-            WHERE setting_id=$3
-        `, [is_active, modified_by, setting_id]);
+            WHERE setting_uuid=$3
+        `, [is_active, modified_by, setting_uuid]);
 
         cb(null, {
             status: true,
@@ -317,6 +334,37 @@ responder.on('advancefilter-setting', async (req, cb) => {
     } catch (err) {
         console.error('[advancefilter-setting] error:', err);
         return cb(null, { status: false, code: 2004, error: err.message });
+    }
+});
+
+
+// --------------------------------------------------
+// FIND SETTING CATEGORY BY NAME
+// --------------------------------------------------
+responder.on('setcategory-setting', async (req, cb) => {
+    try {
+        const { setcategory } = req;
+
+        const result = await pool.query(`
+            SELECT *
+            FROM settings
+            WHERE setcategory=$1
+              AND is_deleted=FALSE
+        `, [setcategory]);
+
+        if (result.rowCount === 0) {
+            return cb(null, { status: false, code: 2003, error: 'Setting not found' });
+        }
+
+        cb(null, {
+            status: true,
+            code: 1000,
+            data: result.rows
+        });
+
+    } catch (err) {
+        logger.error('Responder Error (setcategory-setting):', err);
+        cb(null, { status: false, code: 2004, error: err.message });
     }
 });
 

@@ -73,14 +73,14 @@ router.get('/findbyid/:id', async (req, res) => {
     try {
         const result = await settingsRequester.send({
             type: 'getById-setting',
-            setting_id: req.params.id
+            setting_uuid: req.params.id
         });
 
         if (!result.status) {
             await saveErrorLog({
                 api_name: 'getById-setting',
                 method: 'GET',
-                payload: { setting_id: req.params.id },
+                payload: { setting_uuid: req.params.id },
                 message: result.error,
                 stack: result.stack || '',
                 error_code: result.code || 2004
@@ -104,7 +104,7 @@ router.post('/update/:id', async (req, res) => {
     try {
         const result = await settingsRequester.send({
             type: 'update-setting',
-            setting_id: req.params.id,
+            setting_uuid: req.params.id,
             body: req.body
         });
 
@@ -136,7 +136,7 @@ router.post('/delete/:id', async (req, res) => {
     try {
         const result = await settingsRequester.send({
             type: 'delete-setting',
-            setting_id: req.params.id,
+            setting_uuid: req.params.id,
             body: req.body
         });
 
@@ -168,7 +168,7 @@ router.post('/status/:id', async (req, res) => {
     try {
         const result = await settingsRequester.send({
             type: 'status-setting',
-            setting_id: req.params.id,
+            setting_uuid: req.params.id,
             body: req.body
         });
 
@@ -219,6 +219,37 @@ router.post('/pagination-list', async (req, res) => {
 
     } catch (err) {
         logger.error('Error in settings/pagination-list:', err.message);
+        res.status(500).json({ error: err.message });
+    }
+});
+
+
+// --------------------------------------
+// FIND SETTING CATEGORY BY NAME
+// --------------------------------------
+router.get('/setcategory/:id', async (req, res) => {
+    try {
+        const result = await settingsRequester.send({
+            type: 'setcategory-setting',
+            setcategory: req.params.id
+        });
+
+        if (!result.status) {
+            await saveErrorLog({
+                api_name: 'setcategory-setting',
+                method: 'GET',
+                payload: { setcategory: req.params.id },
+                message: result.error,
+                stack: result.stack || '',
+                error_code: result.code || 2004
+            });
+            return res.status(500).json(result);
+        }
+
+        res.json(result);
+
+    } catch (err) {
+        logger.error('Error in settings/setcategory:', err.message);
         res.status(500).json({ error: err.message });
     }
 });

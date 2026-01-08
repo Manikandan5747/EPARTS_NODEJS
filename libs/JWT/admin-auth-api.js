@@ -35,6 +35,11 @@ module.exports = async function AdminStartAuthApi(req, res, next) {
       [user_id]
     );
     const sessionuser = checkUser.rows[0];
+
+    if (!sessionuser) {
+          return errorHandler({ name: "UserLoggedOut" }, req, res);
+        }
+
     const login_id = sessionuser.login_id;
 
     // 3️⃣ Check active session with same access token

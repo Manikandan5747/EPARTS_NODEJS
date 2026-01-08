@@ -15,6 +15,26 @@ responder.on('create-currency', async (req, cb) => {
     try {
         const { code, name, symbol, description, created_by } = req.body;
 
+        if (!name || !name.trim()) {
+            return cb(null, { status: false, code: 2001, error: 'Currency name is required' });
+        }
+
+        if (!code || !code.trim()) {
+            return cb(null, { status: false, code: 2001, error: 'Code is required' });
+        }
+
+        // CHECK DUPLICATE COUNTRY
+        const check = await pool.query(
+            `SELECT currency_id FROM currency
+              WHERE UPPER(name) = UPPER($1) AND is_deleted = FALSE`,
+            [name.trim()]
+        );
+
+        if (check.rowCount > 0) {
+            return cb(null, { status: false, code: 2002, error: 'Currency already exists' });
+        }
+
+
         const query = `
             INSERT INTO currency (code, name, symbol, description, created_by)
             VALUES ($1, $2, $3, $4, $5)
@@ -66,14 +86,14 @@ responder.on('getById-currency', async (req, cb) => {
 // UPDATE CURRENCY
 // --------------------------------------
 responder.on('update-currency', async (req, cb) => {
-  try {
-    const { code, name, symbol, description, modified_by } = req.body;
-    const currency_uuid = req.currency_uuid;
+    try {
+        const { code, name, symbol, description, modified_by, is_active } = req.body;
+        const currency_uuid = req.currency_uuid;
 
-    // --------------------------------------
-    // 🔍 DUPLICATE CHECK
-    // --------------------------------------
-    const duplicateQuery = `
+        // --------------------------------------
+        // 🔍 DUPLICATE CHECK
+        // --------------------------------------
+        const duplicateQuery = `
       SELECT currency_id 
       FROM currency
       WHERE 
@@ -85,59 +105,59 @@ responder.on('update-currency', async (req, cb) => {
         AND currency_uuid != $3
     `;
 
-    const dup = await pool.query(duplicateQuery, [
-      code.trim(),
-      name.trim(),
-      currency_uuid
-    ]);
+        const dup = await pool.query(duplicateQuery, [
+            code.trim(),
+            name.trim(),
+            currency_uuid
+        ]);
 
-    if (dup.rowCount > 0) {
-      return cb(null, {
-        status: false,
-        code: 2003,
-        message: "Currency code or name already exists"
-      });
-    }
+        if (dup.rowCount > 0) {
+            return cb(null, {
+                status: false,
+                code: 2003,
+                message: "Currency code or name already exists"
+            });
+        }
 
-    // --------------------------------------
-    // ✅ UPDATE
-    // --------------------------------------
-    const updateQuery = `
+        // --------------------------------------
+        // ✅ UPDATE
+        // --------------------------------------
+        const updateQuery = `
       UPDATE currency
       SET 
         code = $1,
         name = $2,
         symbol = $3,
         description = $4,
-        modified_by = $5,
+        modified_by = $5,is_active=$6,
         modified_at = NOW()
-      WHERE currency_uuid = $6
+      WHERE currency_uuid = $7
         AND is_deleted = FALSE
       RETURNING *
     `;
 
-    const { rows } = await pool.query(updateQuery, [
-      code.trim(),
-      name.trim(),
-      symbol,
-      description,
-      modified_by,
-      currency_uuid
-    ]);
+        const { rows } = await pool.query(updateQuery, [
+            code.trim(),
+            name.trim(),
+            symbol,
+            description,
+            modified_by, is_active,
+            currency_uuid
+        ]);
 
-    if (rows.length === 0) {
-      return cb(null, {
-        status: false,
-        code: 2004,
-        message: "Currency not found or deleted"
-      });
+        if (rows.length === 0) {
+            return cb(null, {
+                status: false,
+                code: 2004,
+                message: "Currency not found or deleted"
+            });
+        }
+
+        cb(null, { status: true, code: 1000, result: rows[0] });
+
+    } catch (err) {
+        cb(null, { status: false, code: 5000, error: err.message });
     }
-
-    cb(null, { status: true, code: 1000, result: rows[0] });
-
-  } catch (err) {
-    cb(null, { status: false, code: 5000, error: err.message });
-  }
 });
 
 

@@ -15,8 +15,9 @@ module.exports = function createMasterRoutes({
 
     /* ---------------- CREATE ---------------- */
     router.post('/create', async (req, res) => {
-        try {console.log("entityName",entityName);
-             const error = validateMaster(entityName, 'create', req.body);
+        try {
+            console.log("entityName", entityName);
+            const error = validateMaster(entityName, 'create', req.body);
             if (error) {
                 return res.status(500).json({
                     status: false,
@@ -24,7 +25,7 @@ module.exports = function createMasterRoutes({
                     error
                 });
             }
-            
+
             const result = await requester.send({
                 type: api('create'),
                 body: req.body
@@ -130,7 +131,8 @@ module.exports = function createMasterRoutes({
         try {
             const result = await requester.send({
                 type: api('delete'),
-                uuid: req.params.id
+                uuid: req.params.id,
+                body: req.body
             });
 
             if (!result.status) {

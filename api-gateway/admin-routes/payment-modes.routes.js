@@ -2,7 +2,7 @@ require('module-alias/register');
 
 const express = require('express');
 const router = express.Router();
-const paymentModeRequester = require('@libs/requesters/admin-requesters/paymentModes-requester');
+const paymentModeRequester = require('@libs/requesters/admin-requesters/payment-modes-requester');
 const logger = require('@libs/logger/logger');
 const { saveErrorLog } = require('@libs/common/common-util');
 

@@ -1,0 +1,1 @@
+module.exports = require('./base-requester')('make_offer_status');

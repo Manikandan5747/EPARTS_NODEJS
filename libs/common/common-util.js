@@ -126,7 +126,22 @@ module.exports = {
             return { status: false, error: err.message };
         }
 
-    }
+    },
+
+    getAllSettingsCategory: function (setcategory) {
+        return new Promise(async (resolve, reject) => {
+            try {
+                const response = await pool.query(
+                    'SELECT * FROM settings where setcategory=$1 and is_active=true  ORDER BY setting_id ASC',
+                    [setcategory],
+                );
+                resolve(response.rows);
+            } catch (err) {
+                console.error("Error saving login log:", err.message);
+                reject(err);
+            }
+        });
+    },
 }
 
 

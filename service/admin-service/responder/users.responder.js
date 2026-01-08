@@ -7,6 +7,8 @@ const bcrypt = require("bcryptjs");
 const jwt = require("jsonwebtoken");
 const { saveLoginLog, sendmail } = require('@libs/common/common-util');
 const APP_CONFIG = require('@libs/config/config.prod');
+const { getAllSettingsCategory } = require('@libs/common/common-util');
+
 
 // REDIS CONNECTION & COTE RESPONDER SETUP
 const redisHost = process.env.COTE_DISCOVERY_REDIS_HOST || '127.0.0.1';
@@ -105,7 +107,7 @@ responder.on('create-users', async (req, cb) => {
                 email,
                 password_hash,
                 phone_number,
-                role_id,reporting_to,
+                role_id, reporting_to,
                 created_by,
             ]
         };
@@ -273,7 +275,7 @@ responder.on('update-users', async (req, cb) => {
             email,
             phone_number,
             role_id,
-            modified_by,reporting_to
+            modified_by, reporting_to, is_active,
         } = body;
 
         if (!user_uuid) {
@@ -340,11 +342,11 @@ responder.on('update-users', async (req, cb) => {
                 modified_by = $5,
                 modified_at = NOW(),
                 fullname = $7,
-                reporting_to = $8,
+                reporting_to = $8,is_active=$9
             WHERE user_uuid = $6
             RETURNING 
                 user_id, user_uuid, username, email, phone_number, role_id,
-                is_active, created_at, modified_at,fullname,reporting_to
+                is_active, created_at, modified_at,fullname,reporting_to,is_active
         `;
 
         const update = await pool.query(updateQuery, [
@@ -354,7 +356,7 @@ responder.on('update-users', async (req, cb) => {
             role_id,
             modified_by,
             user_uuid,
-            fullname,reporting_to
+            fullname, reporting_to, is_active
         ]);
 
         return cb(null, {
@@ -507,9 +509,9 @@ responder.on('advancefilter-users', async (req, cb) => {
             /* ---------------- Allowed Search/Sort Fields ---------------- */
             allowedFields: [
                 'username', 'email', 'phone_number',
-                'role_id', 'role_name', 'owner_id','reporting_to',
+                'role_id', 'role_name', 'owner_id', 'reporting_to',
                 'is_active', 'created_at', 'modified_at',
-                'createdByName', 'updatedByName', 'fullname','reporting_to_name'
+                'createdByName', 'updatedByName', 'fullname', 'reporting_to_name'
             ],
 
             /* ---------------- Custom Joined Fields ---------------- */
@@ -529,7 +531,7 @@ responder.on('advancefilter-users', async (req, cb) => {
                     search: 'updaters.username',
                     sort: 'updaters.username'
                 },
-                 reporting_to_name: {
+                reporting_to_name: {
                     select: 'reto.username',
                     search: 'reto.username',
                     sort: 'reto.username'
@@ -899,17 +901,40 @@ async function createUserSession(login_id, user_uuid, accessToken, device_detail
 // Generate JWT tokens
 // --------------------------------------------------
 function generateTokens(user) {
+    let jwtKeyValue = null;
+    let accessTokenExpiry = null;
+    let refreshTokenExpiry = null;
+
+    (async () => {
+        try {
+            const arr = await getAllSettingsCategory('JWT');
+            console.log("arr", arr);
+
+            const jwtKey = arr?.find(e => e.setparameter === "JWT_KEY");
+            jwtKeyValue = jwtKey?.setparametervalue || null;
+
+            const accessExp = arr?.find(e => e.setparameter === "ACCESS_TOKEN_EXPIRES_IN");
+            accessTokenExpiry = accessExp?.setparametervalue || null;
+
+            const refreshExp = arr?.find(e => e.setparameter === "REFRESH_TOKEN_EXPIRES_IN");
+            refreshTokenExpiry = refreshExp?.setparametervalue || null;
+
+        } catch (err) {
+            console.error("JWT Settings Load Failed:", err);
+        }
+    })();
+
 
     const accessToken = jwt.sign(
         { user_id: user.user_id, user_uuid: user.user_uuid, username: user.username, login_id: user.login_id },
-        'a4db08b7-5729-4ba9-8c08-f2df493465a1',
-        { expiresIn: process.env.ACCESS_TOKEN_EXPIRES_IN || "24h" }
+        jwtKeyValue,
+        { expiresIn: accessTokenExpiry }
     );
 
     const refreshToken = jwt.sign(
         { user_id: user.user_id },
-        'a4db08b7-5729-4ba9-8c08-f2df493465a1',
-        { expiresIn: process.env.REFRESH_TOKEN_EXPIRES_IN || "48h" }
+        jwtKeyValue,
+        { expiresIn: refreshTokenExpiry }
     );
 
     console.log("refreshToken", refreshToken);

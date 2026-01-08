@@ -6,9 +6,6 @@ const stateRequester = require('@libs/requesters/admin-requesters/states-request
 const logger = require('@libs/logger/logger');
 const { saveErrorLog } = require('@libs/common/common-util');
 
-
-
-
 // --------------------------------------
 // CREATE STATE
 // --------------------------------------
@@ -231,6 +228,36 @@ router.post('/clone/:id', async (req, res) => {
         res.send(result);
     } catch (err) {
         logger.error('Error in states/clone:', err.message);
+        res.status(500).json({ error: err.message });
+    }
+});
+
+
+
+// --------------------------------------
+// FIND COUNTRY_ID BY ID
+// --------------------------------------
+router.get('/countryid/:id', async (req, res) => {
+    try {
+        const result = await stateRequester.send({
+            type: 'getById-countryid',
+            country_uuid: req.params.id
+        });
+
+        if (!result.status) {
+            await saveErrorLog({
+                api_name: 'getById-countryid',
+                method: 'GET',
+                payload: { country_uuid: req.params.id },
+                message: result.error,
+                stack: result.stack || '',
+                error_code: result.code || 2004
+            });
+            return res.status(500).json(result);
+        }
+        res.json(result);
+    } catch (err) {
+        logger.error('Error in states countryid/findbyid:', err.message);
         res.status(500).json({ error: err.message });
     }
 });

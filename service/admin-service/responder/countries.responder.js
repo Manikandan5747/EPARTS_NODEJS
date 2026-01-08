@@ -141,7 +141,7 @@ responder.on('update-country', async (req, cb) => {
             currency_id,
             flag_icon_path,
             description,
-            modified_by
+            modified_by,is_active
         } = req.body;
 
         // -----------------------------
@@ -197,9 +197,9 @@ responder.on('update-country', async (req, cb) => {
                  currency_id = $4,
                  flag_icon_path = $5,
                  description = $6,
-                 modified_by = $7,
+                 modified_by = $7,is_active=$8,
                  modified_at = NOW()
-             WHERE country_uuid = $8
+             WHERE country_uuid = $9
              RETURNING *`,
             [
                 name.trim(),
@@ -208,7 +208,7 @@ responder.on('update-country', async (req, cb) => {
                 currency_id || null,
                 flag_icon_path || existingFlagPath, // 👈 keep old flag if not sent
                 description || null,
-                modified_by || null,
+                modified_by || null,is_active,
                 country_uuid
             ]
         );

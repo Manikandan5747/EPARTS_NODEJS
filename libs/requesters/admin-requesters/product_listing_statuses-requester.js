@@ -1,0 +1,1 @@
+module.exports = require('./base-requester')('product_listing_statuses');

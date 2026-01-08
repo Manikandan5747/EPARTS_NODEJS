@@ -43,23 +43,54 @@ async function buildAdvancedSearchQuery({
         params.push(value);
     };
 
-    /* ---------------- Basic SearchTerm ---------------- */
-    for (const [field, obj] of Object.entries(SearchTerm)) {
-        const val = obj?.filterVal;
-        if (!val) continue;
+    // /* ---------------- Basic SearchTerm ---------------- */
+    // for (const [field, obj] of Object.entries(SearchTerm)) {
+    //     const val = obj?.filterVal;
+    //     if (!val) continue;
 
-        const col = customFields[field]?.search ||
-            (allowedFields.includes(field) ? `${alias}.${field}` : null);
+    //     const col = customFields[field]?.search ||
+    //         (allowedFields.includes(field) ? `${alias}.${field}` : null);
 
-        if (!col) continue;
+    //     if (!col) continue;
 
-        if (['created_at', 'modified_at'].includes(field)) {
-            const d = isoDate(val);
-            if (d) addClause(`DATE(${col}) = $${params.length + 1}`, d);
-        } else {
-            addClause(`${col} ILIKE $${params.length + 1}`, `%${val}%`);
-        }
+    //     if (['created_at', 'modified_at'].includes(field)) {
+    //         const d = isoDate(val);
+    //         if (d) addClause(`DATE(${col}) = $${params.length + 1}`, d);
+    //     } else {
+    //         addClause(`${col} ILIKE $${params.length + 1}`, `%${val}%`);
+    //     }
+    // }
+
+
+ /* ---------------- Basic SearchTerm ---------------- */
+for (const [field, val] of Object.entries(SearchTerm || {})) {
+    if (val === undefined || val === null || val === '') continue;
+
+    const col = customFields[field]?.search ||
+        (allowedFields.includes(field) ? `${alias}.${field}` : null);
+
+    if (!col) continue;
+
+    // DATE fields
+    if (['created_at', 'modified_at'].includes(field)) {
+        const d = isoDate(val);
+        if (d) addClause(`DATE(${col}) = $${params.length + 1}`, d);
+
+    // BOOLEAN fields
+    } else if (typeof val === 'boolean') {
+        addClause(`${col} = $${params.length + 1}`, val);
+
+    // NUMBER fields
+    } else if (typeof val === 'number') {
+        addClause(`${col} = $${params.length + 1}`, val);
+
+    // STRING fields
+    } else {
+        addClause(`${col} ILIKE $${params.length + 1}`, `%${val}%`);
     }
+}
+
+
 
     /* ---------------- Advanced Search (AND/OR) ---------------- */
     let advClauses = [];
@@ -67,10 +98,10 @@ async function buildAdvancedSearchQuery({
 
     for (let i = 0; i < advanceFilters.length; i++) {
         const filter = advanceFilters[i];
-        const field = filter.selectedField;
-        const op = (filter.comparisonOperator || '=').toUpperCase();
-        const val = filter.filterCriteria;
-        const logic = (filter.logicalOperator || 'AND').toUpperCase();
+        const field = filter.selectFields;
+        const op = (filter.selectCondition || '=').toUpperCase();
+        const val = filter.enterValue;
+        const logic = (filter.joinCondition || 'AND').toUpperCase();
 
         if (!val || !field || !safeOps.has(op)) continue;
 
@@ -144,7 +175,7 @@ async function buildAdvancedSearchQuery({
     return {
         page,
         pageSize,
-        totalRecords:total,
+        totalRecords: total,
         totalPages,
         data: rows
     };

@@ -4,24 +4,82 @@ module.exports = {
         update: ['code', 'name']
     },
 
-    'countries': {
-        create: ['name', 'country_code'],
-        update: ['name', 'country_code']
+    'registration-status': {
+        create: ['code', 'name'],
+        update: ['code', 'name']
     },
 
-    'currency': {
-        create: ['currency_name', 'currency_code'],
-        update: ['currency_name']
+    'registration-fail-reasons': {
+        create: ['code', 'name'],
+        update: ['code', 'name']
     },
 
-    'states': {
-        create: ['name', 'country_id'],
-        update: ['name']
+    'product-listing-status': {
+        create: ['code', 'name'],
+        update: ['code', 'name']
     },
 
-    'cities': {
-        create: ['name', 'state_id'],
-        update: ['name']
+    'rejection_reasons': {
+        create: ['code', 'name'],
+        update: ['code', 'name']
+    },
+
+    'category-request-status': {
+        create: ['code', 'name'],
+        update: ['code', 'name']
+    },
+
+    'order_statuses': {
+        create: ['code', 'name'],
+        update: ['code', 'name']
+    },
+
+    'parts_request_statuses': {
+        create: ['code', 'name'],
+        update: ['code', 'name']
+    },
+
+    'payment_statuses': {
+        create: ['code', 'name'],
+        update: ['code', 'name']
+    },
+
+    'quote_statuses': {
+        create: ['code', 'name'],
+        update: ['code', 'name']
+    },
+
+    'refund_statuses': {
+        create: ['code', 'name'],
+        update: ['code', 'name']
+    },
+    'shipment_statuses': {
+        create: ['code', 'name'],
+        update: ['code', 'name']
+    },
+    'make_offer_status': {
+        create: ['code', 'name'],
+        update: ['code', 'name']
+    },
+    'product_listing_statuses': {
+        create: ['code', 'name'],
+        update: ['code', 'name']
+    },
+    'order_type': {
+        create: ['code', 'name'],
+        update: ['code', 'name']
+    },
+    'package_type': {
+        create: ['code', 'name'],
+        update: ['code', 'name']
+    },
+    'jurisdiction': {
+        create: ['code', 'name'],
+        update: ['code', 'name']
+    },
+    'tax_code_master': {
+        create: ['code', 'name'],
+        update: ['code', 'name']
     },
 
     'settings': {

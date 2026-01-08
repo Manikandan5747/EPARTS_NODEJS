@@ -139,6 +139,7 @@ module.exports = (err, req, res, next) => {
 
   /* ---------------------- HANDLE KNOWN ERROR TYPES ---------------------- */
   if (err.name === 'TokenExpiredError') err = handleTokenExpiryError();
+   if (err.name === 'UserLoggedOut') err = handleTokenExpiryError();
   if (err.name === 'NoAuthorizationProvided') err = handleNoAuthorizationProvidedError();
   if (err.name === 'JsonWebTokenError') err = handleJsonWebTokenError();
   if (err.name === 'ValidationError') err = handleValidationError(err);

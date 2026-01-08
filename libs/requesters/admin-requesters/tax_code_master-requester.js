@@ -1,0 +1,1 @@
+module.exports = require('./base-requester')('tax_code_master');

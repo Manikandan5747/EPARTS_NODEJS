@@ -16,7 +16,7 @@ module.exports = function registerMasterResponder({
 
     const api = (action) => `${action}-${key}`;
 
-     console.log("api res",api('create'));
+    console.log("api res", api('create'));
 
     // ---------------- CREATE ----------------
     responder.on(api('create'), async (req, cb) => {
@@ -42,6 +42,28 @@ module.exports = function registerMasterResponder({
             });
         } catch (err) {
             logger.error(`Error (create ${table}):`, err);
+            console.log("err.code", err.code);
+
+
+            if (err.code === '23505') {
+                let detail = "Duplicate value.";
+
+                // Parse Postgres detail: "Key (name)=(USD) already exists."
+                if (err.detail) {
+                    const match = err.detail.match(/\((.*?)\)=/);
+                    if (match) {
+                        detail = `${match[1]} already exists.`;
+                    }
+                }
+
+                return cb(null, {
+                    status: false,
+                    code: 2005,
+                    message: "Duplicate value. This record already exists.",
+                    error: detail
+                });
+            }
+
             return cb(null, { status: false, code: 2004, error: err.message });
         }
     });
@@ -182,8 +204,14 @@ module.exports = function registerMasterResponder({
     });
 
     // ---------------- ADVANCE FILTER ----------------
-    responder.on(`advancefilter-${table}`, async (req, cb) => {
+    responder.on(api('advancefilter'), async (req, cb) => {
         try {
+            // Define joins dynamically if needed
+            const joinSQL = `
+            LEFT JOIN users creators ON ${alias}.created_by = creators.user_uuid
+            LEFT JOIN users updaters ON ${alias}.modified_by = updaters.user_uuid
+        `;
+
             const result = await buildAdvancedSearchQuery({
                 pool,
                 reqBody: req.body,
@@ -191,16 +219,30 @@ module.exports = function registerMasterResponder({
                 alias,
                 defaultSort: 'created_at',
                 allowedFields,
-                joinSql,
-                baseWhere: `${alias}.is_deleted = FALSE`
+                joinSql: joinSQL,      // pass joins here
+                baseWhere: `${alias}.is_deleted = FALSE`,
+                customFields: {        // optional virtual fields
+                    createdByName: {
+                        select: 'creators.username',
+                        search: 'creators.username',
+                        sort: 'creators.username'
+                    },
+                    updatedByName: {
+                        select: 'updaters.username',
+                        search: 'updaters.username',
+                        sort: 'updaters.username'
+                    }
+                }
             });
 
             return cb(null, { status: true, code: 1000, result });
+
         } catch (err) {
             logger.error(`Error (advancefilter ${table}):`, err);
             return cb(null, { status: false, code: 2004, error: err.message });
         }
     });
+
 
     // ---------------- CLONE ----------------
     responder.on(api('clone'), async (req, cb) => {

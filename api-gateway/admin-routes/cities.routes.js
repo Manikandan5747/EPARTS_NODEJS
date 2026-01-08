@@ -231,4 +231,62 @@ router.post('/clone/:id', async (req, res) => {
     }
 });
 
+
+// --------------------------------------
+// FIND COUNTRY_ID BY ID
+// --------------------------------------
+router.get('/countryid/:id', async (req, res) => {
+    try {
+        const result = await cityRequester.send({
+            type: 'getById-city-countryid',
+            country_uuid: req.params.id
+        });
+
+        if (!result.status) {
+            await saveErrorLog({
+                api_name: 'getById-city-countryid',
+                method: 'GET',
+                payload: { country_uuid: req.params.id },
+                message: result.error,
+                stack: result.stack || '',
+                error_code: result.code || 2004
+            });
+            return res.status(500).json(result);
+        }
+        res.json(result);
+    } catch (err) {
+        logger.error('Error in states countryid/findbyid:', err.message);
+        res.status(500).json({ error: err.message });
+    }
+});
+
+
+// --------------------------------------
+// FIND STATE_ID BY ID
+// --------------------------------------
+router.get('/stateid/:id', async (req, res) => {
+    try {
+        const result = await cityRequester.send({
+            type: 'getById-city-stateid',
+            state_uuid: req.params.id
+        });
+
+        if (!result.status) {
+            await saveErrorLog({
+                api_name: 'getById-city-stateid',
+                method: 'GET',
+                payload: { state_uuid: req.params.id },
+                message: result.error,
+                stack: result.stack || '',
+                error_code: result.code || 2004
+            });
+            return res.status(500).json(result);
+        }
+        res.json(result);
+    } catch (err) {
+        logger.error('Error in states state_uuid/findbyid:', err.message);
+        res.status(500).json({ error: err.message });
+    }
+});
+
 module.exports = router;

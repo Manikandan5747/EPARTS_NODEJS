@@ -16,7 +16,6 @@ const responder = new cote.Responder({
 
 
 
-
 // --------------------------------------------------
 // CREATE STATE
 // --------------------------------------------------
@@ -329,7 +328,6 @@ responder.on('clone-state', async (req, cb) => {
         return cb(null, { status: false, code: 2004, error: err.message });
     }
 });
-
 
 
 

@@ -26,7 +26,7 @@ responder.on('create-country', async (req, cb) => {
             currency_id,
             flag_icon_path,
             description,
-            created_by
+            created_by,assigned_to
         } = req.body;
 
         if (!name || !name.trim()) {
@@ -52,8 +52,8 @@ responder.on('create-country', async (req, cb) => {
 
         const insert = await pool.query(
             `INSERT INTO countries
-             (country_uuid, name, country_code, iso_code, currency_id, flag_icon_path, description, created_by)
-             VALUES (gen_random_uuid(), $1, $2, $3, $4, $5, $6, $7)
+             ( name, country_code, iso_code, currency_id, flag_icon_path, description, created_by,assigned_to)
+             VALUES ($1, $2, $3, $4, $5, $6, $7,$8)
              RETURNING *`,
             [
                 name.trim(),
@@ -62,7 +62,8 @@ responder.on('create-country', async (req, cb) => {
                 currency_id || null,
                 flag_icon_path || null,
                 description || null,
-                created_by || null
+                created_by || null,
+                assigned_to
             ]
         );
 

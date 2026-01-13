@@ -122,7 +122,7 @@ responder.on('getById-city', async (req, cb) => {
 responder.on('update-city', async (req, cb) => {
     try {
         const { city_uuid, body } = req;
-        const { country_id, state_id, name, modified_by,is_active } = body;
+        const { country_id, state_id, name, modified_by, is_active } = body;
 
         if (!name || !name.trim()) {
             return cb(null, { status: false, code: 2001, error: 'City name is required' });
@@ -151,7 +151,7 @@ responder.on('update-city', async (req, cb) => {
                 modified_at = NOW()
              WHERE city_uuid = $6
              RETURNING *`,
-            [name.trim(), country_id, state_id, modified_by,is_active, city_uuid]
+            [name.trim(), country_id, state_id, modified_by, is_active, city_uuid]
         );
 
         return cb(null, {
@@ -419,12 +419,21 @@ responder.on('getById-city-stateid', async (req, cb) => {
 
         const state_id = stateResult.rows[0].state_id;
 
-        // 🔹 Get states by state_id
         const result = await pool.query(
-            `SELECT * FROM cities
-             WHERE state_id = $1 AND is_deleted = FALSE`,
+            `SELECT ci.*, 
+            s.state_uuid,
+            c.country_uuid
+     FROM cities ci
+     LEFT JOIN states s 
+            ON ci.state_id = s.state_id
+     LEFT JOIN countries c 
+            ON s.country_id = c.country_id
+     WHERE ci.state_id = $1
+       AND ci.is_deleted = FALSE
+     ORDER BY ci.name ASC`,
             [state_id]
         );
+
 
         if (result.rowCount === 0) {
             return cb(null, { status: false, code: 2003, error: 'State not found' });
@@ -442,4 +451,126 @@ responder.on('getById-city-stateid', async (req, cb) => {
         return cb(null, { status: false, code: 2004, error: err.message });
     }
 });
+
+
+
+// --------------------------------------------------
+//  CITY LIST BY STATE UUID (SEARCH + PAGINATION)
+// --------------------------------------------------
+responder.on("city-list", async (req, cb) => {
+    try {
+        const {
+            state_uuid,
+            search = "",
+            page = 1,
+            limit = 10
+        } = req;
+
+        if (!state_uuid) {
+            return cb(null, {
+                status: false,
+                code: 2001,
+                error: "State UUID is required"
+            });
+        }
+
+        const pageNo = parseInt(page, 10);
+        const limitNo = parseInt(limit, 10);
+        const offset = (pageNo - 1) * limitNo;
+
+        /* ----------------------------------
+           1️⃣ GET State ID
+        ---------------------------------- */
+        const stateResult = await pool.query(
+            `SELECT state_id
+             FROM states
+             WHERE state_uuid = $1
+               AND is_deleted = FALSE`,
+            [state_uuid]
+        );
+
+        if (stateResult.rowCount === 0) {
+            return cb(null, {
+                status: false,
+                code: 2003,
+                error: "State not found"
+            });
+        }
+
+        const state_id = stateResult.rows[0].state_id;
+
+        /* ----------------------------------
+           2️⃣ SEARCH CONDITION
+        ---------------------------------- */
+        let searchSql = "";
+        let params = [state_id];
+        let idx = 2;
+
+        if (search) {
+            searchSql = ` AND LOWER(ci.name) LIKE LOWER($${idx}) `;
+            params.push(`%${search}%`);
+            idx++;
+        }
+
+        /* ----------------------------------
+           3️⃣ TOTAL COUNT
+        ---------------------------------- */
+        const countQuery = await pool.query(
+            `SELECT COUNT(*) AS total
+             FROM cities ci
+             WHERE ci.state_id = $1
+               AND ci.is_deleted = FALSE
+             ${searchSql}`,
+            params
+        );
+
+        const totalRecords = parseInt(countQuery.rows[0].total, 10);
+
+        /* ----------------------------------
+           4️⃣ FETCH CITIES WITH STATE + COUNTRY UUID
+        ---------------------------------- */
+        params.push(limitNo, offset);
+
+        const result = await pool.query(
+            `SELECT 
+                ci.*,
+                s.state_uuid,
+                c.country_uuid
+             FROM cities ci
+             LEFT JOIN states s 
+                    ON ci.state_id = s.state_id
+             LEFT JOIN countries c 
+                    ON s.country_id = c.country_id
+             WHERE ci.state_id = $1
+               AND ci.is_deleted = FALSE
+               AND s.is_deleted = FALSE
+               AND c.is_deleted = FALSE
+             ${searchSql}
+             ORDER BY ci.name ASC
+             LIMIT $${idx} OFFSET $${idx + 1}`,
+            params
+        );
+
+        return cb(null, {
+            status: true,
+            code: 1000,
+            data: {
+                count: result.rowCount,
+                total: totalRecords,
+                page: pageNo,
+                limit: limitNo,
+                data: result.rows
+            }
+        });
+
+    } catch (err) {
+        logger.error("Responder Error (city-list):", err);
+        return cb(null, {
+            status: false,
+            code: 2004,
+            error: err.message
+        });
+    }
+});
+
 

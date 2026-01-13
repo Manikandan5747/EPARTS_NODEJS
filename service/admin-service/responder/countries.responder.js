@@ -427,3 +427,74 @@ responder.on('clone-country', async (req, cb) => {
         return cb(null, { status: false, code: 2004, error: err.message });
     }
 });
+
+
+// --------------------------------------------------
+// COUNTRY LIST (SEARCH + PAGINATION)
+// --------------------------------------------------
+responder.on("country-list", async (req, cb) => {
+    try {
+        const {
+            search = "",
+            page = 1,
+            limit = 10
+        } = req;
+
+        const pageNo = parseInt(page, 10);
+        const limitNo = parseInt(limit, 10);
+        const offset = (pageNo - 1) * limitNo;
+
+        let params = [];
+        let whereSql = `WHERE is_deleted = FALSE`;
+        let idx = 1;
+
+        /* ---------------- SEARCH CONDITION ---------------- */
+        if (search) {
+            whereSql += ` AND LOWER(name) ILIKE LOWER($${idx})`;
+            params.push(`%${search}%`);
+            idx++;
+        }
+
+        /* ---------------- TOTAL COUNT ---------------- */
+        const countResult = await pool.query(
+            `SELECT COUNT(*) AS total
+             FROM countries
+             ${whereSql}`,
+            params
+        );
+
+        const totalRecords = parseInt(countResult.rows[0].total, 10);
+
+        /* ---------------- DATA QUERY ---------------- */
+        params.push(limitNo, offset);
+
+        const result = await pool.query(
+            `SELECT *
+             FROM countries
+             ${whereSql}
+             ORDER BY name ASC
+             LIMIT $${idx} OFFSET $${idx + 1}`,
+            params
+        );
+
+        return cb(null, {
+            status: true,
+            code: 1000,
+            data: {
+                count: result.rowCount,
+                total: totalRecords,
+                page: pageNo,
+                limit: limitNo,
+                data: result.rows
+            }
+        });
+
+    } catch (err) {
+        logger.error("Responder Error (country-list):", err);
+        return cb(null, {
+            status: false,
+            code: 2004,
+            error: err.message
+        });
+    }
+});

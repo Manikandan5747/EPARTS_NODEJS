@@ -14,12 +14,13 @@ const responder = new cote.Responder({
     redis: { host: redisHost, port: redisPort }
 });
 
+
 // --------------------------------------------------
 // CREATE CITY
 // --------------------------------------------------
 responder.on('create-city', async (req, cb) => {
     try {
-        const { country_id, state_id, name, created_by } = req.body;
+        const { country_id, state_id, name, created_by, assigned_to } = req.body;
 
         if (!name || !name.trim()) {
             return cb(null, { status: false, code: 2001, error: 'City name is required' });
@@ -46,10 +47,10 @@ responder.on('create-city', async (req, cb) => {
         }
 
         const insert = await pool.query(
-            `INSERT INTO cities (city_uuid, country_id, state_id, name, created_by)
-             VALUES (gen_random_uuid(), $1, $2, $3, $4)
+            `INSERT INTO cities (city_uuid, country_id, state_id, name, created_by, assigned_to)
+             VALUES (gen_random_uuid(), $1, $2, $3, $4, $5)
              RETURNING *`,
-            [country_id, state_id, cityName, created_by]
+            [country_id, state_id, cityName, created_by, assigned_to]
         );
 
         return cb(null, {
@@ -64,6 +65,7 @@ responder.on('create-city', async (req, cb) => {
         return cb(null, { status: false, code: 2004, error: err.message });
     }
 });
+
 
 // --------------------------------------------------
 // LIST CITIES

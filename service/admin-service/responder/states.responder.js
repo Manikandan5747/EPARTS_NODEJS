@@ -14,12 +14,15 @@ const responder = new cote.Responder({
     redis: { host: redisHost, port: redisPort }
 });
 
+
+
+
 // --------------------------------------------------
 // CREATE STATE
 // --------------------------------------------------
 responder.on('create-state', async (req, cb) => {
     try {
-        const { country_id, name, created_by } = req.body;
+        const { country_id, name, created_by, assigned_to } = req.body;
 
         if (!name || !name.trim()) {
             return cb(null, { status: false, code: 2001, error: 'State name is required' });
@@ -40,10 +43,10 @@ responder.on('create-state', async (req, cb) => {
         }
 
         const insert = await pool.query(
-            `INSERT INTO states (state_uuid, country_id, name, created_by)
-             VALUES (gen_random_uuid(), $1, $2, $3)
+            `INSERT INTO states (state_uuid, country_id, name, created_by, assigned_to)
+             VALUES (gen_random_uuid(), $1, $2, $3, $4)
              RETURNING *`,
-            [country_id, stateName, created_by]
+            [country_id, stateName, created_by, assigned_to]
         );
 
         return cb(null, {
@@ -114,7 +117,7 @@ responder.on('getById-state', async (req, cb) => {
 responder.on('update-state', async (req, cb) => {
     try {
         const { state_uuid, body } = req;
-        const { name, country_id, modified_by,is_active } = body;
+        const { name, country_id, modified_by, is_active } = body;
 
         if (!name || !name.trim()) {
             return cb(null, { status: false, code: 2001, error: 'State name is required' });
@@ -141,7 +144,7 @@ responder.on('update-state', async (req, cb) => {
                 modified_at = NOW()
              WHERE state_uuid = $5
              RETURNING *`,
-            [name.trim(), country_id, modified_by, is_active,state_uuid]
+            [name.trim(), country_id, modified_by, is_active, state_uuid]
         );
 
         return cb(null, {
@@ -329,6 +332,7 @@ responder.on('clone-state', async (req, cb) => {
 
 
 
+
 // --------------------------------------------------
 //  FIND STATES BY COUNTRY UUID
 // --------------------------------------------------
@@ -355,7 +359,8 @@ responder.on('getById-countryid', async (req, cb) => {
 
         // 🔹 Get states by country_id
         const result = await pool.query(
-            `SELECT * FROM states
+            `SELECT s.*, c.country_uuid  FROM states s
+            LEFT JOIN countries c ON s.country_id = c.country_id
              WHERE country_id = $1 AND is_deleted = FALSE`,
             [country_id]
         );
@@ -376,4 +381,119 @@ responder.on('getById-countryid', async (req, cb) => {
         return cb(null, { status: false, code: 2004, error: err.message });
     }
 });
+
+
+// --------------------------------------------------
+//  STATE LIST BY COUNTRY UUID (SEARCH + PAGINATION)
+// --------------------------------------------------
+responder.on("state-list", async (req, cb) => {
+    try {
+        const {
+            country_uuid,
+            search = "",
+            page = 1,
+            limit = 10
+        } = req;
+
+        if (!country_uuid) {
+            return cb(null, {
+                status: false,
+                code: 2001,
+                error: "Country UUID is required"
+            });
+        }
+
+        const pageNo = parseInt(page, 10);
+        const limitNo = parseInt(limit, 10);
+        const offset = (pageNo - 1) * limitNo;
+
+        /* ----------------------------------
+           1️⃣ GET COUNTRY ID
+        ---------------------------------- */
+        const countryResult = await pool.query(
+            `SELECT country_id
+             FROM countries
+             WHERE country_uuid = $1
+               AND is_deleted = FALSE`,
+            [country_uuid]
+        );
+
+        if (countryResult.rowCount === 0) {
+            return cb(null, {
+                status: false,
+                code: 2003,
+                error: "Country not found"
+            });
+        }
+
+        const country_id = countryResult.rows[0].country_id;
+
+        /* ----------------------------------
+           2️⃣ SEARCH CONDITION
+        ---------------------------------- */
+        let searchSql = "";
+        let params = [country_id];
+        let idx = 2;
+
+        if (search) {
+            searchSql = ` AND LOWER(s.name) LIKE LOWER($${idx}) `;
+            params.push(`%${search}%`);
+            idx++;
+        }
+
+        /* ----------------------------------
+           3️⃣ TOTAL COUNT
+        ---------------------------------- */
+        const countQuery = await pool.query(
+            `SELECT COUNT(*) AS total
+             FROM states s
+             WHERE s.country_id = $1
+               AND s.is_deleted = FALSE
+             ${searchSql}`,
+            params
+        );
+
+        const totalRecords = parseInt(countQuery.rows[0].total, 10);
+
+        /* ----------------------------------
+           4️⃣ FETCH STATES WITH PAGINATION + JOIN
+        ---------------------------------- */
+        params.push(limitNo, offset);
+
+        const result = await pool.query(
+            `SELECT s.*, c.country_uuid, c.name AS country_name
+             FROM states s
+             LEFT JOIN countries c 
+                    ON s.country_id = c.country_id
+             WHERE s.country_id = $1
+               AND s.is_deleted = FALSE
+             ${searchSql}
+             ORDER BY s.name ASC
+             LIMIT $${idx} OFFSET $${idx + 1}`,
+            params
+        );
+
+        return cb(null, {
+            status: true,
+            code: 1000,
+            data: {
+                count: result.rowCount,
+                total: totalRecords,
+                page: pageNo,
+                limit: limitNo,
+                data: result.rows
+            }
+        });
+
+    } catch (err) {
+        logger.error("Responder Error (state-list):", err);
+        return cb(null, {
+            status: false,
+            code: 2004,
+            error: err.message
+        });
+    }
+});
+
+
 

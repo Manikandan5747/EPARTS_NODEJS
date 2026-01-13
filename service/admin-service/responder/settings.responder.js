@@ -13,6 +13,7 @@ const responder = new cote.Responder({
 });
 
 
+
 // --------------------------------------------------
 // CREATE SETTING
 // --------------------------------------------------
@@ -24,7 +25,8 @@ responder.on('create-setting', async (req, cb) => {
             setparametervalue,
             settingdate,
             settingexpirydate,
-            created_by
+            created_by,
+            assigned_to
         } = req.body;
 
         if (!setcategory || !setparameter) {
@@ -51,8 +53,8 @@ responder.on('create-setting', async (req, cb) => {
 
         const insert = await pool.query(`
             INSERT INTO settings
-            (setcategory, setparameter, setparametervalue, settingdate, settingexpirydate, created_by)
-            VALUES ($1,$2,$3,$4,$5,$6)
+            (setcategory, setparameter, setparametervalue, settingdate, settingexpirydate, created_by, assigned_to)
+            VALUES ($1,$2,$3,$4,$5,$6,$7)
             RETURNING *
         `, [
             setcategory,
@@ -60,7 +62,8 @@ responder.on('create-setting', async (req, cb) => {
             setparametervalue,
             settingdate,
             settingexpirydate,
-            created_by
+            created_by,
+            assigned_to
         ]);
 
         cb(null, {
@@ -75,7 +78,6 @@ responder.on('create-setting', async (req, cb) => {
         cb(null, { status: false, code: 2004, error: err.message });
     }
 });
-
 
 // --------------------------------------------------
 // LIST SETTINGS

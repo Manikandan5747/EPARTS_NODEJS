@@ -61,7 +61,7 @@ app.use('/seller', checkApiKey, SellerPublicRoutes);
 // Assign assigned_to middleware
 const assignAssignedTo = (req, res, next) => {
     if (req.method === "POST" && req.body) {
-        req.body.assigned_to = req.body.created_by || req.body.modified_by || req.body.assigned_to;
+        req.body.assigned_to = req.body.created_by || req.body.assigned_to;
     }
     next();
 };

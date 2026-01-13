@@ -8,20 +8,20 @@ const { saveErrorLog } = require('@libs/common/common-util');
 const multipart = require("connect-multiparty");
 const path = require('path');
 
-// const uploadDir = path.join('/app/assets', 'countries');
-// const multipartMiddleware = multipart({ uploadDir });
-
-
-const fs = require('fs');
-
-const uploadDir = 'C:/inetpub/wwwroot/EPARTS/PRODUCTION_FILES/countries_files';
-
-// Create directory if missing
-if (!fs.existsSync(uploadDir)) {
-  fs.mkdirSync(uploadDir, { recursive: true });
-}
-
+const uploadDir = path.join('/app/assets', 'countries');
 const multipartMiddleware = multipart({ uploadDir });
+
+
+// const fs = require('fs');
+
+// const uploadDir = 'C:/inetpub/wwwroot/EPARTS/PRODUCTION_FILES/countries_files';
+
+// // Create directory if missing
+// if (!fs.existsSync(uploadDir)) {
+//   fs.mkdirSync(uploadDir, { recursive: true });
+// }
+
+// const multipartMiddleware = multipart({ uploadDir });
 
 // --------------------------------------
 // CREATE COUNTRY
@@ -258,6 +258,51 @@ router.post('/clone/:id', async (req, res) => {
     } catch (err) {
         logger.error('Error in country/clone:', err.message);
         res.status(500).json({ error: err.message });
+    }
+});
+
+
+
+// --------------------------------------
+// COUNTRY LIST (SEARCH + PAGINATION)
+// --------------------------------------
+router.get("/listpagination", async (req, res) => {
+    try {
+        const {
+            search = "",
+            page = 1,
+            limit = 10
+        } = req.query;
+
+        const result = await countryRequester.send({
+            type: "country-list",
+            search,
+            page: Number(page),
+            limit: Number(limit)
+        });
+
+        if (!result.status) {
+            await saveErrorLog({
+                api_name: "country-list",
+                method: "GET",
+                payload: { search, page, limit },
+                message: result.error,
+                stack: result.stack || "",
+                error_code: result.code || 2004
+            });
+
+            return res.status(500).json(result);
+        }
+
+        return res.status(200).json(result);
+
+    } catch (err) {
+        logger.error("Error in /country/listpagination:", err);
+        return res.status(500).json({
+            status: false,
+            code: 2004,
+            error: err.message
+        });
     }
 });
 

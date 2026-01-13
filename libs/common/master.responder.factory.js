@@ -58,7 +58,7 @@ module.exports = function registerMasterResponder({
 
                 return cb(null, {
                     status: false,
-                    code: 2005,
+                    code: 2002,
                     message: "Duplicate value. This record already exists.",
                     error: detail
                 });
@@ -121,6 +121,16 @@ module.exports = function registerMasterResponder({
         try {
             const uuid = req[uuidColumn] || req.uuid;
             const body = req.body;
+
+
+            const check = await pool.query(
+                `SELECT * FROM ${table} WHERE ${uuidColumn} = $1 AND is_deleted = FALSE`,
+                [uuid]
+            );
+
+            if (check.rowCount === 0) {
+                return cb(null, { status: false, code: 2003, error: `${table} not found` });
+            }
 
             const columns = Object.keys(body);
             const values = Object.values(body);
@@ -185,6 +195,16 @@ module.exports = function registerMasterResponder({
             const uuid = req[uuidColumn] || req.uuid;
             const isActive = req.body?.is_active;
             const modified_by = req.body?.modified_by;
+
+
+            const check = await pool.query(
+                `SELECT * FROM ${table} WHERE ${uuidColumn} = $1 AND is_deleted = FALSE`,
+                [uuid]
+            );
+
+            if (check.rowCount === 0) {
+                return cb(null, { status: false, code: 2003, error: `${table} not found` });
+            }
 
             const result = await pool.query(
                 `UPDATE ${table} SET is_active = $1, modified_at = NOW(), modified_by = $2 WHERE ${uuidColumn} = $3 RETURNING *`,
@@ -289,6 +309,87 @@ module.exports = function registerMasterResponder({
         } catch (err) {
             logger.error(`Error (clone ${table}):`, err);
             return cb(null, { status: false, code: 2004, error: err.message });
+        }
+    });
+
+
+
+    /* ======================================================
+     LIST + SEARCH + PAGINATION (COMMON FOR ALL MASTERS)
+  ====================================================== */
+    responder.on(`${key}-listpagination`, async (req, cb) => {
+        try {
+
+            let searchableFields = ['code', 'name'];
+            const {
+                search = '',
+                page = 1,
+                limit = 10
+            } = req;
+
+            const pageNo = parseInt(page, 10);
+            const limitNo = parseInt(limit, 10);
+            const offset = (pageNo - 1) * limitNo;
+
+            let whereSql = `WHERE ${alias}.is_deleted = FALSE`;
+            let params = [];
+            let idx = 1;
+
+            /* -------- SEARCH (SAFE) -------- */
+            if (search && searchableFields.length) {
+                const conditions = searchableFields.map(
+                    field => `LOWER(${alias}.${field}) LIKE LOWER($${idx})`
+                );
+                whereSql += ` AND (${conditions.join(' OR ')})`;
+                params.push(`%${search}%`);
+                idx++;
+            }
+
+
+            /* -------- COUNT -------- */
+            const countQuery = `
+                SELECT COUNT(*) AS total
+                FROM ${table} ${alias}
+                ${joinSql}
+                ${whereSql}
+            `;
+
+            const countResult = await pool.query(countQuery, params);
+            const totalRecords = parseInt(countResult.rows[0].total, 10);
+
+            /* -------- DATA -------- */
+            params.push(limitNo, offset);
+
+            const dataQuery = `
+                SELECT ${alias}.*
+                FROM ${table} ${alias}
+                ${joinSql}
+                ${whereSql}
+                ORDER BY ${alias}.created_at DESC
+                LIMIT $${idx} OFFSET $${idx + 1}
+            `;
+
+            const result = await pool.query(dataQuery, params);
+
+            return cb(null, {
+                status: true,
+                code: 1000,
+                data: {
+                    count: result.rowCount,
+                    total: totalRecords,
+                    page: pageNo,
+                    limit: limitNo,
+                    data: result.rows
+                }
+            });
+
+        } catch (err) {
+            logger.error(`Error (${key}-listpagination):`, err);
+            return cb(null, {
+                status: false,
+                code: 2004,
+                error: err.message
+            });
         }
     });
 

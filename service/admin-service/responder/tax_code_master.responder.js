@@ -19,7 +19,7 @@ registerMasterResponder({
     table: 'tax_code_master',
     alias: 'PT',
     uuidColumn: 'tax_code_uuid',
-    allowedFields: ['code', 'name', 'is_active', 'created_at', 'modified_at']
+    allowedFields: ['code', 'name','tax_rate','is_active', 'created_at', 'modified_at']
 });
 
 module.exports = responder;

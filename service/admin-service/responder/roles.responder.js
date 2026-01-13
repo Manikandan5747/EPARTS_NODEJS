@@ -23,7 +23,9 @@ responder.on('create-role', async (req, cb) => {
         const {
             dept_id,
             cmp_id,
-            created_by,hierarchy_level
+            created_by,
+            hierarchy_level,
+            assigned_to
         } = req.body;
 
         const role_name = req.body?.role_name?.trim() || null;
@@ -63,9 +65,9 @@ responder.on('create-role', async (req, cb) => {
         // --------------------------------------------------
         const insert = await pool.query(
             `INSERT INTO user_role 
-                    (role_name, dept_id, cmp_id,hierarchy_level, created_by)
-                VALUES ($1, $2, $3, $4,$5)`,
-            [role_name, dept_id, cmp_id,hierarchy_level, created_by]
+                    (role_name, dept_id, cmp_id,hierarchy_level, created_by,assigned_to)
+                VALUES ($1, $2, $3, $4,$5,$6)`,
+            [role_name, dept_id, cmp_id,hierarchy_level, created_by,assigned_to]
         );
 
         const result = {
@@ -102,7 +104,7 @@ responder.on('list-role', async (req, cb) => {
                 r.created_at,
                 r.created_by,
                 r.modified_at,
-                r.modified_by,
+                r.modified_by, r.assigned_at, r.assigned_to
                 r.deleted_at,
                 r.deleted_by,
                 r.is_deleted,
@@ -146,7 +148,7 @@ responder.on('getById-role', async (req, cb) => {
         const { role_uuid } = req;
 
         const result = await pool.query(
-            `SELECT role_id,role_uuid,role_name,hierarchy_level, dept_id,is_deleted,deleted_at,deleted_by, cmp_id, is_active
+            `SELECT role_id,role_uuid,role_name,hierarchy_level, dept_id,is_deleted,deleted_at,deleted_by, cmp_id, is_active, assigned_at, assigned_to
              FROM user_role
              WHERE role_uuid = $1 AND is_deleted = FALSE`,
             [role_uuid]

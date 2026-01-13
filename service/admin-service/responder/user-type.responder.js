@@ -15,6 +15,7 @@ const responder = new cote.Responder({
 });
 
 
+
 // --------------------------------------------------
 // CREATE USER TYPE (Corrected)
 // --------------------------------------------------
@@ -23,7 +24,8 @@ responder.on('create-usertype', async (req, cb) => {
         const {
             code,
             description,
-            created_by
+            created_by,
+            assigned_to
         } = req.body;
 
         const name = req.body?.name?.trim() || null;
@@ -61,10 +63,10 @@ responder.on('create-usertype', async (req, cb) => {
         // --------------------------------------------------
         const insert = await pool.query(
             `INSERT INTO user_types 
-                (name, code, description, created_by)
-             VALUES ($1, $2, $3, $4)
+                (name, code, description, created_by, assigned_to)
+             VALUES ($1, $2, $3, $4, $5)
              RETURNING user_type_id, name, code, description, is_active`,
-            [name, code, description, created_by]
+            [name, code, description, created_by, assigned_to]
         );
 
         const result = {

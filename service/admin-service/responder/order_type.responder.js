@@ -18,7 +18,7 @@ registerMasterResponder({
     key:'order_type',
     table: 'order_type',
     alias: 'PT',
-    uuidColumn: '',
+    uuidColumn: 'order_type_uuid',
     allowedFields: ['code', 'name', 'is_active', 'created_at', 'modified_at']
 });
 

@@ -21,6 +21,8 @@ const responder = new cote.Responder({
 });
 
 
+
+
 // --------------------------------------------------
 // CREATE USER
 // --------------------------------------------------
@@ -32,7 +34,7 @@ responder.on('create-users', async (req, cb) => {
             password,
             phone_number,
             role_id,
-            created_by, reporting_to
+            created_by, reporting_to, assigned_to
         } = req.body;
 
         // --------------------------------------------------
@@ -96,9 +98,9 @@ responder.on('create-users', async (req, cb) => {
         const insertQuery = {
             text: `
                 INSERT INTO users 
-                    (username,fullname, email, password_hash, phone_number, role_id,reporting_to, created_by)
+                    (username,fullname, email, password_hash, phone_number, role_id,reporting_to, created_by, assigned_to)
                 VALUES 
-                    ($1, $2, $3, $4, $5, $6,$7,$8)
+                    ($1, $2, $3, $4, $5, $6,$7,$8,$9)
                 RETURNING 
                     user_id, user_uuid, username, email, phone_number, role_id, is_active
             `,
@@ -108,7 +110,7 @@ responder.on('create-users', async (req, cb) => {
                 password_hash,
                 phone_number,
                 role_id, reporting_to,
-                created_by,
+                created_by, assigned_to
             ]
         };
 

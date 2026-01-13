@@ -13,12 +13,13 @@ const responder = new cote.Responder({
     redis: { host: redisHost, port: redisPort }
 });
 
+
 // --------------------------------------------------
 // CREATE PAYMENT MODE
 // --------------------------------------------------
 responder.on('create-payment-mode', async (req, cb) => {
     try {
-        const { code, name, description, created_by } = req.body;
+        const { code, name, description, created_by, assigned_to } = req.body;
 
         if (!code || !name) {
             return cb(null, { status: false, code: 2001, error: 'Code and Name are required' });
@@ -35,10 +36,10 @@ responder.on('create-payment-mode', async (req, cb) => {
         }
 
         const insert = await pool.query(
-            `INSERT INTO payment_modes (code, name, description, created_by)
-             VALUES ($1, $2, $3, $4)
+            `INSERT INTO payment_modes (code, name, description, created_by, assigned_to)
+             VALUES ($1, $2, $3, $4, $5)
              RETURNING *`,
-            [code, name, description, created_by]
+            [code, name, description, created_by, assigned_to]
         );
 
         return cb(null, {
@@ -53,6 +54,7 @@ responder.on('create-payment-mode', async (req, cb) => {
         return cb(null, { status: false, code: 2004, error: err.message });
     }
 });
+
 
 // --------------------------------------------------
 // LIST PAYMENT MODES

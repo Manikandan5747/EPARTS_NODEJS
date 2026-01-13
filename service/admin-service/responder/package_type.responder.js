@@ -18,7 +18,7 @@ registerMasterResponder({
     key:'package_type',
     table: 'package_type',
     alias: 'PT',
-    uuidColumn: '',
+    uuidColumn: 'package_type_uuid',
     allowedFields: ['code', 'name', 'is_active', 'created_at', 'modified_at']
 });
 

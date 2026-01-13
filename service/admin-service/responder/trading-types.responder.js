@@ -17,12 +17,13 @@ const responder = new cote.Responder({
     redis: { host: redisHost, port: redisPort }
 });
 
+
 // --------------------------------------
 // CREATE TRADING TYPE
 // --------------------------------------
 responder.on('create-trading-type', async (req, cb) => {
     try {
-        const { code, name, description, created_by } = req.body;
+        const { code, name, description, created_by, assigned_to } = req.body;
 
         if (!code || !name) {
             return cb(null, { status: false, code: 2001, error: 'Code and Name are required' });
@@ -43,10 +44,10 @@ responder.on('create-trading-type', async (req, cb) => {
 
         const insert = await pool.query(
             `INSERT INTO trading_types
-             (trading_type_uuid, code, name, description, created_by)
-             VALUES (gen_random_uuid(), $1, $2, $3, $4)
+             (trading_type_uuid, code, name, description, created_by, assigned_to)
+             VALUES (gen_random_uuid(), $1, $2, $3, $4, $5)
              RETURNING *`,
-            [code, name, description || null, created_by || null]
+            [code, name, description || null, created_by || null, assigned_to]
         );
 
         return cb(null, {
@@ -61,6 +62,7 @@ responder.on('create-trading-type', async (req, cb) => {
         return cb(null, { status: false, code: 2004, error: err.message });
     }
 });
+
 
 // --------------------------------------
 // LIST TRADING TYPES

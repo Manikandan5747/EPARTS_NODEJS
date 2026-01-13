@@ -56,7 +56,7 @@ pipeline {
                     docker-compose up -d
                     docker ps
                     
-                    bat "docker image prune -f"
+                   
                     echo ================================
                     echo ✅ Docker Compose Completed
                     echo ================================

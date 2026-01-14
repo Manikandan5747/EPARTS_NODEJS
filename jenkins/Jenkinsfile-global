@@ -1,76 +1,77 @@
 pipeline {
     agent any
 
+    options {
+        skipDefaultCheckout(true)
+    }
+
     stages {
 
         stage('Cleanup Workspace') {
             steps {
-                cleanWs deleteDirs: true, disableDeferredWipeout: true
+                cleanWs(deleteDirs: true, disableDeferredWipeout: true)
             }
         }
 
         stage('Checkout') {
             steps {
-                checkout scm
+                checkout scm   // Make sure Git repo is configured in Jenkins job
             }
         }
 
         stage('Check Docker Environment') {
             steps {
-                bat """
+                bat '''
                     echo ================================
-                    echo 🔍 Checking Docker Installation
+                    echo Checking Docker Installation
                     echo ================================
 
                     docker --version
                     docker-compose --version
 
                     echo ================================
-                    echo ✅ Docker Environment Verified
+                    echo Docker Environment Verified
                     echo ================================
-                """
+                '''
             }
         }
 
         stage('Install Dependencies') {
             steps {
-                bat """
+                bat '''
                     echo ================================
-                    echo 📦 Installing NPM Dependencies
+                    echo Installing NPM Dependencies
                     echo ================================
-                    cd ${WORKSPACE}
                     npm install
-                """
+                '''
             }
         }
 
         stage('Docker Compose Build & Run') {
             steps {
-                bat """
+                bat '''
                     echo ================================
-                    echo 🐳 Building & Starting Containers
+                    echo Building & Starting Containers
                     echo ================================
-                    cd ${WORKSPACE}
                     docker-compose down
-                    docker-compose build 
+                    docker-compose build
                     docker-compose up -d
                     docker ps
-                    
-                   
+
                     echo ================================
-                    echo ✅ Docker Compose Completed
+                    echo Docker Compose Completed
                     echo ================================
-                """
+                '''
             }
         }
     }
 
     post {
         success {
-            echo '✅ All services are up and running successfully!'
+            echo 'All services are up and running successfully!'
         }
         failure {
-            echo '❌ Build failed! Please check the logs for details.'
+            echo 'Build failed! Please check the logs for details.'
         }
         always {
             echo 'Pipeline execution finished.'

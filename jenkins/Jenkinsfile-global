@@ -1,6 +1,10 @@
 pipeline {
     agent any
 
+    options {
+        skipDefaultCheckout(true)   // 🔴 THIS LINE FIXES YOUR ISSUE
+    }
+
     environment {
         DOCKER_BUILD_DIR = "C:\\docker-builds\\eParts_backend"
     }
@@ -23,15 +27,13 @@ pipeline {
             steps {
                 bat '''
                 echo =====================================
-                echo 📁 Preparing External Docker Build Dir
+                echo Preparing External Docker Build Dir
                 echo =====================================
 
                 if exist "%DOCKER_BUILD_DIR%" rmdir /s /q "%DOCKER_BUILD_DIR%"
                 mkdir "%DOCKER_BUILD_DIR%"
 
                 xcopy "%WORKSPACE%\\*" "%DOCKER_BUILD_DIR%\\" /E /I /Y
-
-                echo ✅ Source copied to Docker build directory
                 '''
             }
         }
@@ -62,6 +64,9 @@ pipeline {
         }
         failure {
             echo '❌ Build Failed!'
+        }
+        always {
+            echo 'Pipeline finished.'
         }
     }
 }

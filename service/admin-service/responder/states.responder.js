@@ -125,6 +125,10 @@ responder.on('update-state', async (req, cb) => {
         const { state_uuid, body } = req;
         const { name, country_id, modified_by, is_active } = body;
 
+        const result = await pool.query(`SELECT * FROM states WHERE state_uuid = $1 AND is_deleted = FALSE`, [state_uuid]);
+        if (result.rowCount === 0) {
+            return cb(null, { status: false, code: 2003, error: 'State not found' });
+        }
         if (!name || !name.trim()) {
             return cb(null, { status: false, code: 2001, error: 'State name is required' });
         }
@@ -174,6 +178,11 @@ responder.on('delete-state', async (req, cb) => {
         const { state_uuid } = req;
         const { deleted_by } = req.body;
 
+          const result = await pool.query(`SELECT * FROM states WHERE state_uuid = $1 AND is_deleted = FALSE`, [state_uuid]);
+        if (result.rowCount === 0) {
+            return cb(null, { status: false, code: 2003, error: 'State not found' });
+        }
+
         await pool.query(
             `UPDATE states SET
                 is_deleted = TRUE,
@@ -204,6 +213,11 @@ responder.on('status-state', async (req, cb) => {
         const { state_uuid } = req;
         const { modified_by, is_active } = req.body;
 
+          const result = await pool.query(`SELECT * FROM states WHERE state_uuid = $1 AND is_deleted = FALSE`, [state_uuid]);
+        if (result.rowCount === 0) {
+            return cb(null, { status: false, code: 2003, error: 'State not found' });
+        }
+        
         await pool.query(
             `UPDATE states SET
                 is_active = $1,

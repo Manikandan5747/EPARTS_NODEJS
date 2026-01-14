@@ -130,6 +130,16 @@ responder.on('update-trading-type', async (req, cb) => {
             return cb(null, { status: false, code: 2001, error: 'Code and Name are required' });
         }
 
+        const result = await pool.query(
+            `SELECT * FROM trading_types
+             WHERE trading_type_uuid = $1 AND is_deleted = FALSE`,
+            [trading_type_uuid]
+        );
+
+        if (result.rowCount === 0) {
+            return cb(null, { status: false, code: 2003, error: 'Trading Type not found' });
+        }
+
         const duplicate = await pool.query(
             `SELECT trading_type_id 
              FROM trading_types
@@ -175,6 +185,7 @@ responder.on('delete-trading-type', async (req, cb) => {
     try {
         const { trading_type_uuid } = req;
 
+
         const check = await pool.query(
             `SELECT trading_type_id FROM trading_types
              WHERE trading_type_uuid = $1 AND is_deleted = FALSE`,
@@ -214,6 +225,16 @@ responder.on('status-trading-type', async (req, cb) => {
         const { trading_type_uuid, body } = req;
         const { modified_by } = body;
 
+
+        const result = await pool.query(
+            `SELECT * FROM trading_types
+             WHERE trading_type_uuid = $1 AND is_deleted = FALSE`,
+            [trading_type_uuid]
+        );
+
+        if (result.rowCount === 0) {
+            return cb(null, { status: false, code: 2003, error: 'Trading Type not found' });
+        }
         await pool.query(
             `UPDATE trading_types
              SET is_active = NOT is_active,

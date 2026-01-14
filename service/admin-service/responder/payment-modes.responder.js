@@ -107,6 +107,16 @@ responder.on('update-payment-mode', async (req, cb) => {
         const { payment_mode_uuid, body } = req;
         const { code, name, description, modified_by } = body;
 
+         const result = await pool.query(
+            `SELECT * FROM payment_modes 
+             WHERE payment_mode_uuid = $1 AND is_deleted = FALSE`,
+            [payment_mode_uuid]
+        );
+
+        if (!result.rowCount) {
+            return cb(null, { status: false, code: 2003, error: 'Payment mode not found' });
+        }
+
         const update = await pool.query(
             `UPDATE payment_modes
              SET code = $1, name = $2, description = $3,
@@ -133,6 +143,17 @@ responder.on('update-payment-mode', async (req, cb) => {
 // --------------------------------------------------
 responder.on('delete-payment-mode', async (req, cb) => {
     try {
+
+         const result = await pool.query(
+            `SELECT * FROM payment_modes 
+             WHERE payment_mode_uuid = $1 AND is_deleted = FALSE`,
+            [req.payment_mode_uuid]
+        );
+
+        if (!result.rowCount) {
+            return cb(null, { status: false, code: 2003, error: 'Payment mode not found' });
+        }
+
         await pool.query(
             `UPDATE payment_modes
              SET is_deleted = TRUE, is_active = FALSE,
@@ -153,6 +174,17 @@ responder.on('delete-payment-mode', async (req, cb) => {
 // --------------------------------------------------
 responder.on('status-payment-mode', async (req, cb) => {
     try {
+
+           const result = await pool.query(
+            `SELECT * FROM payment_modes 
+             WHERE payment_mode_uuid = $1 AND is_deleted = FALSE`,
+            [req.payment_mode_uuid]
+        );
+
+        if (!result.rowCount) {
+            return cb(null, { status: false, code: 2003, error: 'Payment mode not found' });
+        }
+        
         await pool.query(
             `UPDATE payment_modes
              SET is_active = NOT is_active,

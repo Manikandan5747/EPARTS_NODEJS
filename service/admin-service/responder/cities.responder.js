@@ -185,6 +185,11 @@ responder.on('delete-city', async (req, cb) => {
         const { city_uuid } = req;
         const { deleted_by } = req.body;
 
+        const result = await pool.query(`SELECT * FROM cities WHERE city_uuid = $1 AND is_deleted = FALSE`, [city_uuid]);
+        if (result.rowCount === 0) {
+            return cb(null, { status: false, code: 2003, error: 'City not found' });
+        }
+
         await pool.query(
             `UPDATE cities SET
                 is_deleted = TRUE,
@@ -215,6 +220,11 @@ responder.on('status-city', async (req, cb) => {
         const { city_uuid } = req;
         const { is_active, modified_by } = req.body;
 
+         const result = await pool.query(`SELECT * FROM cities WHERE city_uuid = $1 AND is_deleted = FALSE`, [city_uuid]);
+        if (result.rowCount === 0) {
+            return cb(null, { status: false, code: 2003, error: 'City not found' });
+        }
+        
         await pool.query(
             `UPDATE cities SET
                 is_active = $1,

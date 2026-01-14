@@ -13,7 +13,7 @@ const responder = new cote.Responder({
 // --------------------------------------
 responder.on('create-currency', async (req, cb) => {
     try {
-        const { code, name, symbol, description, created_by, assigned_to } = req.body;
+        const { code, name, symbol, description, created_by } = req.body;
 
         if (!name || !name.trim()) {
             return cb(null, { status: false, code: 2001, error: 'Currency name is required' });
@@ -36,23 +36,22 @@ responder.on('create-currency', async (req, cb) => {
 
 
         const query = `
-            INSERT INTO currency (code, name, symbol, description, created_by, assigned_to)
-            VALUES ($1, $2, $3, $4, $5, $6)
+            INSERT INTO currency (code, name, symbol, description, created_by)
+            VALUES ($1, $2, $3, $4, $5)
             RETURNING *
         `;
 
         const { rows } = await pool.query(query, [
-            code, name, symbol, description, created_by, assigned_to
+            code, name, symbol, description, created_by
         ]);
 
-        cb(null, { status: true, code: 1000, result: rows[0] });
+        cb(null, { status: true, code: 1000, result: rows[0], message: 'Currency created successfully', });
 
     } catch (err) {
         logger.error('[create-currency]', err);
         cb(null, { status: false, code: 2004, error: err.message });
     }
 });
-
 
 // --------------------------------------
 // LIST CURRENCY
@@ -62,7 +61,7 @@ responder.on('list-currency', async (req, cb) => {
         const { rows } = await pool.query(
             `SELECT * FROM currency WHERE is_deleted = FALSE ORDER BY created_at DESC`
         );
-        cb(null, { status: true, code: 1000, data: rows });
+        cb(null, { status: true, code: 1000, result: rows });
     } catch (err) {
         cb(null, { status: false, code: 2004, error: err.message });
     }
@@ -73,11 +72,22 @@ responder.on('list-currency', async (req, cb) => {
 // --------------------------------------
 responder.on('getById-currency', async (req, cb) => {
     try {
-        const { rows } = await pool.query(
+
+        const { rows, rowCount } = await pool.query(
             `SELECT * FROM currency WHERE currency_uuid = $1 AND is_deleted = FALSE`,
             [req.currency_uuid]
         );
-        cb(null, { status: true, code: 1000, data: rows[0] });
+
+
+        if (rowCount === 0) {
+            return cb(null, {
+                status: false,
+                code: 2003,
+                error: "Currency not found"
+            });
+        }
+
+        cb(null, { status: true, code: 1000, result: rows[0] });
     } catch (err) {
         cb(null, { status: false, code: 2004, error: err.message });
     }
@@ -154,7 +164,7 @@ responder.on('update-currency', async (req, cb) => {
             });
         }
 
-        cb(null, { status: true, code: 1000, data: rows[0] });
+        cb(null, { status: true, code: 1000, result: rows[0] });
 
     } catch (err) {
         cb(null, { status: false, code: 5000, error: err.message });
@@ -167,13 +177,28 @@ responder.on('update-currency', async (req, cb) => {
 // --------------------------------------
 responder.on('delete-currency', async (req, cb) => {
     try {
+
+        const { rows, rowCount } = await pool.query(
+            `SELECT * FROM currency WHERE currency_uuid = $1 AND is_deleted = FALSE`,
+            [req.currency_uuid]
+        );
+
+
+        if (rowCount === 0) {
+            return cb(null, {
+                status: false,
+                code: 2003,
+                error: "Currency not found"
+            });
+        }
+
         await pool.query(
             `UPDATE currency
              SET is_deleted=TRUE, deleted_at=NOW()
              WHERE currency_uuid=$1`,
             [req.currency_uuid]
         );
-        cb(null, { status: true, code: 1000 });
+        cb(null, { status: true, code: 1000, message: "Currency deleted successfully" });
     } catch (err) {
         cb(null, { status: false, code: 2004, error: err.message });
     }
@@ -184,6 +209,22 @@ responder.on('delete-currency', async (req, cb) => {
 // --------------------------------------
 responder.on('status-currency', async (req, cb) => {
     try {
+
+        const { rows, rowCount } = await pool.query(
+            `SELECT * FROM currency WHERE currency_uuid = $1 AND is_deleted = FALSE`,
+            [req.currency_uuid]
+        );
+
+
+        if (rowCount === 0) {
+            return cb(null, {
+                status: false,
+                code: 2003,
+                error: "Currency not found"
+            });
+        }
+
+
         const { is_active } = req.body;
         await pool.query(
             `UPDATE currency
@@ -191,7 +232,7 @@ responder.on('status-currency', async (req, cb) => {
              WHERE currency_uuid=$2`,
             [is_active, req.currency_uuid]
         );
-        cb(null, { status: true, code: 1000 });
+        cb(null, { status: true, code: 1000, message: "Currency status updated successfully" });
     } catch (err) {
         cb(null, { status: false, code: 2004, error: err.message });
     }

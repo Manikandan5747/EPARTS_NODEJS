@@ -13,7 +13,6 @@ const responder = new cote.Responder({
 });
 
 
-
 // --------------------------------------------------
 // CREATE SETTING
 // --------------------------------------------------
@@ -25,8 +24,7 @@ responder.on('create-setting', async (req, cb) => {
             setparametervalue,
             settingdate,
             settingexpirydate,
-            created_by,
-            assigned_to
+            created_by
         } = req.body;
 
         if (!setcategory || !setparameter) {
@@ -53,8 +51,8 @@ responder.on('create-setting', async (req, cb) => {
 
         const insert = await pool.query(`
             INSERT INTO settings
-            (setcategory, setparameter, setparametervalue, settingdate, settingexpirydate, created_by, assigned_to)
-            VALUES ($1,$2,$3,$4,$5,$6,$7)
+            (setcategory, setparameter, setparametervalue, settingdate, settingexpirydate, created_by)
+            VALUES ($1,$2,$3,$4,$5,$6)
             RETURNING *
         `, [
             setcategory,
@@ -62,8 +60,7 @@ responder.on('create-setting', async (req, cb) => {
             setparametervalue,
             settingdate,
             settingexpirydate,
-            created_by,
-            assigned_to
+            created_by
         ]);
 
         cb(null, {
@@ -78,6 +75,7 @@ responder.on('create-setting', async (req, cb) => {
         cb(null, { status: false, code: 2004, error: err.message });
     }
 });
+
 
 // --------------------------------------------------
 // LIST SETTINGS
@@ -233,6 +231,18 @@ responder.on('delete-setting', async (req, cb) => {
         const { setting_uuid } = req;
         const { deleted_by } = req.body;
 
+
+         const result = await pool.query(`
+            SELECT *
+            FROM settings
+            WHERE setting_uuid=$1
+              AND is_deleted=FALSE
+        `, [setting_uuid]);
+
+        if (result.rowCount === 0) {
+            return cb(null, { status: false, code: 2003, error: 'Setting not found' });
+        }
+
         await pool.query(`
             UPDATE settings
             SET is_deleted=TRUE,
@@ -263,6 +273,17 @@ responder.on('status-setting', async (req, cb) => {
         const { setting_uuid } = req;
         const { is_active, modified_by } = req.body;
 
+         const result = await pool.query(`
+            SELECT *
+            FROM settings
+            WHERE setting_uuid=$1
+              AND is_deleted=FALSE
+        `, [setting_uuid]);
+
+        if (result.rowCount === 0) {
+            return cb(null, { status: false, code: 2003, error: 'Setting not found' });
+        }
+        
         await pool.query(`
             UPDATE settings
             SET is_active=$1,

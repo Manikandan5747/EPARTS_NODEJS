@@ -93,7 +93,7 @@ responder.on('list-country', async (req, cb) => {
 
         return cb(null, {
             status: true,
-            code: 1000,
+            code: 1000,message: "Country list fetched successfully",
             count: result.rowCount,
             data: result.rows
         });

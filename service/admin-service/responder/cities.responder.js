@@ -81,6 +81,7 @@ responder.on('list-city', async (req, cb) => {
         return cb(null, {
             status: true,
             code: 1000,
+            message: "City list fetched successfully",
             count: result.rowCount,
             data: result.rows
         });

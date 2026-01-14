@@ -22,7 +22,7 @@ app.use(cors()); // Enables CORS for all origins and all routes
 // --------------------------------------
 // const allowedOrigins = [
 //    'http://localhost:3000',
-//    'http://localhost:4000',
+//    'http://localhost:3000',
 //    'https://yourdomain.com'
 // ];
 
@@ -88,10 +88,10 @@ app.use(
 // GLOBAL ERROR HANDLER
 app.use(errorHandler);
 
-app.listen(4000, (err) => {
+app.listen(3000, (err) => {
     if (err) {
         logger.error('Failed to start server:', err);
         process.exit(1);
     }
-    logger.info('Server listening on port 4000');
+    logger.info('Server listening on port 3000');
 });

@@ -1,66 +1,98 @@
 pipeline {
     agent any
 
-    options {
-        skipDefaultCheckout(true)
-    }
-
     stages {
 
+        /* ---------------------------------------------------
+           STOP DOCKER CONTAINERS (Release folder locks)
+        --------------------------------------------------- */
+        stage('Stop Docker Containers') {
+            steps {
+                bat '''
+                echo =====================================
+                echo 🛑 Stopping running Docker containers
+                echo =====================================
+
+                for /f %%i in ('docker ps -q') do docker stop %%i
+                for /f %%i in ('docker ps -aq') do docker rm %%i
+
+                echo =====================================
+                echo 🧹 Cleaning unused Docker resources
+                echo =====================================
+                docker system prune -af
+
+                echo ✅ Docker cleanup completed
+                '''
+            }
+        }
+
+        /* ---------------------------------------------------
+           CLEAN WORKSPACE
+        --------------------------------------------------- */
         stage('Cleanup Workspace') {
             steps {
                 cleanWs(deleteDirs: true, disableDeferredWipeout: true)
             }
         }
 
+        /* ---------------------------------------------------
+           CHECKOUT SOURCE
+        --------------------------------------------------- */
         stage('Checkout') {
             steps {
-                checkout scm   // Make sure Git repo is configured in Jenkins job
+                checkout scm
             }
         }
 
+        /* ---------------------------------------------------
+           CHECK DOCKER
+        --------------------------------------------------- */
         stage('Check Docker Environment') {
             steps {
                 bat '''
-                    echo ================================
-                    echo Checking Docker Installation
-                    echo ================================
-
-                    docker --version
-                    docker-compose --version
-
-                    echo ================================
-                    echo Docker Environment Verified
-                    echo ================================
+                echo =====================================
+                echo 🔍 Checking Docker Installation
+                echo =====================================
+                docker --version
+                docker-compose --version
+                echo ✅ Docker Environment Verified
                 '''
             }
         }
 
+        /* ---------------------------------------------------
+           INSTALL NPM
+        --------------------------------------------------- */
         stage('Install Dependencies') {
             steps {
                 bat '''
-                    echo ================================
-                    echo Installing NPM Dependencies
-                    echo ================================
-                    npm install
+                echo =====================================
+                echo 📦 Installing NPM Dependencies
+                echo =====================================
+                cd %WORKSPACE%
+                npm install
                 '''
             }
         }
 
+        /* ---------------------------------------------------
+           DOCKER BUILD & RUN
+        --------------------------------------------------- */
         stage('Docker Compose Build & Run') {
             steps {
                 bat '''
-                    echo ================================
-                    echo Building & Starting Containers
-                    echo ================================
-                    docker-compose down
-                    docker-compose build
-                    docker-compose up -d
-                    docker ps
+                echo =====================================
+                echo 🐳 Building & Starting Containers
+                echo =====================================
 
-                    echo ================================
-                    echo Docker Compose Completed
-                    echo ================================
+                cd %WORKSPACE%
+                docker-compose down
+                docker-compose build
+                docker-compose up -d
+
+                docker ps
+
+                echo ✅ Docker Compose Completed
                 '''
             }
         }
@@ -68,10 +100,10 @@ pipeline {
 
     post {
         success {
-            echo 'All services are up and running successfully!'
+            echo '✅ All services are up and running successfully!'
         }
         failure {
-            echo 'Build failed! Please check the logs for details.'
+            echo '❌ Build failed! Please check the logs for details.'
         }
         always {
             echo 'Pipeline execution finished.'

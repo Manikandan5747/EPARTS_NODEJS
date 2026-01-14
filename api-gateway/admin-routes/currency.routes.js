@@ -214,4 +214,48 @@ router.post('/pagination-list', async (req, res) => {
     }
 });
 
+
+// --------------------------------------
+// currency LIST (SEARCH + PAGINATION)
+// --------------------------------------
+router.get("/listpagination", async (req, res) => {
+    try {
+        const {
+            search = "",
+            page = 1,
+            limit = 10
+        } = req.query;
+
+        const result = await currencyRequester.send({
+            type: "currency-list",
+            search,
+            page: Number(page),
+            limit: Number(limit)
+        });
+
+        if (!result.status) {
+            await saveErrorLog({
+                api_name: "currency-list",
+                method: "GET",
+                payload: { search, page, limit },
+                message: result.error,
+                stack: result.stack || "",
+                error_code: result.code || 2004
+            });
+
+            return res.status(500).json(result);
+        }
+
+        return res.status(200).json(result);
+
+    } catch (err) {
+        logger.error("Error in /currency/listpagination:", err);
+        return res.status(500).json({
+            status: false,
+            code: 2004,
+            error: err.message
+        });
+    }
+});
+
 module.exports = router;

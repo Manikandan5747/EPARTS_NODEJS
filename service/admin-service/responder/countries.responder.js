@@ -26,7 +26,7 @@ responder.on('create-country', async (req, cb) => {
             currency_id,
             flag_icon_path,
             description,
-            created_by,assigned_to
+            created_by, assigned_to
         } = req.body;
 
         if (!name || !name.trim()) {
@@ -86,14 +86,20 @@ responder.on('create-country', async (req, cb) => {
 responder.on('list-country', async (req, cb) => {
     try {
         const result = await pool.query(
-            `SELECT * FROM countries
-             WHERE is_deleted = FALSE
-             ORDER BY created_at ASC`
+            `SELECT 
+        co.*,
+        cu.currency_uuid
+     FROM countries co
+     LEFT JOIN currencies cu
+            ON co.currency_id = cu.currency_id
+     WHERE co.is_deleted = FALSE
+     ORDER BY co.created_at ASC`
         );
+
 
         return cb(null, {
             status: true,
-            code: 1000,message: "Country list fetched successfully",
+            code: 1000, message: "Country list fetched successfully",
             count: result.rowCount,
             data: result.rows
         });
@@ -142,7 +148,7 @@ responder.on('update-country', async (req, cb) => {
             currency_id,
             flag_icon_path,
             description,
-            modified_by,is_active
+            modified_by, is_active
         } = req.body;
 
         // -----------------------------
@@ -209,7 +215,7 @@ responder.on('update-country', async (req, cb) => {
                 currency_id || null,
                 flag_icon_path || existingFlagPath, // 👈 keep old flag if not sent
                 description || null,
-                modified_by || null,is_active,
+                modified_by || null, is_active,
                 country_uuid
             ]
         );

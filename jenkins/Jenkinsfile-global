@@ -1,98 +1,56 @@
 pipeline {
     agent any
 
+    environment {
+        DOCKER_BUILD_DIR = "C:\\docker-builds\\eParts_backend"
+    }
+
     stages {
 
-        /* ---------------------------------------------------
-           STOP DOCKER CONTAINERS (Release folder locks)
-        --------------------------------------------------- */
-        stage('Stop Docker Containers') {
-            steps {
-                bat '''
-                echo =====================================
-                echo 🛑 Stopping running Docker containers
-                echo =====================================
-
-                for /f %%i in ('docker ps -q') do docker stop %%i
-                for /f %%i in ('docker ps -aq') do docker rm %%i
-
-                echo =====================================
-                echo 🧹 Cleaning unused Docker resources
-                echo =====================================
-                docker system prune -af
-
-                echo ✅ Docker cleanup completed
-                '''
-            }
-        }
-
-        /* ---------------------------------------------------
-           CLEAN WORKSPACE
-        --------------------------------------------------- */
         stage('Cleanup Workspace') {
             steps {
                 cleanWs(deleteDirs: true, disableDeferredWipeout: true)
             }
         }
 
-        /* ---------------------------------------------------
-           CHECKOUT SOURCE
-        --------------------------------------------------- */
         stage('Checkout') {
             steps {
                 checkout scm
             }
         }
 
-        /* ---------------------------------------------------
-           CHECK DOCKER
-        --------------------------------------------------- */
-        stage('Check Docker Environment') {
+        stage('Prepare Docker Build Directory') {
             steps {
                 bat '''
                 echo =====================================
-                echo 🔍 Checking Docker Installation
+                echo 📁 Preparing External Docker Build Dir
                 echo =====================================
-                docker --version
-                docker-compose --version
-                echo ✅ Docker Environment Verified
+
+                if exist "%DOCKER_BUILD_DIR%" rmdir /s /q "%DOCKER_BUILD_DIR%"
+                mkdir "%DOCKER_BUILD_DIR%"
+
+                xcopy "%WORKSPACE%\\*" "%DOCKER_BUILD_DIR%\\" /E /I /Y
+
+                echo ✅ Source copied to Docker build directory
                 '''
             }
         }
 
-        /* ---------------------------------------------------
-           INSTALL NPM
-        --------------------------------------------------- */
-        stage('Install Dependencies') {
+        stage('Stop Old Containers') {
             steps {
                 bat '''
-                echo =====================================
-                echo 📦 Installing NPM Dependencies
-                echo =====================================
-                cd %WORKSPACE%
-                npm install
+                docker-compose -f "%DOCKER_BUILD_DIR%\\docker-compose.yml" down
                 '''
             }
         }
 
-        /* ---------------------------------------------------
-           DOCKER BUILD & RUN
-        --------------------------------------------------- */
-        stage('Docker Compose Build & Run') {
+        stage('Build & Run Docker') {
             steps {
                 bat '''
-                echo =====================================
-                echo 🐳 Building & Starting Containers
-                echo =====================================
-
-                cd %WORKSPACE%
-                docker-compose down
+                cd "%DOCKER_BUILD_DIR%"
                 docker-compose build
                 docker-compose up -d
-
                 docker ps
-
-                echo ✅ Docker Compose Completed
                 '''
             }
         }
@@ -100,13 +58,10 @@ pipeline {
 
     post {
         success {
-            echo '✅ All services are up and running successfully!'
+            echo '✅ Build & Deployment Successful!'
         }
         failure {
-            echo '❌ Build failed! Please check the logs for details.'
-        }
-        always {
-            echo 'Pipeline execution finished.'
+            echo '❌ Build Failed!'
         }
     }
 }

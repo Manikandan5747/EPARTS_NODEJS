@@ -3,6 +3,7 @@ pipeline {
 
     environment {
         DOCKER_BUILD_DIR = "C:\\docker-builds\\eParts_backend"
+        echo 'Build!'
     }
 
     stages {

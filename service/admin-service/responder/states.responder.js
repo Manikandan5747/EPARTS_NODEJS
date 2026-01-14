@@ -93,10 +93,17 @@ responder.on('getById-state', async (req, cb) => {
         const { state_uuid } = req;
 
         const result = await pool.query(
-            `SELECT * FROM states
-             WHERE state_uuid = $1 AND is_deleted = FALSE`,
+            `SELECT 
+        s.*,
+        c.country_uuid
+     FROM states s
+     LEFT JOIN countries c 
+            ON s.country_id = c.country_id
+     WHERE s.state_uuid = $1
+       AND s.is_deleted = FALSE`,
             [state_uuid]
         );
+
 
         if (result.rowCount === 0) {
             return cb(null, { status: false, code: 2003, error: 'State not found' });

@@ -99,8 +99,17 @@ responder.on('getById-city', async (req, cb) => {
         const { city_uuid } = req;
 
         const result = await pool.query(
-            `SELECT * FROM cities
-             WHERE city_uuid = $1 AND is_deleted = FALSE`,
+            `SELECT 
+        ci.*,
+        s.state_uuid,
+        c.country_uuid
+     FROM cities ci
+     LEFT JOIN states s 
+            ON ci.state_id = s.state_id
+     LEFT JOIN countries c 
+            ON s.country_id = c.country_id
+     WHERE ci.city_uuid = $1
+       AND ci.is_deleted = FALSE`,
             [city_uuid]
         );
 

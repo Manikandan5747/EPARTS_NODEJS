@@ -289,4 +289,88 @@ router.get('/stateid/:id', async (req, res) => {
     }
 });
 
+
+// --------------------------------------
+// FIND STATE_ID BY ID
+// --------------------------------------
+router.get('/stateid/:id', async (req, res) => {
+    try {
+        const result = await cityRequester.send({
+            type: 'getById-city-stateid',
+            state_uuid: req.params.id
+        });
+
+        if (!result.status) {
+            await saveErrorLog({
+                api_name: 'getById-city-stateid',
+                method: 'GET',
+                payload: { state_uuid: req.params.id },
+                message: result.error,
+                stack: result.stack || '',
+                error_code: result.code || 2004
+            });
+            return res.status(500).json(result);
+        }
+        res.json(result);
+    } catch (err) {
+        logger.error('Error in states state_uuid/findbyid:', err.message);
+        res.status(500).json({ error: err.message });
+    }
+});
+
+
+
+// --------------------------------------
+// STATE LIST BY COUNTRY UUID
+// --------------------------------------
+router.get("/listpagination", async (req, res) => {
+    try {
+        const {
+            state_uuid,
+            search = "",
+            page = 1,
+            limit = 10
+        } = req.query;
+
+        if (!state_uuid) {
+            return res.status(400).json({
+                status: false,
+                code: 2001,
+                error: "state_uuid is required"
+            });
+        }
+
+        const result = await cityRequester.send({
+            type: "city-list",
+            state_uuid,
+            search,
+            page: Number(page),
+            limit: Number(limit)
+        });
+
+        if (!result.status) {
+            await saveErrorLog({
+                api_name: "city-list",
+                method: "GET",
+                payload: { state_uuid, search, page, limit },
+                message: result.error,
+                stack: result.stack || "",
+                error_code: result.code || 2004
+            });
+
+            return res.status(500).json(result);
+        }
+
+        return res.status(200).json(result);
+
+    } catch (err) {
+        logger.error("Error in /state/list:", err);
+        return res.status(500).json({
+            status: false,
+            code: 2004,
+            error: err.message
+        });
+    }
+});
+
 module.exports = router;

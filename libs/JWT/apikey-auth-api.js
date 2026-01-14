@@ -23,7 +23,7 @@ module.exports = function checkApiKey(req, res, next) {
     req.headers['x-apikey'];
 
   if (!apiKeyValue || !clientToken || clientToken !== apiKeyValue) {
-    const err = new AppError('API Key authentication failed', 401, ['apikey']);
+    const err = new AppError('API Key authentication failed  Testing', 401, ['apikey']);
     err.name = 'ApiKeyError';
     return next(err);
   }

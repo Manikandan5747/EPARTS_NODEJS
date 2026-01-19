@@ -101,6 +101,19 @@ responder.on('update-currency', async (req, cb) => {
         const { code, name, symbol, description, modified_by, is_active } = req.body;
         const currency_uuid = req.currency_uuid;
 
+        const Records = await pool.query(
+            `SELECT * FROM currency WHERE currency_uuid = $1 AND is_deleted = FALSE`,
+            [req.currency_uuid]
+        );
+
+        if (Records.rowCount === 0) {
+            return cb(null, {
+                status: false,
+                code: 2003,
+                error: "Currency not found"
+            });
+        }
+
         // --------------------------------------
         // 🔍 DUPLICATE CHECK
         // --------------------------------------

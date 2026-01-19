@@ -1,5 +1,5 @@
 const staticPaths = [
-  { route: '/assets', dir: '/app/assets' }
+  { route: '/app/assets', dir: '/app/assets' }
 ];
 
 module.exports = staticPaths;

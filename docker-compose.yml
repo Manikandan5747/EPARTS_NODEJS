@@ -17,6 +17,7 @@ services:
       - ./api-gateway:C:/app/src
       - ./libs:C:/app/libs
       - ./assets:C:/app/assets
+      - ./logs:C:/app/logs
     depends_on:
       - admin-service
 
@@ -38,6 +39,7 @@ services:
       - ./service/admin-service:C:/app/src
       - ./libs:C:/app/libs 
       - ./assets:C:/app/assets
+      - ./logs:C:/app/logs
 
   buyer-service:
     build:

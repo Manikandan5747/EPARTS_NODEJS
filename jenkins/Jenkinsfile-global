@@ -72,6 +72,7 @@ pipeline {
 
         REM Ensure assets folder always exists and is preserved
         if not exist "%DOCKER_BUILD_DIR%\\assets" mkdir "%DOCKER_BUILD_DIR%\\assets"
+        if not exist "%DOCKER_BUILD_DIR%\\logs" mkdir "%DOCKER_BUILD_DIR%\\logs"
 
         echo ==================================================
         echo Docker build directory prepared successfully

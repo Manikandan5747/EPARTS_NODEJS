@@ -20,16 +20,58 @@ const responder = new cote.Responder({
 // --------------------------------------------------
 responder.on('create-city', async (req, cb) => {
     try {
-        const { country_id, state_id, name, created_by, assigned_to } = req.body;
+        const { country_uuid, state_uuid, name, created_by, assigned_to } = req.body;
 
         if (!name || !name.trim()) {
             return cb(null, { status: false, code: 2001, error: 'City name is required' });
         }
 
-        if (!country_id || !state_id) {
-            return cb(null, { status: false, code: 2001, error: 'Country ID and State ID are required' });
+        if (!country_uuid || !state_uuid) {
+            return cb(null, { status: false, code: 2001, error: 'Country UUID and State UUID are required' });
         }
 
+        
+        // Validate country_uuid and fetch country_id
+        const countryResult = await pool.query(
+            `SELECT country_id 
+             FROM countries
+             WHERE country_uuid = $1
+               AND is_deleted = FALSE
+               AND is_active = TRUE`,
+            [country_uuid]
+        );
+
+        if (countryResult.rowCount === 0) {
+            return cb(null, {
+                status: false,
+                code: 2001,
+                error: 'Invalid or inactive country'
+            });
+        }
+
+        const country_id = countryResult.rows[0].country_id;
+
+        
+        // Validate state_uuid and fetch state_id
+        const stateResult = await pool.query(
+            `SELECT state_id 
+             FROM states
+             WHERE state_uuid = $1
+               AND is_deleted = FALSE
+               AND is_active = TRUE`,
+            [state_uuid]
+        );
+
+        if (stateResult.rowCount === 0) {
+            return cb(null, {
+                status: false,
+                code: 2001,
+                error: 'Invalid or inactive state'
+            });
+        }
+
+        const state_id = stateResult.rows[0].state_id;
+        
         const cityName = name.trim();
 
         // Duplicate check (same city in same state & country)
@@ -129,14 +171,63 @@ responder.on('getById-city', async (req, cb) => {
 // --------------------------------------------------
 // UPDATE CITY
 // --------------------------------------------------
+// --------------------------------------------------
+// UPDATE CITY
+// --------------------------------------------------
 responder.on('update-city', async (req, cb) => {
     try {
         const { city_uuid, body } = req;
-        const { country_id, state_id, name, modified_by, is_active } = body;
+        const { country_uuid, state_uuid, name, modified_by, is_active } = body;
 
         if (!name || !name.trim()) {
             return cb(null, { status: false, code: 2001, error: 'City name is required' });
         }
+
+        if (!country_uuid || !state_uuid) {
+            return cb(null, { status: false, code: 2001, error: 'Country UUID and State UUID are required' });
+        }
+
+        
+        // Validate country_uuid and fetch country_id
+        const countryResult = await pool.query(
+            `SELECT country_id 
+             FROM countries
+             WHERE country_uuid = $1
+               AND is_deleted = FALSE
+               AND is_active = TRUE`,
+            [country_uuid]
+        );
+
+        if (countryResult.rowCount === 0) {
+            return cb(null, {
+                status: false,
+                code: 2001,
+                error: 'Invalid or inactive country'
+            });
+        }
+
+        const country_id = countryResult.rows[0].country_id;
+
+        
+        // Validate state_uuid and fetch state_id
+        const stateResult = await pool.query(
+            `SELECT state_id 
+             FROM states
+             WHERE state_uuid = $1
+               AND is_deleted = FALSE
+               AND is_active = TRUE`,
+            [state_uuid]
+        );
+
+        if (stateResult.rowCount === 0) {
+            return cb(null, {
+                status: false,
+                code: 2001,
+                error: 'Invalid or inactive state'
+            });
+        }
+
+        const state_id = stateResult.rows[0].state_id;
 
         const duplicate = await pool.query(
             `SELECT city_uuid FROM cities

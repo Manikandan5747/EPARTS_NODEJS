@@ -15,13 +15,16 @@ const responder = new cote.Responder({
 });
 
 
-
 // --------------------------------------------------
 // CREATE STATE
 // --------------------------------------------------
 responder.on('create-state', async (req, cb) => {
     try {
-        const { country_id, name, created_by, assigned_to } = req.body;
+        const { country_uuid, name, created_by, assigned_to } = req.body;
+
+        if (!country_uuid) {
+            return cb(null, { status: false, code: 2001, error: 'Country UUID is required' });
+        }
 
         if (!name || !name.trim()) {
             return cb(null, { status: false, code: 2001, error: 'State name is required' });
@@ -29,20 +32,48 @@ responder.on('create-state', async (req, cb) => {
 
         const stateName = name.trim();
 
+        // Validate country_uuid and fetch country_id
+        const countryResult = await pool.query(
+            `SELECT country_id 
+             FROM countries
+             WHERE country_uuid = $1
+               AND is_deleted = FALSE
+               AND is_active = TRUE`,
+            [country_uuid]
+        );
+
+        if (countryResult.rowCount === 0) {
+            return cb(null, {
+                status: false,
+                code: 2001,
+                error: 'Invalid or inactive country'
+            });
+        }
+
+        const country_id = countryResult.rows[0].country_id;
+
+        // Check duplicate state
         const duplicate = await pool.query(
-            `SELECT state_id FROM states
+            `SELECT state_id
+             FROM states
              WHERE UPPER(name) = UPPER($1)
-             AND country_id = $2
-             AND is_deleted = FALSE`,
+               AND country_id = $2
+               AND is_deleted = FALSE`,
             [stateName, country_id]
         );
 
         if (duplicate.rowCount > 0) {
-            return cb(null, { status: false, code: 2002, error: 'State already exists' });
+            return cb(null, {
+                status: false,
+                code: 2002,
+                error: 'State already exists'
+            });
         }
 
+        // Insert state
         const insert = await pool.query(
-            `INSERT INTO states (state_uuid, country_id, name, created_by, assigned_to)
+            `INSERT INTO states
+             (state_uuid, country_id, name, created_by, assigned_to)
              VALUES (gen_random_uuid(), $1, $2, $3, $4)
              RETURNING *`,
             [country_id, stateName, created_by, assigned_to]
@@ -57,7 +88,11 @@ responder.on('create-state', async (req, cb) => {
 
     } catch (err) {
         logger.error('Responder Error (create state):', err);
-        return cb(null, { status: false, code: 2004, error: err.message });
+        return cb(null, {
+            status: false,
+            code: 2004,
+            error: err.message
+        });
     }
 });
 
@@ -123,7 +158,7 @@ responder.on('getById-state', async (req, cb) => {
 responder.on('update-state', async (req, cb) => {
     try {
         const { state_uuid, body } = req;
-        const { name, country_id, modified_by, is_active } = body;
+        const { name, country_uuid, modified_by, is_active } = body;
 
         const result = await pool.query(`SELECT * FROM states WHERE state_uuid = $1 AND is_deleted = FALSE`, [state_uuid]);
         if (result.rowCount === 0) {
@@ -133,6 +168,30 @@ responder.on('update-state', async (req, cb) => {
             return cb(null, { status: false, code: 2001, error: 'State name is required' });
         }
 
+        if (!country_uuid) {
+            return cb(null, { status: false, code: 2001, error: 'Country UUID is required' });
+        }
+        
+        // Validate country_uuid and fetch country_id
+        const countryResult = await pool.query(
+            `SELECT country_id 
+             FROM countries
+             WHERE country_uuid = $1
+               AND is_deleted = FALSE
+               AND is_active = TRUE`,
+            [country_uuid]
+        );
+
+        if (countryResult.rowCount === 0) {
+            return cb(null, {
+                status: false,
+                code: 2001,
+                error: 'Invalid or inactive country'
+            });
+        }
+
+        const country_id = countryResult.rows[0].country_id;
+        
         const duplicate = await pool.query(
             `SELECT state_uuid FROM states
              WHERE UPPER(name) = UPPER($1)

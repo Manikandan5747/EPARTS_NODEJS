@@ -16,7 +16,7 @@ services:
     volumes:
       - ./api-gateway:C:/app/src
       - ./libs:C:/app/libs
-      - ./assets:/app/assets
+      - ./assets:C:/app/assets
     depends_on:
       - admin-service
 

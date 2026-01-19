@@ -48,6 +48,7 @@ pipeline {
         robocopy "%WORKSPACE%\\service" "%DOCKER_BUILD_DIR%\\service" /E
         robocopy "%WORKSPACE%\\jenkins" "%DOCKER_BUILD_DIR%\\jenkins" /E
         robocopy "%WORKSPACE%\\node_modules" "%DOCKER_BUILD_DIR%\\node_modules" /E
+        robocopy "%WORKSPACE%\\libs" "%DOCKER_BUILD_DIR%\\libs" /E
 
         REM Copy specific files
         copy "%WORKSPACE%\\docker-compose.yml" "%DOCKER_BUILD_DIR%\\docker-compose.yml"

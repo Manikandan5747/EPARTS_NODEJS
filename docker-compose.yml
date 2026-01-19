@@ -16,7 +16,7 @@ services:
     volumes:
       - ./api-gateway:C:/app/src
       - ./libs:C:/app/libs
-      - C:/EPARTS/EPARTS_PRODUCTION_FILES/assets:/app/assets
+      - ./assets:/app/assets
     depends_on:
       - admin-service
 
@@ -37,7 +37,7 @@ services:
     volumes:
       - ./service/admin-service:C:/app/src
       - ./libs:C:/app/libs 
-      - C:/EPARTS/EPARTS_PRODUCTION_FILES/assets:/app/assets
+      - ./assets:C:/app/assets
 
   buyer-service:
     build:

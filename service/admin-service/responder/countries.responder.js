@@ -111,7 +111,7 @@ responder.on('list-country', async (req, cb) => {
         co.*,
         cu.currency_uuid
      FROM countries co
-     LEFT JOIN currencies cu
+     LEFT JOIN currency cu
             ON co.currency_id = cu.currency_id
      WHERE co.is_deleted = FALSE
      ORDER BY co.created_at ASC`

@@ -30,7 +30,7 @@ responder.on('create-city', async (req, cb) => {
             return cb(null, { status: false, code: 2001, error: 'Country UUID and State UUID are required' });
         }
 
-        
+
         // Validate country_uuid and fetch country_id
         const countryResult = await pool.query(
             `SELECT country_id 
@@ -51,7 +51,7 @@ responder.on('create-city', async (req, cb) => {
 
         const country_id = countryResult.rows[0].country_id;
 
-        
+
         // Validate state_uuid and fetch state_id
         const stateResult = await pool.query(
             `SELECT state_id 
@@ -71,7 +71,7 @@ responder.on('create-city', async (req, cb) => {
         }
 
         const state_id = stateResult.rows[0].state_id;
-        
+
         const cityName = name.trim();
 
         // Duplicate check (same city in same state & country)
@@ -168,9 +168,7 @@ responder.on('getById-city', async (req, cb) => {
     }
 });
 
-// --------------------------------------------------
-// UPDATE CITY
-// --------------------------------------------------
+
 // --------------------------------------------------
 // UPDATE CITY
 // --------------------------------------------------
@@ -187,7 +185,12 @@ responder.on('update-city', async (req, cb) => {
             return cb(null, { status: false, code: 2001, error: 'Country UUID and State UUID are required' });
         }
 
-        
+        const result = await pool.query(`SELECT * FROM cities WHERE city_uuid = $1 AND is_deleted = FALSE`, [city_uuid]);
+        if (result.rowCount === 0) {
+            return cb(null, { status: false, code: 2003, error: 'City not found' });
+        }
+
+
         // Validate country_uuid and fetch country_id
         const countryResult = await pool.query(
             `SELECT country_id 
@@ -208,7 +211,7 @@ responder.on('update-city', async (req, cb) => {
 
         const country_id = countryResult.rows[0].country_id;
 
-        
+
         // Validate state_uuid and fetch state_id
         const stateResult = await pool.query(
             `SELECT state_id 
@@ -311,11 +314,11 @@ responder.on('status-city', async (req, cb) => {
         const { city_uuid } = req;
         const { is_active, modified_by } = req.body;
 
-         const result = await pool.query(`SELECT * FROM cities WHERE city_uuid = $1 AND is_deleted = FALSE`, [city_uuid]);
+        const result = await pool.query(`SELECT * FROM cities WHERE city_uuid = $1 AND is_deleted = FALSE`, [city_uuid]);
         if (result.rowCount === 0) {
             return cb(null, { status: false, code: 2003, error: 'City not found' });
         }
-        
+
         await pool.query(
             `UPDATE cities SET
                 is_active = $1,

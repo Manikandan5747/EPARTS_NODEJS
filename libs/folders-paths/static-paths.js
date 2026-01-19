@@ -1,6 +1,5 @@
 const staticPaths = [
-  { route: '/uploads', dir: './uploads' },
-   { route: '/settingImg', dir: './settingImg' }
+  { route: '/assets', dir: '/app/assets' }
 ];
 
 module.exports = staticPaths;

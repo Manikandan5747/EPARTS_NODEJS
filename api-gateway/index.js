@@ -10,7 +10,7 @@ const logger = require('@libs/logger/logger');
 const path = require('path');
 app.use(bodyParser.json())
 const cors = require('cors');
-
+const setupStaticFiles = require('@libs/folders-paths/setup-static-files'); 
 // API AUTHENTICATION – ACCESS TOKEN CHECKING FOR EACH REQUEST
 const AdminStartAuthApi = require("@libs/JWT/admin-auth-api");
 const BuyerStartAuthApi = require("@libs/JWT/buyer-auth-api");
@@ -37,6 +37,9 @@ app.use(cors()); // Enables CORS for all origins and all routes
 //    methods: ['GET', 'POST', 'PUT', 'DELETE'],
 //    credentials: true
 // }));
+
+// 🔹 Map static files
+setupStaticFiles(app);
 
 
 // PUBLIC ROUTES
@@ -74,15 +77,6 @@ app.use('/api', checkApiKey,assignAssignedTo,  AdminRoutes);
 app.use('/buyer', checkApiKey,  BuyerRoutes);
 app.use('/seller', checkApiKey,  SellerRoutes);
 
-
-
-
-
-
-app.use(
-  '/upload-files',
-  express.static(path.join('/app/logs', 'upload-files'))
-);
 
 
 // GLOBAL ERROR HANDLER

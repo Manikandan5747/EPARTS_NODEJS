@@ -32,16 +32,29 @@ pipeline {
         //     }
         // }
 
-        stage('Prepare Docker Directory') {
+     stage('Prepare Docker Directory') {
     steps {
         bat '''
         echo ==================================================
         echo Preparing Docker build directory...
         echo ==================================================
 
-        REM Remove old docker build directory
-        if exist "%DOCKER_BUILD_DIR%" rmdir /s /q "%DOCKER_BUILD_DIR%"
-        mkdir "%DOCKER_BUILD_DIR%"
+        REM Create docker build dir if not exists
+        if not exist "%DOCKER_BUILD_DIR%" mkdir "%DOCKER_BUILD_DIR%"
+
+        REM Remove only code folders (DO NOT delete assets)
+        if exist "%DOCKER_BUILD_DIR%\\api-gateway" rmdir /s /q "%DOCKER_BUILD_DIR%\\api-gateway"
+        if exist "%DOCKER_BUILD_DIR%\\service" rmdir /s /q "%DOCKER_BUILD_DIR%\\service"
+        if exist "%DOCKER_BUILD_DIR%\\jenkins" rmdir /s /q "%DOCKER_BUILD_DIR%\\jenkins"
+        if exist "%DOCKER_BUILD_DIR%\\node_modules" rmdir /s /q "%DOCKER_BUILD_DIR%\\node_modules"
+        if exist "%DOCKER_BUILD_DIR%\\libs" rmdir /s /q "%DOCKER_BUILD_DIR%\\libs"
+
+        REM Remove old root files
+        if exist "%DOCKER_BUILD_DIR%\\docker-compose.yml" del "%DOCKER_BUILD_DIR%\\docker-compose.yml"
+        if exist "%DOCKER_BUILD_DIR%\\package.json" del "%DOCKER_BUILD_DIR%\\package.json"
+        if exist "%DOCKER_BUILD_DIR%\\package-lock.json" del "%DOCKER_BUILD_DIR%\\package-lock.json"
+        if exist "%DOCKER_BUILD_DIR%\\development.Dockerfile" del "%DOCKER_BUILD_DIR%\\development.Dockerfile"
+        if exist "%DOCKER_BUILD_DIR%\\Dockerfile" del "%DOCKER_BUILD_DIR%\\Dockerfile"
 
         REM Copy only selected folders
         robocopy "%WORKSPACE%\\api-gateway" "%DOCKER_BUILD_DIR%\\api-gateway" /E
@@ -56,6 +69,9 @@ pipeline {
         copy "%WORKSPACE%\\package-lock.json" "%DOCKER_BUILD_DIR%\\package-lock.json"
         copy "%WORKSPACE%\\development.Dockerfile" "%DOCKER_BUILD_DIR%\\development.Dockerfile"
         copy "%WORKSPACE%\\Dockerfile" "%DOCKER_BUILD_DIR%\\Dockerfile"
+
+        REM Ensure assets folder always exists and is preserved
+        if not exist "%DOCKER_BUILD_DIR%\\assets" mkdir "%DOCKER_BUILD_DIR%\\assets"
 
         echo ==================================================
         echo Docker build directory prepared successfully

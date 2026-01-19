@@ -23,7 +23,7 @@ responder.on('create-country', async (req, cb) => {
             name,
             country_code,
             iso_code,
-            currency_id,
+            currency_uuid,
             flag_icon_path,
             description,
             created_by, assigned_to
@@ -36,6 +36,27 @@ responder.on('create-country', async (req, cb) => {
         if (!country_code || !country_code.trim()) {
             return cb(null, { status: false, code: 2001, error: 'Country code is required' });
         }
+
+
+                // Validate currency_uuid and fetch currency_id
+        const countryResult = await pool.query(
+            `SELECT currency_id 
+             FROM currency
+             WHERE currency_uuid = $1
+               AND is_deleted = FALSE
+               AND is_active = TRUE`,
+            [currency_uuid]
+        );
+
+        if (countryResult.rowCount === 0) {
+            return cb(null, {
+                status: false,
+                code: 2001,
+                error: 'Invalid or inactive currency'
+            });
+        }
+
+        const currency_id = countryResult.rows[0].currency_id;
 
         // CHECK DUPLICATE COUNTRY
         const check = await pool.query(
@@ -145,7 +166,7 @@ responder.on('update-country', async (req, cb) => {
             name,
             country_code,
             iso_code,
-            currency_id,
+            currency_uuid,
             flag_icon_path,
             description,
             modified_by, is_active
@@ -161,6 +182,26 @@ responder.on('update-country', async (req, cb) => {
         if (!name || !name.trim()) {
             return cb(null, { status: false, code: 2001, error: 'Country name is required' });
         }
+
+             // Validate currency_uuid and fetch currency_id
+        const countryResult = await pool.query(
+            `SELECT currency_id 
+             FROM currency
+             WHERE currency_uuid = $1
+               AND is_deleted = FALSE
+               AND is_active = TRUE`,
+            [currency_uuid]
+        );
+
+        if (countryResult.rowCount === 0) {
+            return cb(null, {
+                status: false,
+                code: 2001,
+                error: 'Invalid or inactive currency'
+            });
+        }
+
+        const currency_id = countryResult.rows[0].currency_id;
 
         // -----------------------------
         // CHECK COUNTRY EXISTS

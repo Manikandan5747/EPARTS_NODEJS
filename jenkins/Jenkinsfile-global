@@ -54,6 +54,8 @@ pipeline {
         copy "%WORKSPACE%\\docker-compose.yml" "%DOCKER_BUILD_DIR%\\docker-compose.yml"
         copy "%WORKSPACE%\\package.json" "%DOCKER_BUILD_DIR%\\package.json"
         copy "%WORKSPACE%\\package-lock.json" "%DOCKER_BUILD_DIR%\\package-lock.json"
+        copy "%WORKSPACE%\\development.Dockerfile" "%DOCKER_BUILD_DIR%\\development.Dockerfile"
+        copy "%WORKSPACE%\\Dockerfile" "%DOCKER_BUILD_DIR%\\Dockerfile"
 
         echo ==================================================
         echo Docker build directory prepared successfully

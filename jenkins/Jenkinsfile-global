@@ -17,20 +17,50 @@ pipeline {
             }
         }
 
+        // stage('Prepare Docker Directory') {
+        //     steps {
+        //         bat '''
+        //         echo Preparing Docker build directory...
+
+        //         if exist "%DOCKER_BUILD_DIR%" rmdir /s /q "%DOCKER_BUILD_DIR%"
+        //         mkdir "%DOCKER_BUILD_DIR%"
+
+        //         xcopy "%WORKSPACE%\\*" "%DOCKER_BUILD_DIR%\\" /E /I /Y
+
+        //         echo Source copied to Docker build directory
+        //         '''
+        //     }
+        // }
+
         stage('Prepare Docker Directory') {
-            steps {
-                bat '''
-                echo Preparing Docker build directory...
+    steps {
+        bat '''
+        echo ==================================================
+        echo Preparing Docker build directory...
+        echo ==================================================
 
-                if exist "%DOCKER_BUILD_DIR%" rmdir /s /q "%DOCKER_BUILD_DIR%"
-                mkdir "%DOCKER_BUILD_DIR%"
+        REM Remove old docker build directory
+        if exist "%DOCKER_BUILD_DIR%" rmdir /s /q "%DOCKER_BUILD_DIR%"
+        mkdir "%DOCKER_BUILD_DIR%"
 
-                xcopy "%WORKSPACE%\\*" "%DOCKER_BUILD_DIR%\\" /E /I /Y
+        REM Copy only selected folders
+        robocopy "%WORKSPACE%\\api-gateway" "%DOCKER_BUILD_DIR%\\api-gateway" /E
+        robocopy "%WORKSPACE%\\service" "%DOCKER_BUILD_DIR%\\service" /E
+        robocopy "%WORKSPACE%\\jenkins" "%DOCKER_BUILD_DIR%\\jenkins" /E
+        robocopy "%WORKSPACE%\\node_modules" "%DOCKER_BUILD_DIR%\\node_modules" /E
 
-                echo Source copied to Docker build directory
-                '''
-            }
-        }
+        REM Copy specific files
+        copy "%WORKSPACE%\\docker-compose.yml" "%DOCKER_BUILD_DIR%\\docker-compose.yml"
+        copy "%WORKSPACE%\\package.json" "%DOCKER_BUILD_DIR%\\package.json"
+        copy "%WORKSPACE%\\package-lock.json" "%DOCKER_BUILD_DIR%\\package-lock.json"
+
+        echo ==================================================
+        echo Docker build directory prepared successfully
+        echo ==================================================
+        '''
+    }
+}
+
 
         stage('Docker Build & Run') {
             steps {

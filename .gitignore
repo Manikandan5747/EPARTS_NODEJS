@@ -1,5 +1,5 @@
 
 # Dependency directories
 node_modules/
-
+libs/db/postgresql_index.js
 

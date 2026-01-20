@@ -138,10 +138,14 @@ responder.on('getById-country', async (req, cb) => {
     try {
         const { country_uuid } = req;
 
-        const result = await pool.query(
-            `SELECT * FROM countries
-             WHERE country_uuid = $1 AND is_deleted = FALSE`,
-            [country_uuid]
+         const result = await pool.query(
+            `SELECT 
+        co.*,
+        cu.currency_uuid
+     FROM countries co
+     LEFT JOIN currency cu
+            ON co.currency_id = cu.currency_id
+     WHERE co.country_uuid = $1 AND co.is_deleted = FALSE` [country_uuid]
         );
 
         if (result.rowCount === 0) {

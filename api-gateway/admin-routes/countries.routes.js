@@ -11,18 +11,6 @@ const path = require('path');
 const uploadDir = path.join('/app/assets', 'countries');
 const multipartMiddleware = multipart({ uploadDir });
 
-
-// const fs = require('fs');
-
-// const uploadDir = 'C:/inetpub/wwwroot/EPARTS/PRODUCTION_FILES/countries_files';
-
-// // Create directory if missing
-// if (!fs.existsSync(uploadDir)) {
-//   fs.mkdirSync(uploadDir, { recursive: true });
-// }
-
-// const multipartMiddleware = multipart({ uploadDir });
-
 // --------------------------------------
 // CREATE COUNTRY
 // --------------------------------------

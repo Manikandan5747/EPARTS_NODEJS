@@ -1,0 +1,1 @@
+module.exports = require('./base-requester')('document_type_master');

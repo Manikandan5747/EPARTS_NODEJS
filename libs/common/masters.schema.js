@@ -81,7 +81,35 @@ module.exports = {
         create: ['code', 'name'],
         update: ['code', 'name']
     },
+      'manufacturer': {
+        create: ['code', 'name'],
+        update: ['code', 'name']
+    },
+    'account_type': {
+        create: ['code', 'name'],
+        update: ['code', 'name']
+    },
 
+     'address_type_master': {
+        create: ['code', 'name'],
+        update: ['code', 'name']
+    },
+       'document_type_master': {
+        create: ['code', 'name'],
+        update: ['code', 'name']
+    },
+       'payout_schedule': {
+        create: ['code', 'name'],
+        update: ['code', 'name']
+    },
+       'product_conditions': {
+        create: ['code', 'name'],
+        update: ['code', 'name']
+    },
+       'model': {
+        create: ['code', 'name'],
+        update: ['code', 'name']
+    },
     'settings': {
         create: ['setcategory', 'setparameter', 'setparametervalue'],
         update: ['setparametervalue']

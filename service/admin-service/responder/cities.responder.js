@@ -18,18 +18,108 @@ const responder = new cote.Responder({
 // --------------------------------------------------
 // CREATE CITY
 // --------------------------------------------------
+// responder.on('create-city', async (req, cb) => {
+//     try {
+//         const { country_id, state_id, name, created_by, assigned_to } = req.body;
+
+//         if (!name || !name.trim()) {
+//             return cb(null, { status: false, code: 2001, error: 'City name is required' });
+//         }
+
+//         if (!country_id || !state_id) {
+//             return cb(null, { status: false, code: 2001, error: 'Country ID and State ID are required' });
+//         }
+
+//         const cityName = name.trim();
+
+//         // Duplicate check (same city in same state & country)
+//         const duplicate = await pool.query(
+//             `SELECT city_id FROM cities
+//              WHERE UPPER(name) = UPPER($1)
+//                AND country_id = $2
+//                AND state_id = $3
+//                AND is_deleted = FALSE`,
+//             [cityName, country_id, state_id]
+//         );
+
+//         if (duplicate.rowCount > 0) {
+//             return cb(null, { status: false, code: 2002, error: 'City already exists' });
+//         }
+
+//         const insert = await pool.query(
+//             `INSERT INTO cities (city_uuid, country_id, state_id, name, created_by, assigned_to)
+//              VALUES (gen_random_uuid(), $1, $2, $3, $4, $5)
+//              RETURNING *`,
+//             [country_id, state_id, cityName, created_by, assigned_to]
+//         );
+
+//         return cb(null, {
+//             status: true,
+//             code: 1000,
+//             message: 'City created successfully',
+//             data: insert.rows[0]
+//         });
+
+//     } catch (err) {
+//         logger.error('Responder Error (create city):', err);
+//         return cb(null, { status: false, code: 2004, error: err.message });
+//     }
+// });
+
 responder.on('create-city', async (req, cb) => {
     try {
-        const { country_id, state_id, name, created_by, assigned_to } = req.body;
+        const { country_uuid, state_uuid, name, created_by, assigned_to } = req.body;
 
         if (!name || !name.trim()) {
             return cb(null, { status: false, code: 2001, error: 'City name is required' });
         }
 
-        if (!country_id || !state_id) {
-            return cb(null, { status: false, code: 2001, error: 'Country ID and State ID are required' });
+        if (!country_uuid || !state_uuid) {
+            return cb(null, { status: false, code: 2001, error: 'Country UUID and State UUID are required' });
         }
 
+        
+        // Validate country_uuid and fetch country_id
+        const countryResult = await pool.query(
+            `SELECT country_id 
+             FROM countries
+             WHERE country_uuid = $1
+               AND is_deleted = FALSE
+               AND is_active = TRUE`,
+            [country_uuid]
+        );
+
+        if (countryResult.rowCount === 0) {
+            return cb(null, {
+                status: false,
+                code: 2001,
+                error: 'Invalid or inactive country'
+            });
+        }
+
+        const country_id = countryResult.rows[0].country_id;
+
+        
+        // Validate state_uuid and fetch state_id
+        const stateResult = await pool.query(
+            `SELECT state_id 
+             FROM states
+             WHERE state_uuid = $1
+               AND is_deleted = FALSE
+               AND is_active = TRUE`,
+            [state_uuid]
+        );
+
+        if (stateResult.rowCount === 0) {
+            return cb(null, {
+                status: false,
+                code: 2001,
+                error: 'Invalid or inactive state'
+            });
+        }
+
+        const state_id = stateResult.rows[0].state_id;
+        
         const cityName = name.trim();
 
         // Duplicate check (same city in same state & country)
@@ -65,7 +155,6 @@ responder.on('create-city', async (req, cb) => {
         return cb(null, { status: false, code: 2004, error: err.message });
     }
 });
-
 
 // --------------------------------------------------
 // LIST CITIES
@@ -129,14 +218,113 @@ responder.on('getById-city', async (req, cb) => {
 // --------------------------------------------------
 // UPDATE CITY
 // --------------------------------------------------
+// responder.on('update-city', async (req, cb) => {
+//     try {
+//         const { city_uuid, body } = req;
+//         const { country_id, state_id, name, modified_by, is_active } = body;
+
+//         if (!name || !name.trim()) {
+//             return cb(null, { status: false, code: 2001, error: 'City name is required' });
+//         }
+
+//         const duplicate = await pool.query(
+//             `SELECT city_uuid FROM cities
+//              WHERE UPPER(name) = UPPER($1)
+//                AND country_id = $2
+//                AND state_id = $3
+//                AND is_deleted = FALSE
+//                AND city_uuid != $4`,
+//             [name.trim(), country_id, state_id, city_uuid]
+//         );
+
+//         if (duplicate.rowCount > 0) {
+//             return cb(null, { status: false, code: 2002, error: 'City already exists' });
+//         }
+
+//         const update = await pool.query(
+//             `UPDATE cities SET
+//                 name = $1,
+//                 country_id = $2,
+//                 state_id = $3,
+//                 modified_by = $4,is_active=$5,
+//                 modified_at = NOW()
+//              WHERE city_uuid = $6
+//              RETURNING *`,
+//             [name.trim(), country_id, state_id, modified_by, is_active, city_uuid]
+//         );
+
+//         return cb(null, {
+//             status: true,
+//             code: 1000,
+//             message: 'City updated successfully',
+//             data: update.rows[0]
+//         });
+
+//     } catch (err) {
+//         logger.error('Responder Error (update city):', err);
+//         return cb(null, { status: false, code: 2004, error: err.message });
+//     }
+// });
+
 responder.on('update-city', async (req, cb) => {
     try {
         const { city_uuid, body } = req;
-        const { country_id, state_id, name, modified_by, is_active } = body;
+        const { country_uuid, state_uuid, name, modified_by, is_active } = body;
+
+   const result = await pool.query(`SELECT * FROM cities WHERE city_uuid = $1 AND is_deleted = FALSE`, [city_uuid]);
+        if (result.rowCount === 0) {
+            return cb(null, { status: false, code: 2003, error: 'City not found' });
+        }
 
         if (!name || !name.trim()) {
             return cb(null, { status: false, code: 2001, error: 'City name is required' });
         }
+
+        if (!country_uuid || !state_uuid) {
+            return cb(null, { status: false, code: 2001, error: 'Country UUID and State UUID are required' });
+        }
+
+        
+        // Validate country_uuid and fetch country_id
+        const countryResult = await pool.query(
+            `SELECT country_id 
+             FROM countries
+             WHERE country_uuid = $1
+               AND is_deleted = FALSE
+               AND is_active = TRUE`,
+            [country_uuid]
+        );
+
+        if (countryResult.rowCount === 0) {
+            return cb(null, {
+                status: false,
+                code: 2001,
+                error: 'Invalid or inactive country'
+            });
+        }
+
+        const country_id = countryResult.rows[0].country_id;
+
+        
+        // Validate state_uuid and fetch state_id
+        const stateResult = await pool.query(
+            `SELECT state_id 
+             FROM states
+             WHERE state_uuid = $1
+               AND is_deleted = FALSE
+               AND is_active = TRUE`,
+            [state_uuid]
+        );
+
+        if (stateResult.rowCount === 0) {
+            return cb(null, {
+                status: false,
+                code: 2001,
+                error: 'Invalid or inactive state'
+            });
+        }
+
+        const state_id = stateResult.rows[0].state_id;
 
         const duplicate = await pool.query(
             `SELECT city_uuid FROM cities

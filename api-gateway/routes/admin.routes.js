@@ -62,6 +62,21 @@ router.use('/jurisdiction', (req, res, next) => require('../admin-routes/jurisdi
 
 router.use('/tax_code_master', (req, res, next) => require('../admin-routes/tax_code_master.routes.js')(req, res, next));
 
+
+router.use('/manufacturer', (req, res, next) => require('../admin-routes/manufacturer.routes.js')(req, res, next));
+
+router.use('/account_type', (req, res, next) => require('../admin-routes/account_type.routes.js')(req, res, next));
+
+router.use('/address_type_master', (req, res, next) => require('../admin-routes/address_type_master.routes.js')(req, res, next));
+
+router.use('/document_type_master', (req, res, next) => require('../admin-routes/document_type_master.routes.js')(req, res, next));
+
+router.use('/payout_schedule', (req, res, next) => require('../admin-routes/payout_schedule.routes.js')(req, res, next));
+
+router.use('/product_conditions', (req, res, next) => require('../admin-routes/product_conditions.routes.js')(req, res, next));
+
+router.use('/model', (req, res, next) => require('../admin-routes/model.routes.js')(req, res, next));
+
 router.use('/module', (req, res, next) => require('../admin-routes/module.routes.js')(req, res, next));
 
 router.use('/profile-privilege', (req, res, next) => require('../admin-routes/profile-privilege.routes.js')(req, res, next));

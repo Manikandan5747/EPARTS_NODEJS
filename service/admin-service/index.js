@@ -29,6 +29,15 @@ module.exports = {
   jurisdictionResponder: require('./responder/jurisdiction.responder'),
   taxCodeMasterResponder: require('./responder/tax_code_master.responder'),
 
+  manufacturerResponder: require('./responder/manufacturer.responder'),
+  accountTypeResponder: require('./responder/account_type.responder'),
+  addressTypeResponder: require('./responder/address_type_master.responder'),
+  documentTypeResponder: require('./responder/document_type_master.responder'),
+  payoutScheduleResponder: require('./responder/payout_schedule.responder'),
+  productConditionsResponder: require('./responder/product_conditions.responder'),
+  modelResponder: require('./responder/model.responder'),
+
+  
   moduleResponder: require('./responder/module.responder'),
   profilesResponder: require('./responder/profile.responder'),
   profilesPrivilegeResponder: require('./responder/profile-privilege.responder'),

@@ -38,7 +38,7 @@ responder.on('create-country', async (req, cb) => {
         }
 
 
-                // Validate currency_uuid and fetch currency_id
+        // Validate currency_uuid and fetch currency_id
         const countryResult = await pool.query(
             `SELECT currency_id 
              FROM currency
@@ -138,14 +138,16 @@ responder.on('getById-country', async (req, cb) => {
     try {
         const { country_uuid } = req;
 
-         const result = await pool.query(
+        const result = await pool.query(
             `SELECT 
-        co.*,
-        cu.currency_uuid
-     FROM countries co
-     LEFT JOIN currency cu
-            ON co.currency_id = cu.currency_id
-     WHERE co.country_uuid = $1 AND co.is_deleted = FALSE` [country_uuid]
+                co.*,
+                cu.currency_uuid
+             FROM countries co
+             LEFT JOIN currency cu
+               ON co.currency_id = cu.currency_id
+             WHERE co.country_uuid = $1 
+               AND co.is_deleted = FALSE`,
+            [country_uuid]   // ✅ comma added here
         );
 
         if (result.rowCount === 0) {
@@ -187,7 +189,7 @@ responder.on('update-country', async (req, cb) => {
             return cb(null, { status: false, code: 2001, error: 'Country name is required' });
         }
 
-             // Validate currency_uuid and fetch currency_id
+        // Validate currency_uuid and fetch currency_id
         const countryResult = await pool.query(
             `SELECT currency_id 
              FROM currency

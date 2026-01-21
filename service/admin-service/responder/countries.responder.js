@@ -521,10 +521,13 @@ responder.on("country-list", async (req, cb) => {
         params.push(limitNo, offset);
 
         const result = await pool.query(
-            `SELECT *
-             FROM countries
+            `SELECT co.*,
+        cu.currency_uuid
+             FROM countries co
+             LEFT JOIN currency cu
+            ON co.currency_id = cu.currency_id
              ${whereSql}
-             ORDER BY name DESC
+             ORDER BY co.created_at DESC
              LIMIT $${idx} OFFSET $${idx + 1}`,
             params
         );

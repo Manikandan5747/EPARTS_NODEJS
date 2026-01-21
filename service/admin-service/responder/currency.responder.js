@@ -45,7 +45,7 @@ responder.on('create-currency', async (req, cb) => {
             code, name, symbol, description, created_by
         ]);
 
-        cb(null, { status: true, code: 1000, result: rows[0], message: 'Currency created successfully', });
+        cb(null, { status: true, code: 1000, data: rows[0], message: 'Currency created successfully', });
 
     } catch (err) {
         logger.error('[create-currency]', err);
@@ -61,7 +61,7 @@ responder.on('list-currency', async (req, cb) => {
         const { rows } = await pool.query(
             `SELECT * FROM currency WHERE is_deleted = FALSE ORDER BY created_at DESC`
         );
-        cb(null, { status: true, code: 1000, result: rows });
+        cb(null, { status: true, code: 1000, data: rows });
     } catch (err) {
         cb(null, { status: false, code: 2004, error: err.message });
     }
@@ -87,7 +87,7 @@ responder.on('getById-currency', async (req, cb) => {
             });
         }
 
-        cb(null, { status: true, code: 1000, result: rows[0] });
+        cb(null, { status: true, code: 1000, data: rows[0] });
     } catch (err) {
         cb(null, { status: false, code: 2004, error: err.message });
     }
@@ -177,7 +177,7 @@ responder.on('update-currency', async (req, cb) => {
             });
         }
 
-        cb(null, { status: true, code: 1000, result: rows[0] });
+        cb(null, { status: true, code: 1000, data: rows[0] });
 
     } catch (err) {
         cb(null, { status: false, code: 5000, error: err.message });

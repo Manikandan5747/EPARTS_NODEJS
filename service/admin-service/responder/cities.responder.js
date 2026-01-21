@@ -117,7 +117,7 @@ responder.on('list-city', async (req, cb) => {
         const result = await pool.query(
             `SELECT * FROM cities
              WHERE is_deleted = FALSE
-             ORDER BY created_at ASC`
+             ORDER BY created_at DESC`
         );
 
         return cb(null, {
@@ -544,7 +544,7 @@ responder.on('getById-city-stateid', async (req, cb) => {
             ON s.country_id = c.country_id
      WHERE ci.state_id = $1
        AND ci.is_deleted = FALSE
-     ORDER BY ci.name ASC`,
+     ORDER BY ci.name DESC`,
             [state_id]
         );
 
@@ -660,7 +660,7 @@ responder.on("city-list", async (req, cb) => {
                AND s.is_deleted = FALSE
                AND c.is_deleted = FALSE
              ${searchSql}
-             ORDER BY ci.name ASC
+             ORDER BY ci.name DESC
              LIMIT $${idx} OFFSET $${idx + 1}`,
             params
         );

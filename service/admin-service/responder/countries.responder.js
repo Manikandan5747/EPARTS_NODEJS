@@ -114,7 +114,7 @@ responder.on('list-country', async (req, cb) => {
      LEFT JOIN currency cu
             ON co.currency_id = cu.currency_id
      WHERE co.is_deleted = FALSE
-     ORDER BY co.created_at ASC`
+     ORDER BY co.created_at DESC`
         );
 
 
@@ -524,7 +524,7 @@ responder.on("country-list", async (req, cb) => {
             `SELECT *
              FROM countries
              ${whereSql}
-             ORDER BY name ASC
+             ORDER BY name DESC
              LIMIT $${idx} OFFSET $${idx + 1}`,
             params
         );

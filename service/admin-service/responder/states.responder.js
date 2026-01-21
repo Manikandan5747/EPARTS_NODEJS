@@ -104,7 +104,7 @@ responder.on('list-state', async (req, cb) => {
         const result = await pool.query(
             `SELECT * FROM states
              WHERE is_deleted = FALSE
-             ORDER BY created_at ASC`
+             ORDER BY created_at DESC`
         );
 
         return cb(null, {

@@ -546,7 +546,7 @@ responder.on("state-list", async (req, cb) => {
              WHERE s.country_id = $1
                AND s.is_deleted = FALSE
              ${searchSql}
-             ORDER BY s.name ASC
+             ORDER BY s.created_at DESC
              LIMIT $${idx} OFFSET $${idx + 1}`,
             params
         );

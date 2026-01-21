@@ -484,6 +484,9 @@ responder.on('clone-country', async (req, cb) => {
 // --------------------------------------------------
 // COUNTRY LIST (SEARCH + PAGINATION)
 // --------------------------------------------------
+// --------------------------------------------------
+// COUNTRY LIST (SEARCH + PAGINATION)
+// --------------------------------------------------
 responder.on("country-list", async (req, cb) => {
     try {
         const {
@@ -497,12 +500,12 @@ responder.on("country-list", async (req, cb) => {
         const offset = (pageNo - 1) * limitNo;
 
         let params = [];
-        let whereSql = `WHERE is_deleted = FALSE`;
+        let whereSql = `WHERE co.is_deleted = FALSE`;
         let idx = 1;
 
         /* ---------------- SEARCH CONDITION ---------------- */
         if (search) {
-            whereSql += ` AND LOWER(name) ILIKE LOWER($${idx})`;
+            whereSql += ` AND LOWER(co.name) ILIKE LOWER($${idx})`;
             params.push(`%${search}%`);
             idx++;
         }
@@ -510,7 +513,7 @@ responder.on("country-list", async (req, cb) => {
         /* ---------------- TOTAL COUNT ---------------- */
         const countResult = await pool.query(
             `SELECT COUNT(*) AS total
-             FROM countries
+             FROM countries co
              ${whereSql}`,
             params
         );
@@ -521,14 +524,17 @@ responder.on("country-list", async (req, cb) => {
         params.push(limitNo, offset);
 
         const result = await pool.query(
-            `SELECT co.*,
-        cu.currency_uuid
-             FROM countries co
-             LEFT JOIN currency cu
-            ON co.currency_id = cu.currency_id
-             ${whereSql}
-             ORDER BY co.created_at DESC
-             LIMIT $${idx} OFFSET $${idx + 1}`,
+            `
+            SELECT 
+              co.*,
+              cu.currency_uuid
+            FROM countries co
+            LEFT JOIN currency cu
+              ON co.currency_id = cu.currency_id
+            ${whereSql}
+            ORDER BY co.created_at DESC
+            LIMIT $${idx} OFFSET $${idx + 1}
+            `,
             params
         );
 

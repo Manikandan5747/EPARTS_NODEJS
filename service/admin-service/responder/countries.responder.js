@@ -381,6 +381,7 @@ responder.on('advancefilter-country', async (req, cb) => {
             joinSql: `
                 LEFT JOIN users creators ON C.created_by = creators.user_uuid
                 LEFT JOIN users updaters ON C.modified_by = updaters.user_uuid
+                LEFT JOIN currency CY ON C.currency_id = CY.currency_id
             `,
 
             /* ---------------- Allowed Search/Sort Fields ---------------- */
@@ -393,7 +394,7 @@ responder.on('advancefilter-country', async (req, cb) => {
                 'created_at',
                 'modified_at',
                 'createdByName',
-                'updatedByName'
+                'updatedByName','currency_name'
             ],
 
             /* ---------------- Custom Joined Fields ---------------- */
@@ -407,6 +408,11 @@ responder.on('advancefilter-country', async (req, cb) => {
                     select: 'updaters.username',
                     search: 'updaters.username',
                     sort: 'updaters.username'
+                },
+                 currency_name: {
+                    select: 'CY.name',
+                    search: 'CY.name',
+                    sort: 'CY.name'
                 }
             },
 

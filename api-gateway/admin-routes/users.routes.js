@@ -431,6 +431,49 @@ router.post('/logout', async (req, res) => {
 });
 
 
+// --------------------------------------
+// get-next-prefix-refno
+// --------------------------------------
+router.get('/getprefixrefno/:name', async (req, res) => {
+    try {
+
+        const result = await usersRequester.send({
+            type: 'get-next-prefix-refno',
+               category_type: req.params.name,
+        });
+
+        if (!result.status) {
+            // SAVE ERROR LOG
+            await saveErrorLog({
+                api_name: 'get-next-prefix-refno',
+                method: 'GET',
+                payload: req.body,
+                message: result.error,
+                stack: result.stack || '',
+                error_code: result.code || 2004
+            });
+            return res.status(500).json(result);
+        }
+
+        res.send(result);
+
+    } catch (err) {
+        logger.error("Error in get-next-prefix-refno:", err.message);
+
+        await saveErrorLog({
+            api_name: 'login',
+            method: 'GET',
+            payload: req.body,
+            message: err.message,
+            stack: err.stack,
+            error_code: 2004
+        });
+
+        res.status(500).json({ error: err.message });
+    }
+});
+
+
 
 
 

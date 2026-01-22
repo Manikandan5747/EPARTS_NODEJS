@@ -5,15 +5,28 @@ const router = express.Router();
 const usersRequester = require('@libs/requesters/admin-requesters/users-requester');
 const logger = require('@libs/logger/logger');
 const { saveErrorLog } = require('@libs/common/common-util');
+const multipart = require("connect-multiparty");
+const path = require('path');
+//test
+const uploadDir = path.join('/app/assets', 'users_icon');
+const multipartMiddleware = multipart({ uploadDir });
+
 
 // --------------------------------------
 // CREATE USERS
 // --------------------------------------
-router.post('/create', async (req, res) => {
+router.post('/create', multipartMiddleware, async (req, res) => {
     try {
-        const result = await usersRequester.send({
+
+        // FILE
+        const profileIconPath = req.files?.profile_icon_path?.path || null;
+
+        const result = await countryRequester.send({
             type: 'create-users',
-            body: req.body
+            body: {
+                ...req.body,
+                profile_icon: profileIconPath
+            }
         });
 
         if (!result.status) {
@@ -127,10 +140,15 @@ router.get('/findbyid/:id', async (req, res) => {
 // --------------------------------------
 router.post('/update/:id', async (req, res) => {
     try {
+        // FILE
+        const profileIconPath = req.files?.profile_icon_path?.path || null;
         const result = await usersRequester.send({
             type: 'update-users',
             user_uuid: req.params.id,
-            body: req.body
+            body: {
+                ...req.body,
+                profile_icon: profileIconPath
+            }
         });
 
         if (!result.status) {
@@ -391,9 +409,9 @@ router.post('/login', async (req, res) => {
 router.post('/logout', async (req, res) => {
     try {
         const authHeader = req.headers.authorization;
-        console.log("authHeader",authHeader);
+        console.log("authHeader", authHeader);
         req.body.access_token = authHeader;
-         console.log("authHeader",req.body);
+        console.log("authHeader", req.body);
         const result = await usersRequester.send({
             type: 'logout',
             body: req.body
@@ -439,7 +457,7 @@ router.get('/getprefixrefno/:name', async (req, res) => {
 
         const result = await usersRequester.send({
             type: 'get-next-prefix-refno',
-               category_type: req.params.name,
+            category_type: req.params.name,
         });
 
         if (!result.status) {

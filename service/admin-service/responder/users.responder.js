@@ -33,7 +33,7 @@ responder.on('create-users', async (req, cb) => {
             email,
             password,
             phone_number,
-            role_id,
+            role_id, profile_icon,
             created_by, reporting_to, assigned_to
         } = req.body;
 
@@ -98,9 +98,9 @@ responder.on('create-users', async (req, cb) => {
         const insertQuery = {
             text: `
                 INSERT INTO users 
-                    (username,fullname, email, password_hash, phone_number, role_id,reporting_to, created_by, assigned_to)
+                    (username,fullname, email, password_hash, phone_number, role_id,reporting_to, created_by, assigned_to,profile_icon)
                 VALUES 
-                    ($1, $2, $3, $4, $5, $6,$7,$8,$9)
+                    ($1, $2, $3, $4, $5, $6,$7,$8,$9,$10)
                 RETURNING 
                     user_id, user_uuid, username, email, phone_number, role_id, is_active
             `,
@@ -110,7 +110,7 @@ responder.on('create-users', async (req, cb) => {
                 password_hash,
                 phone_number,
                 role_id, reporting_to,
-                created_by, assigned_to
+                created_by, assigned_to, profile_icon
             ]
         };
 
@@ -276,7 +276,7 @@ responder.on('update-users', async (req, cb) => {
             username, fullname,
             email,
             phone_number,
-            role_id,
+            role_id,profile_icon,
             modified_by, reporting_to, is_active,
         } = body;
 
@@ -331,6 +331,22 @@ responder.on('update-users', async (req, cb) => {
             });
         }
 
+
+        // -----------------------------
+        // CHECK PROFILE ICON EXISTS
+        // -----------------------------
+        const exists = await pool.query(
+            `SELECT user_id, profile_icon FROM users
+             WHERE user_uuid = $1 AND is_deleted = FALSE`,
+            [user_uuid]
+        );
+
+        if (exists.rowCount === 0) {
+            return cb(null, { status: false, code: 2003, error: 'User not found' });
+        }
+
+        const existingPath = exists.rows[0].profile_icon;
+
         // --------------------------------------------------
         // UPDATE USER
         // --------------------------------------------------
@@ -344,11 +360,11 @@ responder.on('update-users', async (req, cb) => {
                 modified_by = $5,
                 modified_at = NOW(),
                 fullname = $7,
-                reporting_to = $8,is_active=$9
+                reporting_to = $8,is_active=$9,profile_icon=$10
             WHERE user_uuid = $6
             RETURNING 
                 user_id, user_uuid, username, email, phone_number, role_id,
-                is_active, created_at, modified_at,fullname,reporting_to,is_active
+                is_active, created_at, modified_at,fullname,reporting_to
         `;
 
         const update = await pool.query(updateQuery, [
@@ -358,7 +374,8 @@ responder.on('update-users', async (req, cb) => {
             role_id,
             modified_by,
             user_uuid,
-            fullname, reporting_to, is_active
+            fullname, reporting_to, is_active,
+            profile_icon || existingPath, // keep old flag if not sent
         ]);
 
         return cb(null, {
@@ -1222,72 +1239,72 @@ responder.on('changepassword-users', async (req, cb) => {
 // responder/prefixResponder.js
 
 responder.on('get-next-prefix-refno', async (req, cb) => {
-  try {
-    const { category_type } = req;
+    try {
+        const { category_type } = req;
 
-    // 1. Get config from prefix_refno table
-    const configResult = await pool.query(
-      `SELECT table_name, id_field, ref_field, prefix_code
+        // 1. Get config from prefix_refno table
+        const configResult = await pool.query(
+            `SELECT table_name, id_field, ref_field, prefix_code
        FROM prefix_refno
        WHERE category_type = $1
          AND is_active = TRUE
          AND is_deleted = FALSE`,
-      [category_type]
-    );
+            [category_type]
+        );
 
-    if (configResult.rowCount === 0) {
-      return cb(null, {
-        status: false,
-        code: 2003,
-        error: 'Invalid category type'
-      });
-    }
+        if (configResult.rowCount === 0) {
+            return cb(null, {
+                status: false,
+                code: 2003,
+                error: 'Invalid category type'
+            });
+        }
 
-    const { table_name, id_field, ref_field, prefix_code } = configResult.rows[0];
+        const { table_name, id_field, ref_field, prefix_code } = configResult.rows[0];
 
-    // 2. Get last reference number
-    const lastRefResult = await pool.query(
-      `SELECT ${ref_field}
+        // 2. Get last reference number
+        const lastRefResult = await pool.query(
+            `SELECT ${ref_field}
        FROM ${table_name}
        WHERE is_deleted = FALSE
        ORDER BY ${id_field} DESC
        LIMIT 1`
-    );
+        );
 
-    // 3. Date parts
-    const now = new Date();
-    const yy = now.getFullYear().toString().slice(-2);
-    const mm = String(now.getMonth() + 1).padStart(2, '0');
-    const dd = String(now.getDate()).padStart(2, '0');
+        // 3. Date parts
+        const now = new Date();
+        const yy = now.getFullYear().toString().slice(-2);
+        const mm = String(now.getMonth() + 1).padStart(2, '0');
+        const dd = String(now.getDate()).padStart(2, '0');
 
-    let nextRefNo;
+        let nextRefNo;
 
-    if (lastRefResult.rowCount === 0 || !lastRefResult.rows[0][ref_field]) {
-      nextRefNo = `${prefix_code}${yy}${mm}${dd}1`;
-    } else {
-      const lastRef = lastRefResult.rows[0][ref_field];
-      const fixedLen = prefix_code.length + yy.length + mm.length + dd.length;
-      const lastSeq = parseInt(lastRef.substring(fixedLen)) || 0;
-      nextRefNo = `${prefix_code}${yy}${mm}${dd}${lastSeq + 1}`;
+        if (lastRefResult.rowCount === 0 || !lastRefResult.rows[0][ref_field]) {
+            nextRefNo = `${prefix_code}${yy}${mm}${dd}1`;
+        } else {
+            const lastRef = lastRefResult.rows[0][ref_field];
+            const fixedLen = prefix_code.length + yy.length + mm.length + dd.length;
+            const lastSeq = parseInt(lastRef.substring(fixedLen)) || 0;
+            nextRefNo = `${prefix_code}${yy}${mm}${dd}${lastSeq + 1}`;
+        }
+
+        return cb(null, {
+            status: true,
+            code: 1000,
+            data: {
+                category_type,
+                [ref_field]: nextRefNo
+            }
+        });
+
+    } catch (err) {
+        logger.error("Responder Error (get-next-prefix-refno):", err);
+        return cb(null, {
+            status: false,
+            code: 2004,
+            error: err.message
+        });
     }
-
-    return cb(null, {
-      status: true,
-      code: 1000,
-      data: {
-        category_type,
-        [ref_field]: nextRefNo
-      }
-    });
-
-  } catch (err) {
-    logger.error("Responder Error (get-next-prefix-refno):", err);
-    return cb(null, {
-      status: false,
-      code: 2004,
-      error: err.message
-    });
-  }
 });
 
 

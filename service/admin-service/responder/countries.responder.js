@@ -26,7 +26,7 @@ responder.on('create-country', async (req, cb) => {
             currency_uuid,
             flag_icon_path,
             description,
-            created_by, assigned_to
+            created_by, assigned_to, code
         } = req.body;
 
         if (!name || !name.trim()) {
@@ -36,7 +36,9 @@ responder.on('create-country', async (req, cb) => {
         if (!country_code || !country_code.trim()) {
             return cb(null, { status: false, code: 2001, error: 'Country code is required' });
         }
-
+        if (!code || !code.trim()) {
+            return cb(null, { status: false, code: 2001, error: 'Code is required' });
+        }
 
         // Validate currency_uuid and fetch currency_id
         const countryResult = await pool.query(
@@ -73,8 +75,8 @@ responder.on('create-country', async (req, cb) => {
 
         const insert = await pool.query(
             `INSERT INTO countries
-             ( name, country_code, iso_code, currency_id, flag_icon_path, description, created_by,assigned_to)
-             VALUES ($1, $2, $3, $4, $5, $6, $7,$8)
+             ( name, country_code, iso_code, currency_id, flag_icon_path, description, created_by,assigned_to,code)
+             VALUES ($1, $2, $3, $4, $5, $6, $7,$8,$9)
              RETURNING *`,
             [
                 name.trim(),
@@ -84,7 +86,7 @@ responder.on('create-country', async (req, cb) => {
                 flag_icon_path || null,
                 description || null,
                 created_by || null,
-                assigned_to
+                assigned_to,code
             ]
         );
 
@@ -393,8 +395,8 @@ responder.on('advancefilter-country', async (req, cb) => {
                 'is_active',
                 'created_at',
                 'modified_at',
-                'createdByName',
-                'updatedByName','currency_name'
+                'createdByName','code',
+                'updatedByName', 'currency_name'
             ],
 
             /* ---------------- Custom Joined Fields ---------------- */
@@ -409,7 +411,7 @@ responder.on('advancefilter-country', async (req, cb) => {
                     search: 'updaters.username',
                     sort: 'updaters.username'
                 },
-                 currency_name: {
+                currency_name: {
                     select: 'CY.name',
                     search: 'CY.name',
                     sort: 'CY.name'

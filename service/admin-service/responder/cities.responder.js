@@ -20,7 +20,7 @@ const responder = new cote.Responder({
 // --------------------------------------------------
 responder.on('create-city', async (req, cb) => {
     try {
-        const { country_uuid, state_uuid, name, created_by, assigned_to } = req.body;
+        const { country_uuid, state_uuid, name, created_by, assigned_to,code } = req.body;
 
         if (!name || !name.trim()) {
             return cb(null, { status: false, code: 2001, error: 'City name is required' });
@@ -28,6 +28,11 @@ responder.on('create-city', async (req, cb) => {
 
         if (!country_uuid || !state_uuid) {
             return cb(null, { status: false, code: 2001, error: 'Country UUID and State UUID are required' });
+        }
+
+        
+        if (!code || !code) {
+            return cb(null, { status: false, code: 2001, error: 'Code is required' });
         }
 
 
@@ -89,10 +94,10 @@ responder.on('create-city', async (req, cb) => {
         }
 
         const insert = await pool.query(
-            `INSERT INTO cities (city_uuid, country_id, state_id, name, created_by, assigned_to)
-             VALUES (gen_random_uuid(), $1, $2, $3, $4, $5)
+            `INSERT INTO cities (city_uuid, country_id, state_id, name, created_by, assigned_to,code)
+             VALUES (gen_random_uuid(), $1, $2, $3, $4, $5,$6)
              RETURNING *`,
-            [country_id, state_id, cityName, created_by, assigned_to]
+            [country_id, state_id, cityName, created_by, assigned_to,code]
         );
 
         return cb(null, {
@@ -373,7 +378,7 @@ responder.on('advancefilter-city', async (req, cb) => {
                 'is_active',
                 'created_at',
                 'modified_at',
-                'createdByName',
+                'createdByName','code',
                 'updatedByName'
             ],
 

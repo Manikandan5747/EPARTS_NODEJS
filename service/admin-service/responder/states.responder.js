@@ -20,7 +20,7 @@ const responder = new cote.Responder({
 // --------------------------------------------------
 responder.on('create-state', async (req, cb) => {
     try {
-        const { country_uuid, name, created_by, assigned_to } = req.body;
+        const { country_uuid, name, created_by, assigned_to,code } = req.body;
 
         if (!country_uuid) {
             return cb(null, { status: false, code: 2001, error: 'Country UUID is required' });
@@ -28,6 +28,9 @@ responder.on('create-state', async (req, cb) => {
 
         if (!name || !name.trim()) {
             return cb(null, { status: false, code: 2001, error: 'State name is required' });
+        }
+          if (!code || !code.trim()) {
+            return cb(null, { status: false, code: 2001, error: 'Code is required' });
         }
 
         const stateName = name.trim();
@@ -73,10 +76,10 @@ responder.on('create-state', async (req, cb) => {
         // Insert state
         const insert = await pool.query(
             `INSERT INTO states
-             (state_uuid, country_id, name, created_by, assigned_to)
-             VALUES (gen_random_uuid(), $1, $2, $3, $4)
+             (state_uuid, country_id, name, created_by, assigned_to,code)
+             VALUES (gen_random_uuid(), $1, $2, $3, $4,$5)
              RETURNING *`,
-            [country_id, stateName, created_by, assigned_to]
+            [country_id, stateName, created_by, assigned_to,code]
         );
 
         return cb(null, {
@@ -329,7 +332,7 @@ responder.on('advancefilter-state', async (req, cb) => {
                 'created_at',
                 'modified_at',
                 'createdByName',
-                'updatedByName'
+                'updatedByName','code'
             ],
 
             /* ---------------- Custom Joined Fields ---------------- */

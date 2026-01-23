@@ -111,7 +111,7 @@ router.post('/update/:id', multipartMiddleware, async (req, res) => {
             body: {
                 ...req.body,
                 country_uuid: req.params.id,
-                flag_icon_path: flagIconPath   // ✅ pass only if exists
+                flag_icon_path: flagIconPath.replace(/\\/g, '/')   // ✅ pass only if exists
             }
         });
 

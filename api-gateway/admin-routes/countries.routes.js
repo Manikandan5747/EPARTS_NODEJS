@@ -104,7 +104,7 @@ router.get('/findbyid/:id', async (req, res) => {
 router.post('/update/:id', multipartMiddleware, async (req, res) => {
     try {
         // FILE (optional)
-        const flagIconPath = req.files?.flag_icon?.path || null;
+        const flagIconPath = req.files?.flag_icon_path?.path || null;
         const result = await countryRequester.send({
             type: 'update-country',
             country_uuid: req.params.id,

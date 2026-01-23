@@ -23,7 +23,7 @@ router.post('/create', multipartMiddleware, async (req, res) => {
             type: 'create-country',
             body: {
                 ...req.body,
-                flag_icon_path: flagIconPath.replace(/\\/g, '/')
+                flag_icon_path: flagIconPath ? flagIconPath.replace(/\\/g, '/') : null
             }
         });
 
@@ -111,7 +111,7 @@ router.post('/update/:id', multipartMiddleware, async (req, res) => {
             body: {
                 ...req.body,
                 country_uuid: req.params.id,
-                flag_icon_path: flagIconPath.replace(/\\/g, '/')   // ✅ pass only if exists
+                flag_icon_path: flagIconPath ? flagIconPath.replace(/\\/g, '/') : null
             }
         });
 

@@ -23,7 +23,7 @@ router.post('/create', multipartMiddleware, async (req, res) => {
             type: 'create-country',
             body: {
                 ...req.body,
-                flag_icon_path: flagIconPath
+                flag_icon_path: flagIconPath.replace(/\\/g, '/')
             }
         });
 

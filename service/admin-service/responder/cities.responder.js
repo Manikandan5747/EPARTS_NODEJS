@@ -20,7 +20,7 @@ const responder = new cote.Responder({
 // --------------------------------------------------
 responder.on('create-city', async (req, cb) => {
     try {
-        const { country_uuid, state_uuid, name, created_by, assigned_to,code } = req.body;
+        const { country_uuid, state_uuid, name, created_by, assigned_to, code } = req.body;
 
         if (!name || !name.trim()) {
             return cb(null, { status: false, code: 2001, error: 'City name is required' });
@@ -30,7 +30,7 @@ responder.on('create-city', async (req, cb) => {
             return cb(null, { status: false, code: 2001, error: 'Country UUID and State UUID are required' });
         }
 
-        
+
         if (!code || !code) {
             return cb(null, { status: false, code: 2001, error: 'Code is required' });
         }
@@ -97,7 +97,7 @@ responder.on('create-city', async (req, cb) => {
             `INSERT INTO cities (city_uuid, country_id, state_id, name, created_by, assigned_to,code)
              VALUES (gen_random_uuid(), $1, $2, $3, $4, $5,$6)
              RETURNING *`,
-            [country_id, state_id, cityName, created_by, assigned_to,code]
+            [country_id, state_id, cityName, created_by, assigned_to, code]
         );
 
         return cb(null, {
@@ -378,7 +378,7 @@ responder.on('advancefilter-city', async (req, cb) => {
                 'is_active',
                 'created_at',
                 'modified_at',
-                'createdByName','code',
+                'createdByName', 'code','country_uuid','state_uuid',
                 'updatedByName'
             ],
 
@@ -393,6 +393,16 @@ responder.on('advancefilter-city', async (req, cb) => {
                     select: 'S.name',
                     search: 'S.name',
                     sort: 'S.name'
+                },
+                country_uuid: {
+                    select: 'CO.country_uuid',
+                    search: 'CO.country_uuid::text',
+                    sort: 'CO.country_uuid'
+                },
+                state_uuid: {
+                    select: 'S.state_uuid',
+                    search: 'S.state_uuid::text',
+                    sort: 'S.state_uuid'
                 },
                 createdByName: {
                     select: 'creators.username',

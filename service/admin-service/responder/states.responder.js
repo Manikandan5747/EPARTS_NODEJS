@@ -20,7 +20,7 @@ const responder = new cote.Responder({
 // --------------------------------------------------
 responder.on('create-state', async (req, cb) => {
     try {
-        const { country_uuid, name, created_by, assigned_to,code } = req.body;
+        const { country_uuid, name, created_by, assigned_to, code } = req.body;
 
         if (!country_uuid) {
             return cb(null, { status: false, code: 2001, error: 'Country UUID is required' });
@@ -29,7 +29,7 @@ responder.on('create-state', async (req, cb) => {
         if (!name || !name.trim()) {
             return cb(null, { status: false, code: 2001, error: 'State name is required' });
         }
-          if (!code || !code.trim()) {
+        if (!code || !code.trim()) {
             return cb(null, { status: false, code: 2001, error: 'Code is required' });
         }
 
@@ -79,7 +79,7 @@ responder.on('create-state', async (req, cb) => {
              (state_uuid, country_id, name, created_by, assigned_to,code)
              VALUES (gen_random_uuid(), $1, $2, $3, $4,$5)
              RETURNING *`,
-            [country_id, stateName, created_by, assigned_to,code]
+            [country_id, stateName, created_by, assigned_to, code]
         );
 
         return cb(null, {
@@ -174,7 +174,7 @@ responder.on('update-state', async (req, cb) => {
         if (!country_uuid) {
             return cb(null, { status: false, code: 2001, error: 'Country UUID is required' });
         }
-        
+
         // Validate country_uuid and fetch country_id
         const countryResult = await pool.query(
             `SELECT country_id 
@@ -194,7 +194,7 @@ responder.on('update-state', async (req, cb) => {
         }
 
         const country_id = countryResult.rows[0].country_id;
-        
+
         const duplicate = await pool.query(
             `SELECT state_uuid FROM states
              WHERE UPPER(name) = UPPER($1)
@@ -240,7 +240,7 @@ responder.on('delete-state', async (req, cb) => {
         const { state_uuid } = req;
         const { deleted_by } = req.body;
 
-          const result = await pool.query(`SELECT * FROM states WHERE state_uuid = $1 AND is_deleted = FALSE`, [state_uuid]);
+        const result = await pool.query(`SELECT * FROM states WHERE state_uuid = $1 AND is_deleted = FALSE`, [state_uuid]);
         if (result.rowCount === 0) {
             return cb(null, { status: false, code: 2003, error: 'State not found' });
         }
@@ -275,11 +275,11 @@ responder.on('status-state', async (req, cb) => {
         const { state_uuid } = req;
         const { modified_by, is_active } = req.body;
 
-          const result = await pool.query(`SELECT * FROM states WHERE state_uuid = $1 AND is_deleted = FALSE`, [state_uuid]);
+        const result = await pool.query(`SELECT * FROM states WHERE state_uuid = $1 AND is_deleted = FALSE`, [state_uuid]);
         if (result.rowCount === 0) {
             return cb(null, { status: false, code: 2003, error: 'State not found' });
         }
-        
+
         await pool.query(
             `UPDATE states SET
                 is_active = $1,
@@ -327,12 +327,12 @@ responder.on('advancefilter-state', async (req, cb) => {
             allowedFields: [
                 'name',
                 'country_id',
-                'country_name',
+                'country_name', 'country_uuid',
                 'is_active',
                 'created_at',
                 'modified_at',
                 'createdByName',
-                'updatedByName','code'
+                'updatedByName', 'code'
             ],
 
             /* ---------------- Custom Joined Fields ---------------- */
@@ -341,6 +341,11 @@ responder.on('advancefilter-state', async (req, cb) => {
                     select: 'C.name',
                     search: 'C.name',
                     sort: 'C.name'
+                },
+                country_uuid: {
+                    select: 'C.country_uuid',
+                    search: 'C.country_uuid::text',
+                    sort: 'C.country_uuid'
                 },
                 createdByName: {
                     select: 'creators.username',

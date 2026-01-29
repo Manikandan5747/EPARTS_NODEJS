@@ -268,11 +268,28 @@ responder.on('advancefilter-trading-type', async (req, cb) => {
             table: 'trading_types',
             alias: 'TT',
             defaultSort: 'created_at',
-
+            /* ---------------- Joins ---------------- */
+            joinSql: `
+                LEFT JOIN users creators ON UR.created_by = creators.user_uuid
+                LEFT JOIN users updaters ON UR.modified_by = updaters.user_uuid
+            `,
             allowedFields: [
                 'code', 'name', 'is_active',
-                'created_at', 'modified_at'
+                'created_at', 'modified_at', 'createdByName', 'updatedByName'
             ],
+            /* -------- Custom joined fields (virtual fields) -------- */
+            customFields: {
+                createdByName: {
+                    select: 'creators.username',
+                    search: 'creators.username',
+                    sort: 'creators.username'
+                },
+                updatedByName: {
+                    select: 'updaters.username',
+                    search: 'updaters.username',
+                    sort: 'updaters.username'
+                }
+            },
 
             baseWhere: `
                 TT.is_deleted = FALSE

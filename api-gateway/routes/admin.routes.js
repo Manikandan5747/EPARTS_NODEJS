@@ -74,7 +74,9 @@ router.use('/model', (req, res, next) => require('../admin-routes/model.routes.j
 
 router.use('/module', (req, res, next) => require('../admin-routes/module.routes.js')(req, res, next));
 
-router.use('/profile-privilege', (req, res, next) => require('../admin-routes/profile-privilege.routes.js')(req, res, next));
+router.use('/profile', (req, res, next) => require('../admin-routes/profile.routes.js')(req, res, next));
+
+router.use('/role-data-access', (req, res, next) => require('../admin-routes/role-data-access.routes.js')(req, res, next));
 
 // Testing
 router.use('/dynamic-report', (req, res, next) => require('../admin-routes/report.routes.js')(req, res, next));

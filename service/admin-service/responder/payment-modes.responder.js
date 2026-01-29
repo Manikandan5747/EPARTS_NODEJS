@@ -211,7 +211,27 @@ responder.on('advancefilter-payment-mode', async (req, cb) => {
             table: 'payment_modes',
             alias: 'PM',
             defaultSort: 'created_at',
-            allowedFields: ['code', 'name', 'is_active', 'created_at'],
+              /* ---------------- Joins ---------------- */
+            joinSql: `
+                LEFT JOIN users creators ON PM.created_by = creators.user_uuid
+                LEFT JOIN users updaters ON PM.modified_by = updaters.user_uuid
+            `,
+
+            allowedFields: ['code', 'name', 'is_active', 'created_at','createdByName', 'updatedByName'],
+
+              /* -------- Custom joined fields (virtual fields) -------- */
+            customFields: {
+                createdByName: {
+                    select: 'creators.username',
+                    search: 'creators.username',
+                    sort: 'creators.username'
+                },
+                updatedByName: {
+                    select: 'updaters.username',
+                    search: 'updaters.username',
+                    sort: 'updaters.username'
+                }
+            },
             baseWhere: 'PM.is_deleted = FALSE'
         });
 

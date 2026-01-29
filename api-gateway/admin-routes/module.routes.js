@@ -225,4 +225,66 @@ router.post('/pagination-list', async (req, res) => {
     }
 });
 
+
+// routes/miscellaneousPrivileges.js
+router.post('/misc-privileges', async (req, res) => {
+    try {
+        const result = await moduleRequester.send({
+            type: 'create-or-update-misc-privileges',
+            data: req.body,
+            userid: req.body.userid
+        });
+
+        if (!result.status) {
+            await saveErrorLog({
+                api_name: 'create-or-update-misc-privileges',
+                method: 'POST',
+                payload: req.body,
+                message: result.error,
+                stack: result.stack || '',
+                error_code: result.code || 2004
+            });
+            return res.status(500).json(result);
+        }
+
+        return res.status(200).json(result);
+
+    } catch (err) {
+        logger.error("Error in modules/pagination:", err.message);
+        res.status(500).json({ error: err.message });
+    }
+});
+
+
+// --------------------------------------
+// LIST ALL MODULES
+// --------------------------------------
+router.get('/side-menu/:id', async (req, res) => {
+    try {
+        const result = await moduleRequester.send({
+            type: 'side-menu-module',
+            role_uuid: req.params.id,
+        });
+
+        if (!result.status) {
+            await saveErrorLog({
+                api_name: 'side-menu-module',
+                method: 'GET',
+                payload: null,
+                message: result.error,
+                stack: result.stack || '',
+                error_code: result.code || 2004
+            });
+            return res.status(500).json(result);
+        }
+
+        res.json(result);
+
+    } catch (err) {
+        logger.error("Error in side-menu-module/list:", err.message);
+        res.status(500).json({ error: err.message });
+    }
+});
+
+
 module.exports = router;

@@ -1,12 +1,12 @@
 const router = (() => require('express'))().Router();
 
-router.use('/roles', (req, res, next) => require('../admin-routes/roles.routes.js')(req, res, next));
+router.use('/role', (req, res, next) => require('../admin-routes/roles.routes.js')(req, res, next));
 
 router.use('/user-type', (req, res, next) => require('../admin-routes/user-type.routes.js')(req, res, next));
 
-router.use('/users', (req, res, next) => require('../admin-routes/users.routes.js')(req, res, next));
+router.use('/user', (req, res, next) => require('../admin-routes/users.routes.js')(req, res, next));
 
-router.use('/portal-users', (req, res, next) => require('../admin-routes/portal-user.routes.js')(req, res, next));
+router.use('/portal-user', (req, res, next) => require('../admin-routes/portal-user.routes.js')(req, res, next));
 
 router.use('/country', (req, res, next) => require('../admin-routes/countries.routes.js')(req, res, next));
 
@@ -26,11 +26,11 @@ router.use('/payment-mode', (req, res, next) => require('../admin-routes/payment
 
 router.use('/registration-status', (req, res, next) => require('../admin-routes/registration-status.routes.js')(req, res, next));
 
-router.use('/registration-fail-reasons', (req, res, next) => require('../admin-routes/registration-fail-reasons.routes.js')(req, res, next));
+router.use('/registration-fail-reason', (req, res, next) => require('../admin-routes/registration-fail-reasons.routes.js')(req, res, next));
 
 router.use('/product-listing-status', (req, res, next) => require('../admin-routes/product-listing-status.routes.js')(req, res, next));
 
-router.use('/rejection-reasons', (req, res, next) => require('../admin-routes/rejection-reasons.routes.js')(req, res, next));
+router.use('/rejection-reason', (req, res, next) => require('../admin-routes/rejection-reasons.routes.js')(req, res, next));
 
 router.use('/category-request-status', (req, res, next) => require('../admin-routes/category-request-status.routes.js')(req, res, next));
 
@@ -68,7 +68,7 @@ router.use('/document-type', (req, res, next) => require('../admin-routes/docume
 
 router.use('/payout-schedule', (req, res, next) => require('../admin-routes/payout_schedule.routes.js')(req, res, next));
 
-router.use('/product-conditions', (req, res, next) => require('../admin-routes/product_conditions.routes.js')(req, res, next));
+router.use('/product-condition', (req, res, next) => require('../admin-routes/product_conditions.routes.js')(req, res, next));
 
 router.use('/model', (req, res, next) => require('../admin-routes/model.routes.js')(req, res, next));
 

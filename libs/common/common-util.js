@@ -142,6 +142,93 @@ module.exports = {
             }
         });
     },
+
+    createOrUpdateMisc: async function (body) {
+        const { miscItems, module_id } = body;
+        const created_by = body.created_by || body.modified_by;
+        const client = await pool.connect();
+
+        if (!miscItems || !Array.isArray(miscItems) || miscItems.length === 0) {
+            return {
+                status: false,
+                message: 'No misc items to process.'
+            };
+        }
+
+        try {
+            await client.query('BEGIN');
+
+            for (const item of miscItems) {
+
+                const is_active = typeof item.is_active === 'boolean'
+                    ? item.is_active
+                    : true;
+
+                // 🔹 Check if record exists based on module_id + misc_name
+                const checkQuery = await client.query(
+                    `SELECT misc_id 
+                 FROM miscellaneous_mapping 
+                 WHERE module_id = $1 
+                 AND LOWER(misc_name) = LOWER($2)
+                 AND is_deleted = FALSE`,
+                    [module_id, item.misc_name]
+                );
+
+                if (checkQuery.rowCount > 0) {
+                    // ---------------- UPDATE ----------------
+                    await client.query(
+                        `UPDATE miscellaneous_mapping 
+                     SET is_active = $1,
+                         modified_at = NOW(),
+                         modified_by = $2
+                     WHERE module_id = $3
+                       AND LOWER(misc_name) = LOWER($4)
+                       AND is_deleted = FALSE`,
+                        [
+                            is_active,
+                            created_by,
+                            module_id,
+                            item.misc_name
+                        ]
+                    );
+
+                } else {
+                    // ---------------- CREATE ----------------
+                    await client.query(
+                        `INSERT INTO miscellaneous_mapping 
+                     (misc_name, module_id, is_active, created_at, created_by, assigned_to)
+                     VALUES ($1, $2, $3, NOW(), $4, $4)`,
+                        [
+                            item.misc_name,
+                            module_id,
+                            is_active,
+                            created_by
+                        ]
+                    );
+                }
+            }
+
+            await client.query('COMMIT');
+
+            return {
+                status: true,
+                message: 'Miscellaneous items saved successfully'
+            };
+
+        } catch (err) {
+            await client.query('ROLLBACK');
+            console.error('Error processing misc items:', err);
+
+            return {
+                status: false,
+                message: 'Error processing misc items',
+                error: err.message
+            };
+
+        } finally {
+            client.release();
+        }
+    },
 }
 
 

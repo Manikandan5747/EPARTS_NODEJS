@@ -270,8 +270,8 @@ responder.on('advancefilter-trading-type', async (req, cb) => {
             defaultSort: 'created_at',
             /* ---------------- Joins ---------------- */
             joinSql: `
-                LEFT JOIN users creators ON UR.created_by = creators.user_uuid
-                LEFT JOIN users updaters ON UR.modified_by = updaters.user_uuid
+                LEFT JOIN users creators ON TT.created_by = creators.user_uuid
+                LEFT JOIN users updaters ON TT.modified_by = updaters.user_uuid
             `,
             allowedFields: [
                 'code', 'name', 'is_active',

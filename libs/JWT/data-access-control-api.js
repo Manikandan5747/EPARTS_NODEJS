@@ -35,7 +35,7 @@ module.exports = function apiAccess() {
             // }
 
             // const { user_id } = verifiedData;
-            const user_id  = 2;
+            const user_id = 2;
             if (!user_id) {
                 return errorHandler({ name: "InvalidToken" }, req, res);
             }
@@ -55,9 +55,9 @@ module.exports = function apiAccess() {
             console.log("role_id: ", role_id);
 
             /* ---------------- 4. GET MODULE FROM ROUTE ---------------- */
-            const baseRoute = '/' + req.originalUrl.split('/')[2]; 
+            const baseRoute = '/' + req.originalUrl.split('/')[2];
             // /api/state/create -> /state
-  console.log("baseRoute: ", baseRoute);
+            console.log("baseRoute: ", baseRoute);
             const moduleRes = await pool.query(
                 `SELECT module_id
                  FROM module
@@ -71,22 +71,27 @@ module.exports = function apiAccess() {
             }
 
             const module_id = moduleRes.rows[0].module_id;
- console.log("module_id: ", module_id);
+            console.log("module_id: ", module_id);
             /* ---------------- 5. GET PROFILE PRIVILEGES ---------------- */
             const privRes = await pool.query(
-                `SELECT pp.*
-                 FROM profile_privilege pp
-                 LEFT JOIN role r ON r.profile_id = pp.profile_id
-                 WHERE r.role_id = $1 AND pp.module_id = $2`,
+                `SELECT r.*
+   FROM role_data_access ra
+   LEFT JOIN profile_privilege r
+          ON r.profile_id = ra.profile_id
+   WHERE ra.role_id = $1
+     AND ra.module_id = $2
+     AND ra.is_deleted = false`,
                 [role_id, module_id]
             );
 
+
+            console.log("privRes.rowCount: ", privRes.rowCount);
             if (privRes.rowCount === 0) {
                 return errorHandler({ name: "NoModulePermission" }, req, res);
             }
 
             const priv = privRes.rows[0];
-console.log("priv: ", priv);
+            console.log("priv: ", priv);
             /* ---------------- 6. FULL GRANT ACCESS ---------------- */
             if (priv.fullgrantaccess === true) {
                 return next();
@@ -123,7 +128,7 @@ console.log("priv: ", priv);
                        AND module_id = $2`,
                     [role_id, module_id]
                 );
-console.log("accessResult: ", accessResult.rows);
+                console.log("accessResult: ", accessResult.rows);
                 if (accessResult.rowCount === 0) {
                     return errorHandler({ name: "NoDataAccess" }, req, res);
                 }
@@ -143,7 +148,7 @@ console.log("accessResult: ", accessResult.rows);
                     return errorHandler({ name: "NoDataAccess" }, req, res);
                 }
             }
-console.log("req.dataAccessScope: ", req.dataAccessScope);
+            console.log("req.dataAccessScope: ", req.dataAccessScope);
             /* ---------------- NEXT ---------------- */
             next();
 

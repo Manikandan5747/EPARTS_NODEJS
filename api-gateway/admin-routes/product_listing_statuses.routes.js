@@ -6,10 +6,3 @@ module.exports = createMasterRoutes({
     requester,
     entityName: 'product_listing_statuses'
 });
-
-
-
-
-
-
-

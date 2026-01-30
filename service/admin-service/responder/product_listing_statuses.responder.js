@@ -16,7 +16,7 @@ registerMasterResponder({
     responder,
     pool,
     key:'product_listing_statuses',
-    table: 'product_listing_statuses',
+    table: 'product_listing_status',
     alias: 'PT',
     uuidColumn: 'product_listing_status_uuid',
     allowedFields: ['code', 'name', 'is_active', 'created_at', 'modified_at']

@@ -34,7 +34,8 @@ router.post('/create', multipartMiddleware, async (req, res) => {
                 payload: req.body,
                 message: result.error,
                 stack: result.stack || '',
-                error_code: result.code || 2004
+                error_code: result.code || 2004,
+                
             });
             return res.status(500).json(result);
         }

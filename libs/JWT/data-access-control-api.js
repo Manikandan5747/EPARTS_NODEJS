@@ -4,157 +4,160 @@ const errorHandler = require("@libs/error-handler/error-handler");
 const APP_CONFIG = require("@libs/JWT/app-config");
 const logger = require("@libs/logger/logger");
 
+/* ---------------- API → PERMISSION MAP ---------------- */
+const getRequiredPermission = (url) => {
+  url = url.toLowerCase();
+
+  if (url.includes('/pagination-list')) return 'listaccess';
+  if (url.includes('/list')) return 'listaccess';
+  if (url.includes('/findbyid')) return 'viewaccess';
+  if (url.includes('/create')) return 'createaccess';
+  if (url.includes('/update')) return 'editaccess';
+  if (url.includes('/status')) return 'editaccess';
+  if (url.includes('/delete')) return 'deleteaccess';
+  if (url.includes('/print')) return 'printaccess';
+  if (url.includes('/clone')) return 'cloneaccess';
+  if (url.includes('/export')) return 'exportaccess';
+
+  return null;
+};
+
 module.exports = function apiAccess() {
 
-    return async function (req, res, next) {
-        try {
+  return async function (req, res, next) {
+    try {
 
-            /* ---------------- 1. GET TOKEN ---------------- */
-            // let authorization =
-            //     req.headers["authorization"] ||
-            //     req.body.authorization ||
-            //     req.query.authorization;
+      /* ---------------- 1. USER (TEMP HARDCODED) ---------------- */
+      const user_id = 2;
+      if (!user_id) {
+        return errorHandler({ name: "InvalidToken" }, req, res);
+      }
 
-            // if (!authorization) {
-            //     return errorHandler({ name: "NoAuthorizationProvided" }, req, res);
-            // }
+      console.log("👤 user_id:", user_id);
 
-            // const token = authorization.startsWith("Bearer ")
-            //     ? authorization.split(" ")[1]
-            //     : authorization;
+      /* ---------------- 2. USER ROLE ---------------- */
+      const userResult = await pool.query(
+        `SELECT role_id FROM users WHERE user_id = $1`,
+        [user_id]
+      );
 
-            /* ---------------- 2. VERIFY TOKEN ---------------- */
-            // let verifiedData;
-            // try {
-            //     verifiedData = jwt.verify(token, APP_CONFIG.secretkey);
-            // } catch (err) {
-            //     if (err instanceof jwt.TokenExpiredError) {
-            //         return errorHandler({ name: "TokenExpiredError" }, req, res);
-            //     }
-            //     return errorHandler({ name: "InvalidToken" }, req, res);
-            // }
+      if (userResult.rowCount === 0) {
+        return errorHandler({ name: "UserNotFound" }, req, res);
+      }
 
-            // const { user_id } = verifiedData;
-            const user_id = 2;
-            if (!user_id) {
-                return errorHandler({ name: "InvalidToken" }, req, res);
-            }
+      const role_id = userResult.rows[0].role_id;
+      console.log("🎭 role_id:", role_id);
 
-            /* ---------------- 3. GET USER ROLE ---------------- */
-            const userResult = await pool.query(
-                `SELECT role_id FROM users WHERE user_id = $1`,
-                [user_id]
-            );
+      /* ---------------- 3. MODULE FROM ROUTE ---------------- */
+      const baseRoute = '/' + req.originalUrl.split('/')[2];
+      console.log("🧭 baseRoute:", baseRoute);
 
-            if (userResult.rowCount === 0) {
-                return errorHandler({ name: "UserNotFound" }, req, res);
-            }
+      const moduleRes = await pool.query(
+        `SELECT module_id
+         FROM module
+         WHERE routename = $1
+           AND is_active = true`,
+        [baseRoute]
+      );
 
-            const role_id = userResult.rows[0].role_id;
+      if (moduleRes.rowCount === 0) {
+        return errorHandler({ name: "ModuleNotRegistered" }, req, res);
+      }
 
-            console.log("role_id: ", role_id);
+      const module_id = moduleRes.rows[0].module_id;
+      console.log("📦 module_id:", module_id);
 
-            /* ---------------- 4. GET MODULE FROM ROUTE ---------------- */
-            const baseRoute = '/' + req.originalUrl.split('/')[2];
-            // /api/state/create -> /state
-            console.log("baseRoute: ", baseRoute);
-            const moduleRes = await pool.query(
-                `SELECT module_id
-                 FROM module
-                 WHERE routename = $1
-                   AND is_active = TRUE`,
-                [baseRoute]
-            );
+      /* ---------------- 4. MERGED PROFILE PRIVILEGES ---------------- */
+      const privRes = await pool.query(
+        `SELECT
+           BOOL_OR(pp.fullgrantaccess) AS fullgrantaccess,
+           BOOL_OR(pp.createaccess)    AS createaccess,
+           BOOL_OR(pp.editaccess)      AS editaccess,
+           BOOL_OR(pp.deleteaccess)    AS deleteaccess,
+           BOOL_OR(pp.listaccess)      AS listaccess,
+           BOOL_OR(pp.viewaccess)      AS viewaccess,
+           BOOL_OR(pp.printaccess)     AS printaccess,
+           BOOL_OR(pp.cloneaccess)     AS cloneaccess
+         FROM role_profile_mapping rpm
+         JOIN profile_privilege pp
+              ON pp.profile_id = rpm.profile_id
+             AND pp.module_id = $2
+             AND pp.is_active = true
+             AND pp.is_deleted = false
+         WHERE rpm.role_id = $1
+           AND rpm.is_active = true
+           AND rpm.is_deleted = false`,
+        [role_id, module_id]
+      );
 
-            if (moduleRes.rowCount === 0) {
-                return errorHandler({ name: "ModuleNotRegistered" }, req, res);
-            }
+      const priv = privRes.rows[0];
+      console.log("🔐 merged privileges:", priv);
 
-            const module_id = moduleRes.rows[0].module_id;
-            console.log("module_id: ", module_id);
-            /* ---------------- 5. GET PROFILE PRIVILEGES ---------------- */
-            const privRes = await pool.query(
-                `SELECT r.*
-   FROM role_data_access ra
-   LEFT JOIN profile_privilege r
-          ON r.profile_id = ra.profile_id
-   WHERE ra.role_id = $1
-     AND ra.module_id = $2
-     AND ra.is_deleted = false`,
-                [role_id, module_id]
-            );
+      if (!priv) {
+        return errorHandler({ name: "NoModulePermission" }, req, res);
+      }
 
+      /* ---------------- 5. FULL GRANT ---------------- */
+      if (priv.fullgrantaccess === true) {
+        console.log("✅ FULL GRANT ACCESS");
+        return next();
+      }
 
-            console.log("privRes.rowCount: ", privRes.rowCount);
-            if (privRes.rowCount === 0) {
-                return errorHandler({ name: "NoModulePermission" }, req, res);
-            }
+      /* ---------------- 6. DETECT API ACTION ---------------- */
+      const requiredPermission = getRequiredPermission(req.originalUrl);
+      console.log("🎯 requiredPermission:", requiredPermission);
 
-            const priv = privRes.rows[0];
-            console.log("priv: ", priv);
-            /* ---------------- 6. FULL GRANT ACCESS ---------------- */
-            if (priv.fullgrantaccess === true) {
-                return next();
-            }
+      if (!requiredPermission) {
+        console.log("ℹ️ No permission mapping → skipping check");
+        return next();
+      }
 
-            /* ---------------- 7. DETECT ACTION ---------------- */
-            const url = req.originalUrl.toLowerCase();
-            let requiredPermission = null;
+      /* ---------------- 7. PERMISSION CHECK ---------------- */
+      if (priv[requiredPermission] !== true) {
+        console.error(`❌ Permission denied: ${requiredPermission}`);
+        return errorHandler({ name: "NoModulePermission" }, req, res);
+      }
 
-            if (url.includes('/pagination-list')) requiredPermission = 'listaccess';
-            else if (url.includes('/list')) requiredPermission = 'listaccess';
-            else if (url.includes('/findbyid')) requiredPermission = 'viewaccess';
-            else if (url.includes('/create')) requiredPermission = 'createaccess';
-            else if (url.includes('/update')) requiredPermission = 'editaccess';
-            else if (url.includes('/status')) requiredPermission = 'editaccess';
-            else if (url.includes('/delete')) requiredPermission = 'deleteaccess';
-            else if (url.includes('/print')) requiredPermission = 'printaccess';
-            else if (url.includes('/clone')) requiredPermission = 'cloneaccess';
-            else if (url.includes('/export')) requiredPermission = 'exportaccess';
+      console.log(`✅ Permission allowed: ${requiredPermission}`);
 
-            if (!requiredPermission) return next();
+      /* ---------------- 8. DATA ACCESS (LIST / VIEW ONLY) ---------------- */
+        console.log("🔎 Applying DATA ACCESS rules");
 
-            if (priv[requiredPermission] !== true) {
-                return errorHandler({ name: "NoModulePermission" }, req, res);
-            }
+        const accessResult = await pool.query(
+          `SELECT listaccess
+           FROM role_data_access
+           WHERE role_id = $1
+             AND module_id = $2`,
+          [role_id, module_id]
+        );
 
-            /* ---------------- 8. DATA ACCESS (Only for Read APIs) ---------------- */
-            if (requiredPermission === 'listaccess' || requiredPermission === 'viewaccess') {
-
-                const accessResult = await pool.query(
-                    `SELECT listaccess 
-                     FROM role_data_access
-                     WHERE role_id = $1 
-                       AND module_id = $2`,
-                    [role_id, module_id]
-                );
-                console.log("accessResult: ", accessResult.rows);
-                if (accessResult.rowCount === 0) {
-                    return errorHandler({ name: "NoDataAccess" }, req, res);
-                }
-
-                const access_type = accessResult.rows[0].listaccess;
-
-                if (access_type === 3) { //'PUBLIC'
-                    req.dataAccessScope = { type: 'PUBLIC' };
-                }
-                else if (access_type === 2) { //'PRIVATE'
-                    req.dataAccessScope = {
-                        type: 'PRIVATE',
-                        user_id: user_id
-                    };
-                }
-                else {
-                    return errorHandler({ name: "NoDataAccess" }, req, res);
-                }
-            }
-            console.log("req.dataAccessScope: ", req.dataAccessScope);
-            /* ---------------- NEXT ---------------- */
-            next();
-
-        } catch (err) {
-            logger.error("ApiAccessingCheckingAuthApi Error:", err);
-            return errorHandler(err, req, res);
+        if (accessResult.rowCount === 0) {
+          return errorHandler({ name: "NoDataAccess" }, req, res);
         }
-    };
+
+        const access_type = accessResult.rows[0].listaccess;
+        console.log("📊 access_type:", access_type);
+
+        /* -------- YOUR IF LOGIC (AS REQUESTED) -------- */
+        if (access_type === 3) {
+          req.dataAccessScope = { type: 'PUBLIC' };
+        }
+        else if (access_type === 2) {
+          req.dataAccessScope = { type: 'PRIVATE', user_id };
+        }
+        else {
+          return errorHandler({ name: "NoDataAccess" }, req, res);
+        }
+
+        console.log("🔐 dataAccessScope:", req.dataAccessScope);
+      
+
+      /* ---------------- NEXT ---------------- */
+      next();
+
+    } catch (err) {
+      logger.error("ApiAccess middleware error:", err);
+      return errorHandler(err, req, res);
+    }
+  };
 };

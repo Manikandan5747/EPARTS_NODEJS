@@ -226,4 +226,35 @@ router.post('/pagination-list', async (req, res) => {
 });
 
 
+/* ======================================================
+   LIST BY moduletypelist
+====================================================== */
+router.get('/moduletypelist', async (req, res) => {
+    try {
+         const {module_type} = req.query;
+        const result = await profileRequester.send({
+            type: 'moduletypelist',
+            module_type: module_type
+        });
+
+        if (!result.status) {
+            await saveErrorLog({
+                api_name: 'moduletypelist',
+                method: 'GET',
+                payload: { module_type: module_type},
+                message: result.error,
+                stack: result.stack || '',
+                error_code: result.code || 2004
+            });
+            return res.status(500).json(result);
+        }
+
+        return res.json(result);
+
+    } catch (err) {
+        logger.error("Error in moduletypelist/list:", err.message);
+        res.status(500).json({ error: err.message });
+    }
+});
+
 module.exports = router;

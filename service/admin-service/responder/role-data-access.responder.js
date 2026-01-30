@@ -73,8 +73,9 @@ responder.on("create-update-role-data-access", async (req, cb) => {
         // --------------------------------------------------
         const insert = await pool.query(
             `INSERT INTO user_role 
-                    (role_name, dept_id, cmp_id,hierarchy_level, created_by,assigned_to)
-                VALUES ($1, $2, $3, $4,$5,$6)`,
+     (role_name, dept_id, cmp_id, hierarchy_level, created_by, assigned_to)
+   VALUES ($1, $2, $3, $4, $5, $6)
+   RETURNING role_id`,
             [role_name, dept_id, cmp_id, hierarchy_level, created_by, assigned_to]
         );
 

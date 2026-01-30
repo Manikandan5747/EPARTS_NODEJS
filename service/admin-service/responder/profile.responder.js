@@ -589,3 +589,48 @@ async function savePrivileges(privileges, profile_id, created_by) {
     }
 }
 
+
+
+
+/* ======================================================
+   LIST BY moduletypelist
+====================================================== */
+responder.on('moduletypelist', async (req, cb) => {
+    try {
+        const { module_type } = req;
+
+        if (!module_type) {
+            return cb(null, {
+                status: false,
+                code: 2001,
+                error: "Module Type required"
+            });
+        }
+
+        const result = await pool.query(
+            `SELECT * FROM profile_privilege
+             WHERE module_type = $1 
+             AND is_deleted = FALSE
+             ORDER BY created_at ASC`,
+            [module_type]
+        );
+
+        return cb(null, {
+            status: true,
+            code: 1000,
+            message: result.rowCount > 0
+                ? "Privilege list fetched"
+                : "No privileges found",
+            count: result.rowCount,
+            data: result.rows
+        });
+
+    } catch (err) {
+        logger.error("moduletypelist Error:", err);
+        return cb(null, {
+            status: false,
+            code: 2004,
+            error: err.message
+        });
+    }
+});

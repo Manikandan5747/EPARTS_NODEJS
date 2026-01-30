@@ -100,7 +100,7 @@ module.exports = function apiAccess() {
       /* ---------------- 5. FULL GRANT ---------------- */
       if (priv.fullgrantaccess === true) {
         console.log("✅ FULL GRANT ACCESS");
-        return next();
+        // return next();
       }
 
       /* ---------------- 6. DETECT API ACTION ---------------- */
@@ -109,7 +109,7 @@ module.exports = function apiAccess() {
 
       if (!requiredPermission) {
         console.log("ℹ️ No permission mapping → skipping check");
-        return next();
+        // return next();
       }
 
       /* ---------------- 7. PERMISSION CHECK ---------------- */

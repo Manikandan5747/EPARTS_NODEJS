@@ -333,9 +333,9 @@ responder.on("create-update-role-data-access", async (req, cb) => {
                         // Create mapping
                         await client.query(
                             `INSERT INTO user_profile_mapping
-         (role_id,user_id, profile_id, is_active, created_by, assigned_to)
-         VALUES ($1,$2,$3,true,$4,$4)`,
-                            [role_id, user_id, profile_id, created_by]
+         (user_id, profile_id, is_active, created_by, assigned_to)
+         VALUES ($1,$2,true,$3,$3)`,
+                            [user_id, profile_id, created_by]
                         );
                     }
                     else if (check.rows[0].is_deleted === true) {

@@ -230,16 +230,14 @@ responder.on('update-profile', async (req, cb) => {
         const update = await pool.query(
             `UPDATE profile SET
                 profile_name = $1,
-                assigned_to = $2,
-                is_active = $3,
-                modified_by = $4,
+                is_active = $2,
+                modified_by = $3,
                 modified_at = NOW(),
-                description = $5
-             WHERE profile_uuid = $6
+                description = $4
+             WHERE profile_uuid = $5
              RETURNING *`,
             [
                 profile_name.trim(),
-                assigned_to,
                 is_active || true,
                 modified_by,
                 description,

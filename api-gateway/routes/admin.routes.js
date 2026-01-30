@@ -1,4 +1,7 @@
+require('module-alias/register');
+const apiAccess = require('@libs/JWT/data-access-control-api.js');
 const router = (() => require('express'))().Router();
+
 
 router.use('/role', (req, res, next) => require('../admin-routes/roles.routes.js')(req, res, next));
 
@@ -18,7 +21,7 @@ router.use('/currency', (req, res, next) => require('../admin-routes/currency.ro
 
 router.use('/setting', (req, res, next) => require('../admin-routes/settings.routes.js')(req, res, next));
 
-router.use('/trading-type', (req, res, next) => require('../admin-routes/trading-types.routes.js')(req, res, next));
+router.use('/trading-type', apiAccess(),(req, res, next) => require('../admin-routes/trading-types.routes.js')(req, res, next));
 
 router.use('/product-type', (req, res, next) => require('../admin-routes/product-types.routes.js')(req, res, next));
 

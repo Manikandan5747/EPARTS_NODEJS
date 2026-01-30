@@ -261,6 +261,17 @@ responder.on('status-trading-type', async (req, cb) => {
 // --------------------------------------
 responder.on('advancefilter-trading-type', async (req, cb) => {
     try {
+
+        const accessScope = req.dataAccessScope;
+        let extraWhere = '';
+        let extraParams = [];
+
+        // If PRIVATE → only show own created data
+        if (accessScope.type === 'PRIVATE') {
+            extraWhere = ' AND TT.created_by = $extraUser';
+            extraParams.push(accessScope.user_id);
+        }
+
         const result = await buildAdvancedSearchQuery({
             pool,
             reqBody: req.body,
@@ -292,7 +303,7 @@ responder.on('advancefilter-trading-type', async (req, cb) => {
             },
 
             baseWhere: `
-                TT.is_deleted = FALSE
+                TT.is_deleted = FALSE ${extraWhere}
             `
         });
 

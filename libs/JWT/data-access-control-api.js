@@ -140,7 +140,7 @@ module.exports = function apiAccess() {
 
         /* -------- YOUR IF LOGIC (AS REQUESTED) -------- */
         if (access_type === 3) {
-          req.dataAccessScope = { type: 'PUBLIC' };
+          req.dataAccessScope = { type: 'PUBLIC',user_id };
         }
         else if (access_type === 2) {
           req.dataAccessScope = { type: 'PRIVATE', user_id };

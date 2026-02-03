@@ -1247,8 +1247,7 @@ responder.on('get-next-prefix-refno', async (req, cb) => {
             `SELECT table_name, id_field, ref_field, prefix_code
        FROM prefix_refno
        WHERE category_type = $1
-         AND is_active = TRUE
-         AND is_deleted = FALSE`,
+         AND is_active = TRUE`,
             [category_type]
         );
 
@@ -1266,7 +1265,6 @@ responder.on('get-next-prefix-refno', async (req, cb) => {
         const lastRefResult = await pool.query(
             `SELECT ${ref_field}
        FROM ${table_name}
-       WHERE is_deleted = FALSE
        ORDER BY ${id_field} DESC
        LIMIT 1`
         );

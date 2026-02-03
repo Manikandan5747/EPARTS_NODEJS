@@ -11,7 +11,10 @@ module.exports = function registerMasterResponder({
     alias,
     uuidColumn = 'uuid', // default column name
     allowedFields = [],
-    joinSql = ''
+    joinSql = '',
+    dateFields = [],
+    customFields = [],
+    // joinSql = []
 }) {
 
     const api = (action) => `${action}-${key}`;
@@ -303,6 +306,7 @@ module.exports = function registerMasterResponder({
 
             // Dynamic joins
             const joinSQL = `
+            ${joinSql}
             LEFT JOIN users creators ON ${alias}.created_by = creators.user_uuid
             LEFT JOIN users updaters ON ${alias}.modified_by = updaters.user_uuid
         `;
@@ -322,8 +326,9 @@ module.exports = function registerMasterResponder({
             `,
 
                 baseParams: extraParams,
-                // dateFields: dateFields,
+                dateFields: dateFields,
                 customFields: {
+                     ...customFields,
                     createdByName: {
                         select: 'creators.username',
                         search: 'creators.username',

@@ -165,7 +165,7 @@ responder.on('getById-city', async (req, cb) => {
             return cb(null, { status: false, code: 2003, error: 'City not found' });
         }
 
-        return cb(null, { status: true, code: 1000, data: result.rows[0] });
+        return cb(null, { status: true, message: "City fetched successfully", code: 1000, data: result.rows[0] });
 
     } catch (err) {
         logger.error('Responder Error (getById city):', err);
@@ -436,6 +436,7 @@ responder.on('advancefilter-city', async (req, cb) => {
         return cb(null, {
             status: true,
             code: 1000,
+            message: "City list fetched successfully",
             result
         });
 
@@ -524,6 +525,7 @@ responder.on('getById-city-countryid', async (req, cb) => {
         return cb(null, {
             status: true,
             code: 1000,
+            message: "City list fetched successfully",
             count: result.rowCount,
             data: result.rows
         });
@@ -582,6 +584,7 @@ responder.on('getById-city-stateid', async (req, cb) => {
         return cb(null, {
             status: true,
             code: 1000,
+            message: "City list fetched successfully",
             count: result.rowCount,
             data: result.rows
         });

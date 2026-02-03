@@ -15,11 +15,23 @@ const responder = new cote.Responder({
 registerMasterResponder({
     responder,
     pool,
-    key:'tax_code_master',
+    key: 'tax_code_master',
     table: 'tax_code_master',
     alias: 'PT',
     uuidColumn: 'tax_code_uuid',
-    allowedFields: ['code', 'name','tax_rate','is_active', 'created_at', 'modified_at']
+    allowedFields: ['code', 'name', 'tax_rate', 'is_active', 'created_at', 'modified_at', 'jurisdiction_uuid'],
+    dateFields: [],
+    customFields: {
+        jurisdiction_name: {
+            select: 'JM.name',
+            search: 'JM.name',
+            sort: 'JM.name'
+        }
+    },
+
+    joinSql: `
+        LEFT JOIN jurisdiction JM
+            ON PT.jurisdiction_uuid = JM.jurisdiction_uuid`
 });
 
 module.exports = responder;

@@ -122,7 +122,8 @@ responder.on('list-country', async (req, cb) => {
 
         return cb(null, {
             status: true,
-            code: 1000, message: "Country list fetched successfully",
+            code: 1000, 
+            message: "Country list fetched successfully",
             count: result.rowCount,
             data: result.rows
         });
@@ -156,7 +157,8 @@ responder.on('getById-country', async (req, cb) => {
             return cb(null, { status: false, code: 2003, error: 'Country not found' });
         }
 
-        return cb(null, { status: true, code: 1000, data: result.rows[0] });
+        return cb(null, { status: true, code: 1000, 
+             message: "Country fetched successfully",data: result.rows[0] });
 
     } catch (err) {
         logger.error('Responder Error (get country):', err);

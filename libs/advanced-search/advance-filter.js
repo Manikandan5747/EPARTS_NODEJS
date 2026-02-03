@@ -9,8 +9,11 @@ async function buildAdvancedSearchQuery({
     allowedFields = [],
     customFields = {},
     baseWhere = '',
-    baseParams = []
+    baseParams = [],
+    dateFields = []
 }) {
+
+
 
     /* ---------------- Unpack Request ---------------- */
     const {
@@ -108,6 +111,11 @@ async function buildAdvancedSearchQuery({
 
     /* ---------------- SELECT List ---------------- */
     const selectList = [`${alias}.*`];
+    if (dateFields?.includes('last_integrated_date')) {
+        selectList.push(
+            `${alias}.last_integrated_date::date AS last_integrated_date`
+        );
+    }
     for (const [key, cfg] of Object.entries(customFields)) {
         if (cfg.select) selectList.push(`${cfg.select} AS "${key}"`);
     }

@@ -19,7 +19,8 @@ registerMasterResponder({
     table: 'jurisdiction',
     alias: 'PT',
     uuidColumn: 'jurisdiction_uuid',
-    allowedFields: ['code', 'name', 'is_active', 'created_at', 'modified_at']
+    allowedFields: ['code', 'name', 'is_active', 'created_at', 'modified_at'],
+    dateFields :[  'last_integrated_date']  
 });
 
 module.exports = responder;

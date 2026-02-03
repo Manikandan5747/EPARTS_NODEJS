@@ -81,7 +81,5 @@ router.use('/profile', (req, res, next) => require('../admin-routes/profile.rout
 
 router.use('/role-data-access', (req, res, next) => require('../admin-routes/role-data-access.routes.js')(req, res, next));
 
-// Testing
-router.use('/dynamic-report', (req, res, next) => require('../admin-routes/report.routes.js')(req, res, next));
 
 module.exports = router;

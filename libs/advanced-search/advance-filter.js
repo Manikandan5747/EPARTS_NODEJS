@@ -8,7 +8,8 @@ async function buildAdvancedSearchQuery({
     joinSql = '',
     allowedFields = [],
     customFields = {},
-    baseWhere = ''
+    baseWhere = '',
+    dateFields = []
 }) {
 
     /* ---------------- Unpack Request ---------------- */
@@ -43,52 +44,33 @@ async function buildAdvancedSearchQuery({
         params.push(value);
     };
 
-    // /* ---------------- Basic SearchTerm ---------------- */
-    // for (const [field, obj] of Object.entries(SearchTerm)) {
-    //     const val = obj?.filterVal;
-    //     if (!val) continue;
+    /* ---------------- Basic SearchTerm ---------------- */
+    for (const [field, val] of Object.entries(SearchTerm || {})) {
+        if (val === undefined || val === null || val === '') continue;
 
-    //     const col = customFields[field]?.search ||
-    //         (allowedFields.includes(field) ? `${alias}.${field}` : null);
+        const col = customFields[field]?.search ||
+            (allowedFields.includes(field) ? `${alias}.${field}` : null);
 
-    //     if (!col) continue;
+        if (!col) continue;
 
-    //     if (['created_at', 'modified_at'].includes(field)) {
-    //         const d = isoDate(val);
-    //         if (d) addClause(`DATE(${col}) = $${params.length + 1}`, d);
-    //     } else {
-    //         addClause(`${col} ILIKE $${params.length + 1}`, `%${val}%`);
-    //     }
-    // }
+        // DATE fields
+        if (['created_at', 'modified_at'].includes(field)) {
+            const d = isoDate(val);
+            if (d) addClause(`DATE(${col}) = $${params.length + 1}`, d);
 
+            // BOOLEAN fields
+        } else if (typeof val === 'boolean') {
+            addClause(`${col} = $${params.length + 1}`, val);
 
- /* ---------------- Basic SearchTerm ---------------- */
-for (const [field, val] of Object.entries(SearchTerm || {})) {
-    if (val === undefined || val === null || val === '') continue;
+            // NUMBER fields
+        } else if (typeof val === 'number') {
+            addClause(`${col} = $${params.length + 1}`, val);
 
-    const col = customFields[field]?.search ||
-        (allowedFields.includes(field) ? `${alias}.${field}` : null);
-
-    if (!col) continue;
-
-    // DATE fields
-    if (['created_at', 'modified_at'].includes(field)) {
-        const d = isoDate(val);
-        if (d) addClause(`DATE(${col}) = $${params.length + 1}`, d);
-
-    // BOOLEAN fields
-    } else if (typeof val === 'boolean') {
-        addClause(`${col} = $${params.length + 1}`, val);
-
-    // NUMBER fields
-    } else if (typeof val === 'number') {
-        addClause(`${col} = $${params.length + 1}`, val);
-
-    // STRING fields
-    } else {
-        addClause(`${col} ILIKE $${params.length + 1}`, `%${val}%`);
+            // STRING fields
+        } else {
+            addClause(`${col} ILIKE $${params.length + 1}`, `%${val}%`);
+        }
     }
-}
 
 
 
@@ -124,9 +106,28 @@ for (const [field, val] of Object.entries(SearchTerm || {})) {
     }
 
     /* ---------------- SELECT List ---------------- */
-    const selectList = [`${alias}.*`];
+    // const selectList = [`${alias}.*`];
+    // for (const [key, cfg] of Object.entries(customFields)) {
+    //     if (cfg.select) selectList.push(`${cfg.select} AS "${key}"`);
+    // }
+
+    /* ---------------- SELECT List (NO alias.* ❌) ---------------- */
+    const selectList = [];
+
+    for (const field of allowedFields) {
+        if (dateFields.includes(field)) {
+            selectList.push(
+                `TO_CHAR(${alias}.${field}, 'YYYY-MM-DD') AS ${field}`
+            );
+        } else {
+            selectList.push(`${alias}.${field}`);
+        }
+    }
+
     for (const [key, cfg] of Object.entries(customFields)) {
-        if (cfg.select) selectList.push(`${cfg.select} AS "${key}"`);
+        if (cfg.select) {
+            selectList.push(`${cfg.select} AS "${key}"`);
+        }
     }
 
     /* ---------------- WHERE ---------------- */

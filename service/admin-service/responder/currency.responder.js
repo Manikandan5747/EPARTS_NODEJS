@@ -13,7 +13,7 @@ const responder = new cote.Responder({
 // --------------------------------------
 responder.on('create-currency', async (req, cb) => {
     try {
-        const { code, name, symbol, description, created_by } = req.body;
+        const { code, name, symbol, description, created_by,assigned_to } = req.body;
 
         if (!name || !name.trim()) {
             return cb(null, { status: false, code: 2001, error: 'Currency name is required' });
@@ -36,13 +36,13 @@ responder.on('create-currency', async (req, cb) => {
 
 
         const query = `
-            INSERT INTO currency (code, name, symbol, description, created_by)
-            VALUES ($1, $2, $3, $4, $5)
+            INSERT INTO currency (code, name, symbol, description, created_by,assigned_to)
+            VALUES ($1, $2, $3, $4, $5,$6)
             RETURNING *
         `;
 
         const { rows } = await pool.query(query, [
-            code, name, symbol, description, created_by
+            code, name, symbol, description, created_by,assigned_to
         ]);
 
         cb(null, { status: true, code: 1000, data: rows[0], message: 'Currency created successfully', });

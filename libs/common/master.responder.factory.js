@@ -11,12 +11,18 @@ module.exports = function registerMasterResponder({
     alias,
     uuidColumn = 'uuid', // default column name
     allowedFields = [],
-    joinSql = ''
+    joinSql = '',
+    dateFields
 }) {
 
     const api = (action) => `${action}-${key}`;
 
     console.log("api res", api('create'));
+
+    const formatTableName = (name) =>
+        name
+            .replace(/_/g, ' ')
+            .replace(/\b\w/g, char => char.toUpperCase());
 
     // ---------------- CREATE ----------------
     responder.on(api('create'), async (req, cb) => {
@@ -37,9 +43,10 @@ module.exports = function registerMasterResponder({
             return cb(null, {
                 status: true,
                 code: 1000,
-                message: `${table} created successfully`,
+                message: `${formatTableName(table)} created successfully`,
                 data: result.rows[0]
             });
+
         } catch (err) {
             logger.error(`Error (create ${table}):`, err);
             console.log("err.code", err.code);
@@ -86,7 +93,7 @@ module.exports = function registerMasterResponder({
             return cb(null, {
                 status: true,
                 code: 1000,
-                message: `${table} list fetched successfully`,
+                message: `${formatTableName(table)} list fetched successfully`,
                 count: result.rowCount,
                 data: result.rows
             });
@@ -109,7 +116,10 @@ module.exports = function registerMasterResponder({
                 return cb(null, { status: false, code: 2003, error: `${table} not found` });
             }
 
-            return cb(null, { status: true, code: 1000, data: result.rows[0] });
+            return cb(null, {
+                status: true,
+                message: `${formatTableName(table)} fetched successfully`, code: 1000, data: result.rows[0]
+            });
         } catch (err) {
             logger.error(`Error (getById ${table}):`, err);
             return cb(null, { status: false, code: 2004, error: err.message });
@@ -129,7 +139,7 @@ module.exports = function registerMasterResponder({
             );
 
             if (check.rowCount === 0) {
-                return cb(null, { status: false, code: 2003, error: `${table} not found` });
+                return cb(null, { status: false, code: 2003, error: `${formatTableName(table)} not found` });
             }
 
             const columns = Object.keys(body);
@@ -149,7 +159,7 @@ module.exports = function registerMasterResponder({
             return cb(null, {
                 status: true,
                 code: 1000,
-                message: `${table} updated successfully`,
+                message: `${formatTableName(table)} updated successfully`,
                 data: result.rows[0]
             });
         } catch (err) {
@@ -181,7 +191,7 @@ module.exports = function registerMasterResponder({
             return cb(null, {
                 status: true,
                 code: 1000,
-                message: `${table} deleted successfully`
+                message: `${formatTableName(table)} deleted successfully`
             });
         } catch (err) {
             logger.error(`Error (delete ${table}):`, err);
@@ -214,7 +224,7 @@ module.exports = function registerMasterResponder({
             return cb(null, {
                 status: true,
                 code: 1000,
-                message: `${table} status updated successfully`,
+                message: `${formatTableName(table)} status updated successfully`,
                 data: result.rows[0]
             });
         } catch (err) {
@@ -224,9 +234,75 @@ module.exports = function registerMasterResponder({
     });
 
     // ---------------- ADVANCE FILTER ----------------
+    // responder.on(api('advancefilter'), async (req, cb) => {
+    //     try {
+
+    //         const accessScope = req.dataAccessScope;
+    //         let extraWhere = '';
+    //         let extraParams = [];
+
+    //         // If PRIVATE → only show own created data
+    //         if (accessScope.type === 'PRIVATE') {
+    //             extraWhere = ` AND ${alias}.created_by = $extraUser`;
+    //             extraParams.push(accessScope.user_id);
+    //         }
+
+    //         // Define joins dynamically if needed
+    //         const joinSQL = `
+    //         LEFT JOIN users creators ON ${alias}.created_by = creators.user_uuid
+    //         LEFT JOIN users updaters ON ${alias}.modified_by = updaters.user_uuid
+    //     `;
+
+    //         const result = await buildAdvancedSearchQuery({
+    //             pool,
+    //             reqBody: req.body,
+    //             table,
+    //             alias,
+    //             defaultSort: 'created_at',
+    //             allowedFields,
+    //             joinSql: joinSQL,      // pass joins here
+    //             baseWhere: `${alias}.is_deleted = FALSE ${extraWhere}`,
+    //             customFields: {        // optional virtual fields
+    //                 createdByName: {
+    //                     select: 'creators.username',
+    //                     search: 'creators.username',
+    //                     sort: 'creators.username'
+    //                 },
+    //                 updatedByName: {
+    //                     select: 'updaters.username',
+    //                     search: 'updaters.username',
+    //                     sort: 'updaters.username'
+    //                 }
+    //             }
+    //         });
+
+    //         return cb(null, {
+    //             status: true, code: 1000,
+    //             message: `${formatTableName(table)} list fetched successfully`,
+    //             result
+    //         });
+
+    //     } catch (err) {
+    //         logger.error(`Error (advancefilter ${table}):`, err);
+    //         return cb(null, { status: false, code: 2004, error: err.message });
+    //     }
+    // });
+
+    // ---------------- ADVANCE FILTER ----------------
     responder.on(api('advancefilter'), async (req, cb) => {
         try {
-            // Define joins dynamically if needed
+
+            const accessScope = req.dataAccessScope;
+            let extraWhere = '';
+            let extraParams = [];
+
+            // If PRIVATE → only show own created data
+            if (accessScope?.type === 'PRIVATE') {
+                extraWhere = ` AND ${alias}.created_by = $1`;
+                extraParams.push(accessScope.user_id);
+            }
+
+            // Dynamic joins
             const joinSQL = `
             LEFT JOIN users creators ON ${alias}.created_by = creators.user_uuid
             LEFT JOIN users updaters ON ${alias}.modified_by = updaters.user_uuid
@@ -239,9 +315,16 @@ module.exports = function registerMasterResponder({
                 alias,
                 defaultSort: 'created_at',
                 allowedFields,
-                joinSql: joinSQL,      // pass joins here
-                baseWhere: `${alias}.is_deleted = FALSE`,
-                customFields: {        // optional virtual fields
+                joinSql: joinSQL,
+
+                baseWhere: `
+                ${alias}.is_deleted = FALSE
+                ${extraWhere}
+            `,
+
+                baseParams: extraParams,   // ✅ IMPORTANT
+                dateFields: dateFields,
+                customFields: {
                     createdByName: {
                         select: 'creators.username',
                         search: 'creators.username',
@@ -255,11 +338,20 @@ module.exports = function registerMasterResponder({
                 }
             });
 
-            return cb(null, { status: true, code: 1000, result });
+            return cb(null, {
+                status: true,
+                code: 1000,
+                message: `${formatTableName(table)} list fetched successfully`,
+                result
+            });
 
         } catch (err) {
             logger.error(`Error (advancefilter ${table}):`, err);
-            return cb(null, { status: false, code: 2004, error: err.message });
+            return cb(null, {
+                status: false,
+                code: 2004,
+                error: err.message
+            });
         }
     });
 
@@ -311,8 +403,6 @@ module.exports = function registerMasterResponder({
             return cb(null, { status: false, code: 2004, error: err.message });
         }
     });
-
-
 
     /* ======================================================
      LIST + SEARCH + PAGINATION (COMMON FOR ALL MASTERS)
@@ -374,6 +464,7 @@ module.exports = function registerMasterResponder({
             return cb(null, {
                 status: true,
                 code: 1000,
+                message: `${formatTableName(table)} list fetched successfully`,
                 data: {
                     count: result.rowCount,
                     total: totalRecords,

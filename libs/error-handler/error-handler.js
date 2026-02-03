@@ -95,11 +95,14 @@ module.exports = (err, req, res, next) => {
   /* ---------------------- CUSTOM API KEY ERROR SUPPORT ------------------ */
   if (err.name === 'ApiKeyError') {
     return res.status(401).json({
-      status: 'error', code: 2005,
-      message: err.message,
+      status: false,
+      code: 2005,
+      error: "Invalid API Key",
+      message: err.message || "API key is missing or incorrect",
       fields: err.fields || ['apikey']
     });
   }
+
 
   /* ---------------------- SEND RESPONSE BASED ON MODE ------------------- */
   if (process.env.NODE_ENV === 'development') {

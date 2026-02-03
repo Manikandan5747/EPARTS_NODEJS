@@ -9,6 +9,7 @@ async function buildAdvancedSearchQuery({
     allowedFields = [],
     customFields = {},
     baseWhere = '',
+    baseParams = []
 }) {
 
     /* ---------------- Unpack Request ---------------- */
@@ -26,7 +27,8 @@ async function buildAdvancedSearchQuery({
 
     const safeOps = new Set(['=', '!=', '<', '<=', '>', '>=', 'ILIKE']);
     const where = [];
-    const params = [];
+    // ✅ base params come first
+    const params = [...baseParams];
 
     /* -------- Register custom fields into allowed list ------- */
     for (const key of Object.keys(customFields)) {

@@ -13,7 +13,7 @@ const responder = new cote.Responder({
 // --------------------------------------
 responder.on('create-currency', async (req, cb) => {
     try {
-        const { code, name, symbol, description, created_by,assigned_to } = req.body;
+        const { code, name, symbol, description, created_by, assigned_to } = req.body;
 
         if (!name || !name.trim()) {
             return cb(null, { status: false, code: 2001, error: 'Currency name is required' });
@@ -42,7 +42,7 @@ responder.on('create-currency', async (req, cb) => {
         `;
 
         const { rows } = await pool.query(query, [
-            code, name, symbol, description, created_by,assigned_to
+            code, name, symbol, description, created_by, assigned_to
         ]);
 
         cb(null, { status: true, code: 1000, data: rows[0], message: 'Currency created successfully', });
@@ -257,6 +257,15 @@ responder.on('status-currency', async (req, cb) => {
 responder.on('advancefilter-currency', async (req, cb) => {
     try {
 
+        const accessScope = req.dataAccessScope;
+        let extraWhere = '';
+        let extraParams = [];
+
+        // If PRIVATE → only show own created data
+        if (accessScope && accessScope.type === 'PRIVATE') {
+            extraWhere = ' AND CU.created_by = $extraUser';
+            extraParams.push(accessScope.user_id);
+        }
         const result = await buildAdvancedSearchQuery({
             pool,
             reqBody: req.body,
@@ -288,7 +297,8 @@ responder.on('advancefilter-currency', async (req, cb) => {
                 }
             },
 
-            baseWhere: `CU.is_deleted = FALSE`
+            baseWhere: `CU.is_deleted = FALSE ${extraWhere}`,
+            baseParams: extraParams
         });
 
         cb(null, { status: true, code: 1000, result });

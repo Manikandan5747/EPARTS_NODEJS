@@ -81,8 +81,8 @@ responder.on('create-setting', async (req, cb) => {
 // LIST SETTINGS
 // --------------------------------------------------
 responder.on('list-setting', async (req, cb) => {
-  try {
-    const query = `
+    try {
+        const query = `
       SELECT 
         s.setting_id,
         s.setting_uuid,
@@ -110,20 +110,20 @@ responder.on('list-setting', async (req, cb) => {
       ORDER BY s.created_at ASC
     `;
 
-    const result = await pool.query(query);
+        const result = await pool.query(query);
 
-    return cb(null, {
-      status: true,
-      code: 1000,
-      message: "Settings list fetched successfully",
-      count: result.rowCount,
-      data: result.rows
-    });
+        return cb(null, {
+            status: true,
+            code: 1000,
+            message: "Settings list fetched successfully",
+            count: result.rowCount,
+            data: result.rows
+        });
 
-  } catch (err) {
-    logger.error("Responder Error (list settings):", err);
-    return cb(null, { status: false, code: 2004, error: err.message });
-  }
+    } catch (err) {
+        logger.error("Responder Error (list settings):", err);
+        return cb(null, { status: false, code: 2004, error: err.message });
+    }
 });
 
 
@@ -232,7 +232,7 @@ responder.on('delete-setting', async (req, cb) => {
         const { deleted_by } = req.body;
 
 
-         const result = await pool.query(`
+        const result = await pool.query(`
             SELECT *
             FROM settings
             WHERE setting_uuid=$1
@@ -273,7 +273,7 @@ responder.on('status-setting', async (req, cb) => {
         const { setting_uuid } = req;
         const { is_active, modified_by } = req.body;
 
-         const result = await pool.query(`
+        const result = await pool.query(`
             SELECT *
             FROM settings
             WHERE setting_uuid=$1
@@ -283,7 +283,7 @@ responder.on('status-setting', async (req, cb) => {
         if (result.rowCount === 0) {
             return cb(null, { status: false, code: 2003, error: 'Setting not found' });
         }
-        
+
         await pool.query(`
             UPDATE settings
             SET is_active=$1,
@@ -310,6 +310,17 @@ responder.on('status-setting', async (req, cb) => {
 // --------------------------------------------------
 responder.on('advancefilter-setting', async (req, cb) => {
     try {
+        const accessScope = req.dataAccessScope;
+        let extraWhere = '';
+        let extraParams = [];
+
+        // If PRIVATE → only show own created data
+        if (accessScope && accessScope.type === 'PRIVATE') {
+            extraWhere = ' AND S.created_by = $extraUser';
+            extraParams.push(accessScope.user_id);
+        }
+
+
         const result = await buildAdvancedSearchQuery({
             pool,
             reqBody: req.body,
@@ -348,8 +359,9 @@ responder.on('advancefilter-setting', async (req, cb) => {
             },
 
             baseWhere: `
-                S.is_deleted = FALSE
-            `
+                S.is_deleted = FALSE ${extraWhere}
+            `,
+            baseParams: extraParams
         });
 
         return cb(null, { status: true, code: 1000, result });

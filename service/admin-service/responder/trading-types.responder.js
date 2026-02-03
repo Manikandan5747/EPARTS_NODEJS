@@ -304,7 +304,8 @@ responder.on('advancefilter-trading-type', async (req, cb) => {
 
             baseWhere: `
                 TT.is_deleted = FALSE ${extraWhere}
-            `
+            `,
+            baseParams: extraParams
         });
 
         return cb(null, {

@@ -86,7 +86,7 @@ responder.on('create-country', async (req, cb) => {
                 flag_icon_path || null,
                 description || null,
                 created_by || null,
-                assigned_to,code
+                assigned_to, code
             ]
         );
 
@@ -369,6 +369,15 @@ responder.on('status-country', async (req, cb) => {
 // --------------------------------------------------
 responder.on('advancefilter-country', async (req, cb) => {
     try {
+        const accessScope = req.dataAccessScope;
+        let extraWhere = '';
+        let extraParams = [];
+
+        // If PRIVATE → only show own created data
+        if (accessScope && accessScope.type === 'PRIVATE') {
+            extraWhere = ' AND C.created_by = $extraUser';
+            extraParams.push(accessScope.user_id);
+        }
 
         const result = await buildAdvancedSearchQuery({
             pool,
@@ -395,7 +404,7 @@ responder.on('advancefilter-country', async (req, cb) => {
                 'is_active',
                 'created_at',
                 'modified_at',
-                'createdByName','code',
+                'createdByName', 'code',
                 'updatedByName', 'currency_name'
             ],
 
@@ -420,8 +429,9 @@ responder.on('advancefilter-country', async (req, cb) => {
 
             /* ---------------- Base Where ---------------- */
             baseWhere: `
-                C.is_deleted = FALSE
-            `
+                C.is_deleted = FALSE ${extraWhere}
+            `,
+            baseParams: extraParams
         });
 
         return cb(null, {
@@ -491,14 +501,14 @@ responder.on('clone-country', async (req, cb) => {
 });
 
 
-// --------------------------------------------------
-// COUNTRY LIST (SEARCH + PAGINATION)
-// --------------------------------------------------
+
 // --------------------------------------------------
 // COUNTRY LIST (SEARCH + PAGINATION)
 // --------------------------------------------------
 responder.on("country-list", async (req, cb) => {
     try {
+        const accessScope = req.dataAccessScope;
+
         const {
             search = "",
             page = 1,
@@ -510,10 +520,19 @@ responder.on("country-list", async (req, cb) => {
         const offset = (pageNo - 1) * limitNo;
 
         let params = [];
-        let whereSql = `WHERE co.is_deleted = FALSE`;
         let idx = 1;
 
-        /* ---------------- SEARCH CONDITION ---------------- */
+        /* ---------------- BASE WHERE ---------------- */
+        let whereSql = `WHERE co.is_deleted = FALSE`;
+
+        /* ---------------- PRIVATE ACCESS ---------------- */
+        if (accessScope?.type === 'PRIVATE') {
+            whereSql += ` AND co.created_by = $${idx}`;
+            params.push(accessScope.user_id);
+            idx++;
+        }
+
+        /* ---------------- SEARCH ---------------- */
         if (search) {
             whereSql += ` AND LOWER(co.name) ILIKE LOWER($${idx})`;
             params.push(`%${search}%`);
@@ -522,9 +541,11 @@ responder.on("country-list", async (req, cb) => {
 
         /* ---------------- TOTAL COUNT ---------------- */
         const countResult = await pool.query(
-            `SELECT COUNT(*) AS total
-             FROM countries co
-             ${whereSql}`,
+            `
+            SELECT COUNT(*) AS total
+            FROM countries co
+            ${whereSql}
+            `,
             params
         );
 
@@ -536,11 +557,11 @@ responder.on("country-list", async (req, cb) => {
         const result = await pool.query(
             `
             SELECT 
-              co.*,
-              cu.currency_uuid
+                co.*,
+                cu.currency_uuid
             FROM countries co
             LEFT JOIN currency cu
-              ON co.currency_id = cu.currency_id
+                ON co.currency_id = cu.currency_id
             ${whereSql}
             ORDER BY co.created_at DESC
             LIMIT $${idx} OFFSET $${idx + 1}
@@ -569,3 +590,4 @@ responder.on("country-list", async (req, cb) => {
         });
     }
 });
+

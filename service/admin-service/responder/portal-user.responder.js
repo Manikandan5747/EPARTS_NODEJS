@@ -526,6 +526,15 @@ responder.on('status-portal-users', async (req, cb) => {
 // --------------------------------------------------
 responder.on('advancefilter-portal-users', async (req, cb) => {
     try {
+        const accessScope = req.dataAccessScope;
+        let extraWhere = '';
+        let extraParams = [];
+
+        // If PRIVATE → only show own created data
+        if (accessScope && accessScope.type === 'PRIVATE') {
+            extraWhere = ' AND PU.created_by = $extraUser';
+            extraParams.push(accessScope.user_id);
+        }
 
         const result = await buildAdvancedSearchQuery({
             pool,
@@ -566,8 +575,9 @@ responder.on('advancefilter-portal-users', async (req, cb) => {
 
             /* ---------------- Base Where ---------------- */
             baseWhere: `
-                PU.is_deleted = FALSE
-            `
+                PU.is_deleted = FALSE ${extraWhere}
+            `,
+             baseParams: extraParams
         });
 
         return cb(null, {

@@ -325,6 +325,18 @@ responder.on('status-usertype', async (req, cb) => {
 // --------------------------------------------------
 responder.on('advancefilter-usertype', async (req, cb) => {
     try {
+
+           const accessScope = req.dataAccessScope;
+        let extraWhere = '';
+        let extraParams = [];
+
+        // If PRIVATE → only show own created data
+        if (accessScope && accessScope.type === 'PRIVATE') {
+            extraWhere = ' AND UR.created_by = $extraUser';
+            extraParams.push(accessScope.user_id);
+        }
+
+
         /* ----------------- RUN DYNAMIC QUERY ----------------- */
         const result = await buildAdvancedSearchQuery({
             pool,
@@ -363,8 +375,9 @@ responder.on('advancefilter-usertype', async (req, cb) => {
 
             /* -------------- ALWAYS FIXED WHERE CONDITION -------------- */
             baseWhere: `
-                UR.is_deleted = FALSE
-            `
+                UR.is_deleted = FALSE ${extraWhere}
+            `,
+             baseParams: extraParams
         });
 
         /* ----------------- SEND RESULT ----------------- */

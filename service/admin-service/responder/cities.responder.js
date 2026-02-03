@@ -351,6 +351,16 @@ responder.on('status-city', async (req, cb) => {
 responder.on('advancefilter-city', async (req, cb) => {
     try {
 
+        const accessScope = req.dataAccessScope;
+        let extraWhere = '';
+        let extraParams = [];
+
+        // If PRIVATE → only show own created data
+        if (accessScope && accessScope.type === 'PRIVATE') {
+            extraWhere = ' AND C.created_by = $extraUser';
+            extraParams.push(accessScope.user_id);
+        }
+
         const result = await buildAdvancedSearchQuery({
             pool,
             reqBody: req.body,
@@ -378,7 +388,7 @@ responder.on('advancefilter-city', async (req, cb) => {
                 'is_active',
                 'created_at',
                 'modified_at',
-                'createdByName', 'code','country_uuid','state_uuid',
+                'createdByName', 'code', 'country_uuid', 'state_uuid',
                 'updatedByName'
             ],
 
@@ -418,8 +428,9 @@ responder.on('advancefilter-city', async (req, cb) => {
 
             /* ---------------- Base Where ---------------- */
             baseWhere: `
-                C.is_deleted = FALSE
-            `
+                C.is_deleted = FALSE ${extraWhere}
+            `,
+            baseParams: extraParams
         });
 
         return cb(null, {

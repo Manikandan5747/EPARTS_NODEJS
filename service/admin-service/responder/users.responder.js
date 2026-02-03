@@ -508,6 +508,17 @@ responder.on('status-users', async (req, cb) => {
 responder.on('advancefilter-users', async (req, cb) => {
     try {
 
+        
+   const accessScope = req.dataAccessScope;
+        let extraWhere = '';
+        let extraParams = [];
+
+        // If PRIVATE → only show own created data
+        if (accessScope && accessScope.type === 'PRIVATE') {
+            extraWhere = ' AND U.created_by = $extraUser';
+            extraParams.push(accessScope.user_id);
+        }
+
         const result = await buildAdvancedSearchQuery({
             pool,
             reqBody: req.body,
@@ -559,8 +570,9 @@ responder.on('advancefilter-users', async (req, cb) => {
 
             /* ---------------- Base Where ---------------- */
             baseWhere: `
-                U.is_deleted = FALSE
-            `
+                U.is_deleted = FALSE ${extraWhere}
+            `,
+             baseParams: extraParams
         });
 
         return cb(null, {

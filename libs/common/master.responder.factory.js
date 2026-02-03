@@ -321,7 +321,7 @@ module.exports = function registerMasterResponder({
                 ${extraWhere}
             `,
 
-                baseParams: extraParams,   // ✅ IMPORTANT
+                baseParams: extraParams,
                 // dateFields: dateFields,
                 customFields: {
                     createdByName: {

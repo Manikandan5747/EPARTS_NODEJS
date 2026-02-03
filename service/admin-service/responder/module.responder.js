@@ -387,6 +387,17 @@ responder.on('status-module', async (req, cb) => {
 ====================================================== */
 responder.on('advancefilter-module', async (req, cb) => {
     try {
+
+        const accessScope = req.dataAccessScope;
+        let extraWhere = '';
+        let extraParams = [];
+
+        // If PRIVATE → only show own created data
+        if (accessScope && accessScope.type === 'PRIVATE') {
+            extraWhere = ' AND M.created_by = $extraUser';
+            extraParams.push(accessScope.user_id);
+        }
+
         const result = await buildAdvancedSearchQuery({
             pool,
             reqBody: req.body,
@@ -430,8 +441,9 @@ responder.on('advancefilter-module', async (req, cb) => {
             },
 
             baseWhere: `
-                M.is_deleted = FALSE
-            `
+                M.is_deleted = FALSE ${extraWhere}
+            `,
+            baseParams: extraParams
         });
 
         return cb(null, {

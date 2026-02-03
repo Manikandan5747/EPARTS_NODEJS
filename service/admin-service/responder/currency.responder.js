@@ -190,7 +190,7 @@ responder.on('update-currency', async (req, cb) => {
 // --------------------------------------
 responder.on('delete-currency', async (req, cb) => {
     try {
-
+        const deleted_by = req.body.deleted_by;
         const { rows, rowCount } = await pool.query(
             `SELECT * FROM currency WHERE currency_uuid = $1 AND is_deleted = FALSE`,
             [req.currency_uuid]
@@ -207,9 +207,9 @@ responder.on('delete-currency', async (req, cb) => {
 
         await pool.query(
             `UPDATE currency
-             SET is_deleted=TRUE, deleted_at=NOW()
-             WHERE currency_uuid=$1`,
-            [req.currency_uuid]
+             SET is_deleted=TRUE, deleted_at=NOW(),deleted_by=$1
+             WHERE currency_uuid=$2`,
+            [deleted_by, req.currency_uuid]
         );
         cb(null, { status: true, code: 1000, message: "Currency deleted successfully" });
     } catch (err) {

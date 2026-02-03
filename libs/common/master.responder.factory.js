@@ -14,8 +14,12 @@ module.exports = function registerMasterResponder({
     joinSql = '',
     dateFields = [],
     customFields = [],
-    // joinSql = []
+    searchableFields = [],
 }) {
+
+    searchableFields = (searchableFields && searchableFields.length > 0)
+        ? searchableFields
+        : ['code', 'name'];
 
     const api = (action) => `${action}-${key}`;
 
@@ -328,7 +332,7 @@ module.exports = function registerMasterResponder({
                 baseParams: extraParams,
                 dateFields: dateFields,
                 customFields: {
-                     ...customFields,
+                    ...customFields,
                     createdByName: {
                         select: 'creators.username',
                         search: 'creators.username',
@@ -414,7 +418,7 @@ module.exports = function registerMasterResponder({
     responder.on(`${key}-listpagination`, async (req, cb) => {
         try {
 
-            let searchableFields = ['code', 'name'];
+            // let searchableFields = ['code', 'name'];
             const {
                 search = '',
                 page = 1,

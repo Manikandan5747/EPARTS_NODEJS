@@ -455,10 +455,12 @@ responder.on('getById-countryid', async (req, cb) => {
         const country_id = countryResult.rows[0].country_id;
 
         // 🔹 Get states by country_id
+
+
         const result = await pool.query(
             `SELECT s.*, c.country_uuid  FROM states s
             LEFT JOIN countries c ON s.country_id = c.country_id
-             WHERE country_id = $1 AND is_deleted = FALSE`,
+             WHERE s.country_id = $1 AND s.is_deleted = FALSE`,
             [country_id]
         );
 

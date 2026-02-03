@@ -77,6 +77,35 @@ router.use('/model', (req, res, next) => require('../admin-routes/model.routes.j
 
 router.use('/module', (req, res, next) => require('../admin-routes/module.routes.js')(req, res, next));
 
+router.use('/profile-privilege', (req, res, next) => require('../admin-routes/profile-privilege.routes.js')(req, res, next));
+
+router.use('/brand', (req, res, next) => require('../admin-routes/brand.routes.js')(req, res, next));
+
+router.use('/web-version', (req, res, next) => require('../admin-routes/web_version.routes.js')(req, res, next));
+
+router.use('/prefix-refno', (req, res, next) => require('../admin-routes/prefix_refno.routes.js')(req, res, next));
+
+router.use('/cms-footer-links', (req, res, next) => require('../admin-routes/cms_footer_links.routes.js')(req, res, next));
+
+router.use('/useful-links-cms', (req, res, next) => require('../admin-routes/useful_links_cms.routes.js')(req, res, next));
+
+router.use('/nav-links-cms', (req, res, next) => require('../admin-routes/nav_links_cms.routes.js')(req, res, next));
+
+router.use('/mobile-section-cms', (req, res, next) => require('../admin-routes/mobile_section_cms.routes.js')(req, res, next));
+
+router.use('/cms-homepage-features', (req, res, next) => require('../admin-routes/cms_homepage_features_section.routes.js')(req, res, next));
+
+router.use('/cms-social-media-info', (req, res, next) => require('../admin-routes/cms_social_media_info.routes.js')(req, res, next));
+
+router.use('/cms-homepage-about-section', (req, res, next) => require('../admin-routes/cms_homepage_about_section.routes.js')(req, res, next));
+
+router.use('/cms-homepage-buyerseller-section', (req, res, next) => require('../admin-routes/cms_homepage_buyerseller_section.routes.js')(req, res, next));
+
+router.use('/services-cms', (req, res, next) => require('../admin-routes/services_cms.routes.js')(req, res, next));
+
+router.use('/cms-company-info', (req, res, next) => require('../admin-routes/cms_company_info.routes.js')(req, res, next));
+
+
 router.use('/profile', (req, res, next) => require('../admin-routes/profile.routes.js')(req, res, next));
 
 router.use('/role-data-access', (req, res, next) => require('../admin-routes/role-data-access.routes.js')(req, res, next));

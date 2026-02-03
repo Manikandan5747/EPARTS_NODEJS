@@ -9,7 +9,6 @@ async function buildAdvancedSearchQuery({
     allowedFields = [],
     customFields = {},
     baseWhere = '',
-    dateFields = []
 }) {
 
     /* ---------------- Unpack Request ---------------- */
@@ -54,7 +53,7 @@ async function buildAdvancedSearchQuery({
         if (!col) continue;
 
         // DATE fields
-        if (['created_at', 'modified_at'].includes(field)) {
+        if (['created_at', 'modified_at', 'last_integrated_date'].includes(field)) {
             const d = isoDate(val);
             if (d) addClause(`DATE(${col}) = $${params.length + 1}`, d);
 
@@ -106,28 +105,9 @@ async function buildAdvancedSearchQuery({
     }
 
     /* ---------------- SELECT List ---------------- */
-    // const selectList = [`${alias}.*`];
-    // for (const [key, cfg] of Object.entries(customFields)) {
-    //     if (cfg.select) selectList.push(`${cfg.select} AS "${key}"`);
-    // }
-
-    /* ---------------- SELECT List (NO alias.* ❌) ---------------- */
-    const selectList = [];
-
-    for (const field of allowedFields) {
-        if (dateFields.includes(field)) {
-            selectList.push(
-                `TO_CHAR(${alias}.${field}, 'YYYY-MM-DD') AS ${field}`
-            );
-        } else {
-            selectList.push(`${alias}.${field}`);
-        }
-    }
-
+    const selectList = [`${alias}.*`];
     for (const [key, cfg] of Object.entries(customFields)) {
-        if (cfg.select) {
-            selectList.push(`${cfg.select} AS "${key}"`);
-        }
+        if (cfg.select) selectList.push(`${cfg.select} AS "${key}"`);
     }
 
     /* ---------------- WHERE ---------------- */

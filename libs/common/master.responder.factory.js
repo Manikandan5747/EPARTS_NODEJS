@@ -11,8 +11,7 @@ module.exports = function registerMasterResponder({
     alias,
     uuidColumn = 'uuid', // default column name
     allowedFields = [],
-    joinSql = '',
-    dateFields
+    joinSql = ''
 }) {
 
     const api = (action) => `${action}-${key}`;
@@ -323,7 +322,7 @@ module.exports = function registerMasterResponder({
             `,
 
                 baseParams: extraParams,   // ✅ IMPORTANT
-                dateFields: dateFields,
+                // dateFields: dateFields,
                 customFields: {
                     createdByName: {
                         select: 'creators.username',

@@ -1,0 +1,1 @@
+module.exports = require('./base-requester')('cms_homepage_about_section');

@@ -1,0 +1,1 @@
+module.exports = require('./base-requester')('cms_footer_links');

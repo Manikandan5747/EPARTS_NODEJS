@@ -89,12 +89,21 @@ module.exports = (err, req, res, next) => {
   if (err.code && err.code === 11000) {
     const field = Object.keys(err.keyValue);
     const message = `An account with that ${field} already exists.`;
-    return res.status(409).json({ status: 'error', message });
+    return res.status(409).json({
+      header_type: "ERROR",
+      message_visibility: true,
+      status: false,
+      code: 2004,
+      message: message,
+      error: message
+    });
   }
 
   /* ---------------------- CUSTOM API KEY ERROR SUPPORT ------------------ */
   if (err.name === 'ApiKeyError') {
     return res.status(401).json({
+      header_type: "ERROR",
+      message_visibility: true,
       status: false,
       code: 2005,
       error: "Invalid API Key",

@@ -17,7 +17,7 @@ const multipartMiddleware = multipart({ uploadDir });
 router.post('/create', multipartMiddleware, async (req, res) => {
     try {
         // FILE
-        const iconPath = req.files?.flag_icon_path?.path || null;
+        const iconPath = req.files?.logo_path?.path || null;
 
         const result = await brandRequester.send({
             type: 'create-brand',
@@ -125,7 +125,7 @@ router.get('/findbyid/:id', async (req, res) => {
 router.post('/update/:id', multipartMiddleware, async (req, res) => {
     try {
         // FILE (optional)
-        const iconPath = req.files?.icon_path?.path || null;
+        const iconPath = req.files?.logo_path?.path || null;
         const result = await brandRequester.send({
             type: 'update-brand',
             brand_uuid: req.params.id,

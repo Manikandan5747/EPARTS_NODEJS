@@ -23,7 +23,8 @@ router.post('/create', multipartMiddleware, async (req, res) => {
             type: 'create-cmshomepagefeatures',
             body: {
                 ...req.body,
-                icon:cmsHomepageFeaturesImage
+                icon: cmsHomepageFeaturesImage ? cmsHomepageFeaturesImage.replace(/\\/g, '/') : null,
+
             }
         });
 
@@ -42,13 +43,13 @@ router.post('/create', multipartMiddleware, async (req, res) => {
     } catch (err) {
         logger.error('Error in cmshomepagefeatures/create:', err.message);
         res.status(500).json({
-    header_type: "ERROR",
-    message_visibility: true,
-    status: false,
-    code: 2004,
-    message: err.message,
-    error: err.message
-});
+            header_type: "ERROR",
+            message_visibility: true,
+            status: false,
+            code: 2004,
+            message: err.message,
+            error: err.message
+        });
     }
 });
 
@@ -74,13 +75,13 @@ router.get('/list', async (req, res) => {
     } catch (err) {
         logger.error('Error in cmshomepagefeatures/list:', err.message);
         res.status(500).json({
-    header_type: "ERROR",
-    message_visibility: true,
-    status: false,
-    code: 2004,
-    message: err.message,
-    error: err.message
-});
+            header_type: "ERROR",
+            message_visibility: true,
+            status: false,
+            code: 2004,
+            message: err.message,
+            error: err.message
+        });
     }
 });
 
@@ -91,7 +92,7 @@ router.get('/findbyid/:id', async (req, res) => {
     try {
         const result = await cmsHomepageFeaturesRequester.send({
             type: 'getById-cmshomepagefeatures',
-        cms_features_uuid: req.params.id
+            cms_features_uuid: req.params.id
         });
 
         if (!result.status) {
@@ -109,13 +110,13 @@ router.get('/findbyid/:id', async (req, res) => {
     } catch (err) {
         logger.error('Error in cmshomepagefeatures/findbyid:', err.message);
         res.status(500).json({
-    header_type: "ERROR",
-    message_visibility: true,
-    status: false,
-    code: 2004,
-    message: err.message,
-    error: err.message
-});
+            header_type: "ERROR",
+            message_visibility: true,
+            status: false,
+            code: 2004,
+            message: err.message,
+            error: err.message
+        });
     }
 });
 
@@ -132,7 +133,7 @@ router.post('/update/:id', multipartMiddleware, async (req, res) => {
             body: {
                 ...req.body,
                 cms_features_uuid: req.params.id,
-                icon: cmsHomepageFeaturesImage   
+                icon: cmsHomepageFeaturesImage ? cmsHomepageFeaturesImage.replace(/\\/g, '/') : null,
             }
         });
 
@@ -151,13 +152,13 @@ router.post('/update/:id', multipartMiddleware, async (req, res) => {
     } catch (err) {
         logger.error('Error in cmshomepagefeatures/update:', err.message);
         res.status(500).json({
-    header_type: "ERROR",
-    message_visibility: true,
-    status: false,
-    code: 2004,
-    message: err.message,
-    error: err.message
-});
+            header_type: "ERROR",
+            message_visibility: true,
+            status: false,
+            code: 2004,
+            message: err.message,
+            error: err.message
+        });
     }
 });
 
@@ -187,13 +188,13 @@ router.post('/delete/:id', async (req, res) => {
     } catch (err) {
         logger.error('Error in cmshomepagefeatures/delete:', err.message);
         res.status(500).json({
-    header_type: "ERROR",
-    message_visibility: true,
-    status: false,
-    code: 2004,
-    message: err.message,
-    error: err.message
-});
+            header_type: "ERROR",
+            message_visibility: true,
+            status: false,
+            code: 2004,
+            message: err.message,
+            error: err.message
+        });
     }
 });
 
@@ -223,13 +224,13 @@ router.post('/status/:id', async (req, res) => {
     } catch (err) {
         logger.error('Error in cmshomepagefeatures/status:', err.message);
         res.status(500).json({
-    header_type: "ERROR",
-    message_visibility: true,
-    status: false,
-    code: 2004,
-    message: err.message,
-    error: err.message
-});
+            header_type: "ERROR",
+            message_visibility: true,
+            status: false,
+            code: 2004,
+            message: err.message,
+            error: err.message
+        });
     }
 });
 
@@ -258,13 +259,13 @@ router.post('/pagination-list', async (req, res) => {
     } catch (err) {
         logger.error('Error in cmshomepagefeatures/pagination-list:', err.message);
         res.status(500).json({
-    header_type: "ERROR",
-    message_visibility: true,
-    status: false,
-    code: 2004,
-    message: err.message,
-    error: err.message
-});
+            header_type: "ERROR",
+            message_visibility: true,
+            status: false,
+            code: 2004,
+            message: err.message,
+            error: err.message
+        });
     }
 });
 

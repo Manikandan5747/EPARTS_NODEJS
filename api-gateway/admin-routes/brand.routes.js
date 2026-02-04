@@ -17,13 +17,13 @@ const multipartMiddleware = multipart({ uploadDir });
 router.post('/create', multipartMiddleware, async (req, res) => {
     try {
         // FILE
-        const flagIconPath = req.files?.flag_icon_path?.path || null;
+        const iconPath = req.files?.flag_icon_path?.path || null;
 
         const result = await brandRequester.send({
             type: 'create-brand',
             body: {
                 ...req.body,
-                flag_icon_path: flagIconPath
+                logo_path: iconPath ? iconPath.replace(/\\/g, '/') : null
             }
         });
 
@@ -125,14 +125,14 @@ router.get('/findbyid/:id', async (req, res) => {
 router.post('/update/:id', multipartMiddleware, async (req, res) => {
     try {
         // FILE (optional)
-        const flagIconPath = req.files?.flag_icon?.path || null;
+        const iconPath = req.files?.icon_path?.path || null;
         const result = await brandRequester.send({
             type: 'update-brand',
             brand_uuid: req.params.id,
             body: {
                 ...req.body,
                 brand_uuid: req.params.id,
-                flag_icon_path: flagIconPath   // ✅ pass only if exists
+                logo_path: iconPath ? iconPath.replace(/\\/g, '/') : null
             }
         });
 

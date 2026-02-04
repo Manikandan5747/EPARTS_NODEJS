@@ -24,8 +24,10 @@ router.post('/create', multipartMiddleware, async (req, res) => {
             type: 'create-cmshomepagebuyersellersection',
             body: {
                 ...req.body,
-                buyer_image:cmsHomepageBuyerImage,
-                seller_image:cmsHomepageSellerImage
+                buyer_image: cmsHomepageBuyerImage ? cmsHomepageBuyerImage.replace(/\\/g, '/') : null,
+                seller_image: cmsHomepageSellerImage ? cmsHomepageSellerImage.replace(/\\/g, '/') : null
+
+
             }
         });
 
@@ -44,13 +46,13 @@ router.post('/create', multipartMiddleware, async (req, res) => {
     } catch (err) {
         logger.error('Error in cmshomepagebuyersellersection/create:', err.message);
         res.status(500).json({
-    header_type: "ERROR",
-    message_visibility: true,
-    status: false,
-    code: 2004,
-    message: err.message,
-    error: err.message
-});
+            header_type: "ERROR",
+            message_visibility: true,
+            status: false,
+            code: 2004,
+            message: err.message,
+            error: err.message
+        });
     }
 });
 
@@ -76,13 +78,13 @@ router.get('/list', async (req, res) => {
     } catch (err) {
         logger.error('Error in cmshomepagebuyersellersection/list:', err.message);
         res.status(500).json({
-    header_type: "ERROR",
-    message_visibility: true,
-    status: false,
-    code: 2004,
-    message: err.message,
-    error: err.message
-});
+            header_type: "ERROR",
+            message_visibility: true,
+            status: false,
+            code: 2004,
+            message: err.message,
+            error: err.message
+        });
     }
 });
 
@@ -93,7 +95,7 @@ router.get('/findbyid/:id', async (req, res) => {
     try {
         const result = await cmsHomepageBuyerSellerSectionRequester.send({
             type: 'getById-cmshomepagebuyersellersection',
-        buyerseller_uuid: req.params.id
+            buyerseller_uuid: req.params.id
         });
 
         if (!result.status) {
@@ -111,13 +113,13 @@ router.get('/findbyid/:id', async (req, res) => {
     } catch (err) {
         logger.error('Error in cmshomepagebuyersellersection/findbyid:', err.message);
         res.status(500).json({
-    header_type: "ERROR",
-    message_visibility: true,
-    status: false,
-    code: 2004,
-    message: err.message,
-    error: err.message
-});
+            header_type: "ERROR",
+            message_visibility: true,
+            status: false,
+            code: 2004,
+            message: err.message,
+            error: err.message
+        });
     }
 });
 
@@ -136,8 +138,8 @@ router.post('/update/:id', multipartMiddleware, async (req, res) => {
             body: {
                 ...req.body,
                 buyerseller_uuid: req.params.id,
-                buyer_image: cmsHomepageBuyerImage,
-                seller_image: cmsHomepageSellerImage   
+                buyer_image: cmsHomepageBuyerImage ? cmsHomepageBuyerImage.replace(/\\/g, '/') : null,
+                seller_image: cmsHomepageSellerImage ? cmsHomepageSellerImage.replace(/\\/g, '/') : null
             }
         });
 
@@ -156,13 +158,13 @@ router.post('/update/:id', multipartMiddleware, async (req, res) => {
     } catch (err) {
         logger.error('Error in cmshomepagebuyersellersection/update:', err.message);
         res.status(500).json({
-    header_type: "ERROR",
-    message_visibility: true,
-    status: false,
-    code: 2004,
-    message: err.message,
-    error: err.message
-});
+            header_type: "ERROR",
+            message_visibility: true,
+            status: false,
+            code: 2004,
+            message: err.message,
+            error: err.message
+        });
     }
 });
 
@@ -192,13 +194,13 @@ router.post('/delete/:id', async (req, res) => {
     } catch (err) {
         logger.error('Error in cmshomepagebuyersellersection/delete:', err.message);
         res.status(500).json({
-    header_type: "ERROR",
-    message_visibility: true,
-    status: false,
-    code: 2004,
-    message: err.message,
-    error: err.message
-});
+            header_type: "ERROR",
+            message_visibility: true,
+            status: false,
+            code: 2004,
+            message: err.message,
+            error: err.message
+        });
     }
 });
 
@@ -228,13 +230,13 @@ router.post('/status/:id', async (req, res) => {
     } catch (err) {
         logger.error('Error in cmshomepagebuyersellersection/status:', err.message);
         res.status(500).json({
-    header_type: "ERROR",
-    message_visibility: true,
-    status: false,
-    code: 2004,
-    message: err.message,
-    error: err.message
-});
+            header_type: "ERROR",
+            message_visibility: true,
+            status: false,
+            code: 2004,
+            message: err.message,
+            error: err.message
+        });
     }
 });
 
@@ -263,13 +265,13 @@ router.post('/pagination-list', async (req, res) => {
     } catch (err) {
         logger.error('Error in cmshomepagebuyersellersection/pagination-list:', err.message);
         res.status(500).json({
-    header_type: "ERROR",
-    message_visibility: true,
-    status: false,
-    code: 2004,
-    message: err.message,
-    error: err.message
-});
+            header_type: "ERROR",
+            message_visibility: true,
+            status: false,
+            code: 2004,
+            message: err.message,
+            error: err.message
+        });
     }
 });
 

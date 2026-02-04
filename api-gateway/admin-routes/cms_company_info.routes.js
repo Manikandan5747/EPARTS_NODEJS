@@ -28,10 +28,10 @@ router.post('/create', multipartMiddleware, async (req, res) => {
             body: {
                 ...req.body,
                 logo: cmsCompanyInfoLogo,
-                footer_image1: cmsCompanyInfoFooterImage1,
-                footer_image2: cmsCompanyInfoFooterImage2,
-                footer_image3: cmsCompanyInfoFooterImage3,
-                dynamics_image: cmsCompanyInfoDynamicsImage
+                 footer_image1: cmsCompanyInfoFooterImage1 ? cmsCompanyInfoFooterImage1.replace(/\\/g, '/') : null,
+                footer_image2: cmsCompanyInfoFooterImage2 ? cmsCompanyInfoFooterImage2.replace(/\\/g, '/') : null,
+                footer_image3: cmsCompanyInfoFooterImage3 ? cmsCompanyInfoFooterImage3.replace(/\\/g, '/') : null,
+                dynamics_image: cmsCompanyInfoDynamicsImage ? cmsCompanyInfoDynamicsImage.replace(/\\/g, '/') : null,
             }
 
         });
@@ -147,10 +147,10 @@ router.post('/update/:id', multipartMiddleware, async (req, res) => {
                 ...req.body,
                 cms_company_uuid: req.params.id,
                logo: cmsCompanyInfoLogo,
-                footer_image1: cmsCompanyInfoFooterImage1,
-                footer_image2: cmsCompanyInfoFooterImage2,
-                footer_image3: cmsCompanyInfoFooterImage3,
-                dynamics_image: cmsCompanyInfoDynamicsImage 
+                  footer_image1: cmsCompanyInfoFooterImage1 ? cmsCompanyInfoFooterImage1.replace(/\\/g, '/') : null,
+                footer_image2: cmsCompanyInfoFooterImage2 ? cmsCompanyInfoFooterImage2.replace(/\\/g, '/') : null,
+                footer_image3: cmsCompanyInfoFooterImage3 ? cmsCompanyInfoFooterImage3.replace(/\\/g, '/') : null,
+                dynamics_image: cmsCompanyInfoDynamicsImage ? cmsCompanyInfoDynamicsImage.replace(/\\/g, '/') : null,
             }
         });
 

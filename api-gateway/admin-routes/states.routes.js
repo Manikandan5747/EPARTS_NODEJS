@@ -31,7 +31,14 @@ router.post('/create',async (req, res) => {
         res.status(201).send(result);
     } catch (err) {
         logger.error('Error in states/create:', err.message);
-        res.status(500).json({ error: err.message });
+        res.status(500).json({
+    header_type: "ERROR",
+    message_visibility: true,
+    status: false,
+    code: 2004,
+    message: err.message,
+    error: err.message
+});
     }
 });
 
@@ -56,7 +63,14 @@ router.get('/list', async (req, res) => {
         res.send(result);
     } catch (err) {
         logger.error('Error in states/list:', err.message);
-        res.status(500).json({ error: err.message });
+        res.status(500).json({
+    header_type: "ERROR",
+    message_visibility: true,
+    status: false,
+    code: 2004,
+    message: err.message,
+    error: err.message
+});
     }
 });
 
@@ -84,7 +98,14 @@ router.get('/findbyid/:id', async (req, res) => {
         res.json(result);
     } catch (err) {
         logger.error('Error in states/findbyid:', err.message);
-        res.status(500).json({ error: err.message });
+        res.status(500).json({
+    header_type: "ERROR",
+    message_visibility: true,
+    status: false,
+    code: 2004,
+    message: err.message,
+    error: err.message
+});
     }
 });
 
@@ -113,7 +134,14 @@ router.post('/update/:id', async (req, res) => {
         res.send(result);
     } catch (err) {
         logger.error('Error in states/update:', err.message);
-        res.status(500).json({ error: err.message });
+        res.status(500).json({
+    header_type: "ERROR",
+    message_visibility: true,
+    status: false,
+    code: 2004,
+    message: err.message,
+    error: err.message
+});
     }
 });
 
@@ -142,7 +170,14 @@ router.post('/delete/:id', async (req, res) => {
         res.send(result);
     } catch (err) {
         logger.error('Error in states/delete:', err.message);
-        res.status(500).json({ error: err.message });
+        res.status(500).json({
+    header_type: "ERROR",
+    message_visibility: true,
+    status: false,
+    code: 2004,
+    message: err.message,
+    error: err.message
+});
     }
 });
 
@@ -171,7 +206,14 @@ router.post('/status/:id', async (req, res) => {
         res.send(result);
     } catch (err) {
         logger.error('Error in states/status:', err.message);
-        res.status(500).json({ error: err.message });
+        res.status(500).json({
+    header_type: "ERROR",
+    message_visibility: true,
+    status: false,
+    code: 2004,
+    message: err.message,
+    error: err.message
+});
     }
 });
 
@@ -199,7 +241,14 @@ router.post('/pagination-list', async (req, res) => {
         res.json(result);
     } catch (err) {
         logger.error('Error in states/pagination-list:', err.message);
-        res.status(500).json({ error: err.message });
+        res.status(500).json({
+    header_type: "ERROR",
+    message_visibility: true,
+    status: false,
+    code: 2004,
+    message: err.message,
+    error: err.message
+});
     }
 });
 
@@ -228,7 +277,14 @@ router.post('/clone/:id', async (req, res) => {
         res.send(result);
     } catch (err) {
         logger.error('Error in states/clone:', err.message);
-        res.status(500).json({ error: err.message });
+        res.status(500).json({
+    header_type: "ERROR",
+    message_visibility: true,
+    status: false,
+    code: 2004,
+    message: err.message,
+    error: err.message
+});
     }
 });
 
@@ -258,7 +314,14 @@ router.get('/countryid/:id', async (req, res) => {
         res.json(result);
     } catch (err) {
         logger.error('Error in states countryid/findbyid:', err.message);
-        res.status(500).json({ error: err.message });
+        res.status(500).json({
+    header_type: "ERROR",
+    message_visibility: true,
+    status: false,
+    code: 2004,
+    message: err.message,
+    error: err.message
+});
     }
 });
 

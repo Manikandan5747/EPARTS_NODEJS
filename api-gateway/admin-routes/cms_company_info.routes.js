@@ -50,7 +50,14 @@ router.post('/create', multipartMiddleware, async (req, res) => {
         res.status(201).send(result);
     } catch (err) {
         logger.error('Error in cmscompanyinfo/create:', err.message);
-        res.status(500).json({ error: err.message });
+        res.status(500).json({
+    header_type: "ERROR",
+    message_visibility: true,
+    status: false,
+    code: 2004,
+    message: err.message,
+    error: err.message
+});
     }
 });
 
@@ -75,7 +82,14 @@ router.get('/list', async (req, res) => {
         res.send(result);
     } catch (err) {
         logger.error('Error in cmscompanyinfo/list:', err.message);
-        res.status(500).json({ error: err.message });
+        res.status(500).json({
+    header_type: "ERROR",
+    message_visibility: true,
+    status: false,
+    code: 2004,
+    message: err.message,
+    error: err.message
+});
     }
 });
 
@@ -103,7 +117,14 @@ router.get('/findbyid/:id', async (req, res) => {
         res.json(result);
     } catch (err) {
         logger.error('Error in cmscompanyinfo/findbyid:', err.message);
-        res.status(500).json({ error: err.message });
+        res.status(500).json({
+    header_type: "ERROR",
+    message_visibility: true,
+    status: false,
+    code: 2004,
+    message: err.message,
+    error: err.message
+});
     }
 });
 
@@ -147,7 +168,14 @@ router.post('/update/:id', multipartMiddleware, async (req, res) => {
         res.send(result);
     } catch (err) {
         logger.error('Error in cmscompanyinfo/update:', err.message);
-        res.status(500).json({ error: err.message });
+        res.status(500).json({
+    header_type: "ERROR",
+    message_visibility: true,
+    status: false,
+    code: 2004,
+    message: err.message,
+    error: err.message
+});
     }
 });
 
@@ -176,7 +204,14 @@ router.post('/delete/:id', async (req, res) => {
         res.send(result);
     } catch (err) {
         logger.error('Error in cmscompanyinfo/delete:', err.message);
-        res.status(500).json({ error: err.message });
+        res.status(500).json({
+    header_type: "ERROR",
+    message_visibility: true,
+    status: false,
+    code: 2004,
+    message: err.message,
+    error: err.message
+});
     }
 });
 
@@ -205,7 +240,14 @@ router.post('/status/:id', async (req, res) => {
         res.send(result);
     } catch (err) {
         logger.error('Error in cmscompanyinfo/status:', err.message);
-        res.status(500).json({ error: err.message });
+        res.status(500).json({
+    header_type: "ERROR",
+    message_visibility: true,
+    status: false,
+    code: 2004,
+    message: err.message,
+    error: err.message
+});
     }
 });
 
@@ -233,7 +275,14 @@ router.post('/pagination-list', async (req, res) => {
         res.json(result);
     } catch (err) {
         logger.error('Error in cmscompanyinfo/pagination-list:', err.message);
-        res.status(500).json({ error: err.message });
+        res.status(500).json({
+    header_type: "ERROR",
+    message_visibility: true,
+    status: false,
+    code: 2004,
+    message: err.message,
+    error: err.message
+});
     }
 });
 

@@ -33,7 +33,14 @@ router.post('/save', async (req, res) => {
 
     } catch (err) {
         logger.error("Error in create-update-role-data-access/save:", err.message);
-        res.status(500).json({ error: err.message });
+        res.status(500).json({
+    header_type: "ERROR",
+    message_visibility: true,
+    status: false,
+    code: 2004,
+    message: err.message,
+    error: err.message
+});
     }
 });
 
@@ -64,7 +71,14 @@ router.post('/fetch-details', async (req, res) => {
 
     } catch (err) {
         logger.error("Error in fetch-role-data-access-details:", err.message);
-        res.status(500).json({ error: err.message });
+        res.status(500).json({
+    header_type: "ERROR",
+    message_visibility: true,
+    status: false,
+    code: 2004,
+    message: err.message,
+    error: err.message
+});
     }
 });
 

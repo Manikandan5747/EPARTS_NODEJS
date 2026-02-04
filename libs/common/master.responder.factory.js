@@ -47,10 +47,12 @@ module.exports = function registerMasterResponder({
             const result = await pool.query(insertSQL, values);
 
             return cb(null, {
+                header_type: "SUCCESS", //'SUCCESS' | 'VALIDATION' | 'ERROR' | 'WARNING' | 'INFO'
                 status: true,
                 code: 1000,
                 message: `${formatTableName(table)} created successfully`,
-                data: result.rows[0]
+                data: result.rows[0],
+                message_visibility: true
             });
 
         } catch (err) {
@@ -70,14 +72,23 @@ module.exports = function registerMasterResponder({
                 }
 
                 return cb(null, {
+                    header_type: "VALIDATION", //'SUCCESS' | 'VALIDATION' | 'ERROR' | 'WARNING' | 'INFO'
                     status: false,
                     code: 2002,
                     message: "Duplicate value. This record already exists.",
+                    message_visibility: true,
                     error: detail
                 });
             }
 
-            return cb(null, { status: false, code: 2004, error: err.message });
+            return cb(null, {
+                header_type: "ERROR",
+                message_visibility: true,
+                status: false,
+                code: 2004,
+                message: err.message,
+                error: err.message
+            });
         }
     });
 
@@ -97,6 +108,8 @@ module.exports = function registerMasterResponder({
             const result = await pool.query(listSQL);
 
             return cb(null, {
+                header_type: "SUCCESS",
+                message_visibility: false,
                 status: true,
                 code: 1000,
                 message: `${formatTableName(table)} list fetched successfully`,
@@ -105,30 +118,108 @@ module.exports = function registerMasterResponder({
             });
         } catch (err) {
             logger.error(`Error (list ${table}):`, err);
-            return cb(null, { status: false, code: 2004, error: err.message });
+            return cb(null, {
+                header_type: "ERROR",
+                message_visibility: true,
+                status: false,
+                code: 2004,
+                message: err.message,
+                error: err.message
+            });
         }
     });
 
     // ---------------- GET BY ID ----------------
+    // responder.on(api('getById'), async (req, cb) => {
+    //     try {
+    //         const uuid = req[uuidColumn] || req.uuid;
+    //         const result = await pool.query(
+    //             `SELECT * FROM ${table} WHERE ${uuidColumn} = $1 AND is_deleted = FALSE`,
+    //             [uuid]
+    //         );
+
+    //         if (result.rowCount === 0) {
+    //             return cb(null, { status: false, code: 2003, error: `${table} not found` });
+    //         }
+
+    //         return cb(null, {
+    //             status: true,
+    //             message: `${formatTableName(table)} fetched successfully`, code: 1000, data: result.rows[0]
+    //         });
+    //     } catch (err) {
+    //         logger.error(`Error (getById ${table}):`, err);
+    //         return cb(null, { status: false, code: 2004, error: err.message });
+    //     }
+    // });
+
+    // ---------------- GET BY ID (WITH LOCK STATUS + USER NAME) ----------------
     responder.on(api('getById'), async (req, cb) => {
         try {
             const uuid = req[uuidColumn] || req.uuid;
+
+            // 1️⃣ Auto-unlock expired lock (1 minute)
+            await pool.query(
+                `
+            UPDATE ${table}
+            SET locked_by = NULL,
+                locked_at = NULL
+            WHERE ${uuidColumn} = $1
+              AND locked_at + INTERVAL '1 minutes' < NOW()
+            `,
+                [uuid]
+            );
+
+            // 2️⃣ Fetch record with lock status + locked user name
             const result = await pool.query(
-                `SELECT * FROM ${table} WHERE ${uuidColumn} = $1 AND is_deleted = FALSE`,
+                `
+            SELECT 
+                T.*,
+                U.username AS locked_by_name,
+                CASE
+                    WHEN T.locked_at IS NULL THEN false
+                    WHEN T.locked_at + INTERVAL '1 minutes' < NOW() THEN false
+                    ELSE true
+                END AS lock_status
+            FROM ${table} T
+            LEFT JOIN users U
+                ON U.user_uuid = T.locked_by
+            WHERE T.${uuidColumn} = $1
+              AND T.is_deleted = FALSE
+            `,
                 [uuid]
             );
 
             if (result.rowCount === 0) {
-                return cb(null, { status: false, code: 2003, error: `${table} not found` });
+                return cb(null, {
+                    header_type: "ERROR", //'SUCCESS' | 'VALIDATION' | 'ERROR' | 'WARNING' | 'INFO'
+                    message_visibility: false,
+                    status: false,
+                    code: 2003,
+                    message: `${formatTableName(table)} not found`,
+                    error: `${formatTableName(table)} not found`
+                });
             }
 
+            const row = result.rows[0];
             return cb(null, {
+                header_type: "SUCCESS", //'SUCCESS' | 'VALIDATION' | 'ERROR' | 'WARNING' | 'INFO'
+                message_visibility: false,
                 status: true,
-                message: `${formatTableName(table)} fetched successfully`, code: 1000, data: result.rows[0]
+                code: 1000,
+                message: `${formatTableName(table)} fetched successfully`,
+                data: row,
             });
+
         } catch (err) {
             logger.error(`Error (getById ${table}):`, err);
-            return cb(null, { status: false, code: 2004, error: err.message });
+            return cb(null, {
+                header_type: "ERROR", //'SUCCESS' | 'VALIDATION' | 'ERROR' | 'WARNING' | 'INFO'
+                message_visibility: false,
+                status: false,
+                code: 2004,
+                message: err.message,
+                error: err.message,
+            });
         }
     });
 
@@ -145,7 +236,14 @@ module.exports = function registerMasterResponder({
             );
 
             if (check.rowCount === 0) {
-                return cb(null, { status: false, code: 2003, error: `${formatTableName(table)} not found` });
+                return cb(null, {
+                    header_type: "ERROR",
+                    message_visibility: true,
+                    status: false,
+                    code: 2003,
+                    message: `${formatTableName(table)} not found`,
+                    error: `${formatTableName(table)} not found`
+                });
             }
 
             const columns = Object.keys(body);
@@ -163,6 +261,8 @@ module.exports = function registerMasterResponder({
             const result = await pool.query(updateSQL, [...values, uuid]);
 
             return cb(null, {
+                header_type: "SUCCESS", //'SUCCESS' | 'VALIDATION' | 'ERROR' | 'WARNING' | 'INFO'
+                message_visibility: true,
                 status: true,
                 code: 1000,
                 message: `${formatTableName(table)} updated successfully`,
@@ -170,7 +270,14 @@ module.exports = function registerMasterResponder({
             });
         } catch (err) {
             logger.error(`Error (update ${table}):`, err);
-            return cb(null, { status: false, code: 2004, error: err.message });
+            return cb(null, {
+                header_type: "ERROR",
+                message_visibility: true,
+                status: false,
+                code: 2004,
+                message: err.message,
+                error: err.message
+            });
         }
     });
 
@@ -186,7 +293,14 @@ module.exports = function registerMasterResponder({
             );
 
             if (check.rowCount === 0) {
-                return cb(null, { status: false, code: 2003, error: `${table} not found` });
+                return cb(null, {
+                    header_type: "ERROR",
+                    message_visibility: true,
+                    status: false,
+                    code: 2003,
+                    error: `${table} not found`,
+                    message: `${formatTableName(table)} not found`,
+                });
             }
 
             await pool.query(
@@ -195,13 +309,22 @@ module.exports = function registerMasterResponder({
             );
 
             return cb(null, {
+                header_type: "SUCCESS", //'SUCCESS' | 'VALIDATION' | 'ERROR' | 'WARNING' | 'INFO'
+                message_visibility: true,
                 status: true,
                 code: 1000,
                 message: `${formatTableName(table)} deleted successfully`
             });
         } catch (err) {
             logger.error(`Error (delete ${table}):`, err);
-            return cb(null, { status: false, code: 2004, error: err.message });
+            return cb(null, {
+                header_type: "ERROR",
+                message_visibility: true,
+                status: false,
+                code: 2004,
+                message: err.message,
+                error: err.message
+            });
         }
     });
 
@@ -219,7 +342,14 @@ module.exports = function registerMasterResponder({
             );
 
             if (check.rowCount === 0) {
-                return cb(null, { status: false, code: 2003, error: `${table} not found` });
+                return cb(null, {
+                    header_type: "ERROR",
+                    message_visibility: true,
+                    message: `${formatTableName(table)} not found`,
+                    status: false,
+                    code: 2003,
+                    error: `${table} not found`
+                });
             }
 
             const result = await pool.query(
@@ -228,6 +358,8 @@ module.exports = function registerMasterResponder({
             );
 
             return cb(null, {
+                header_type: "SUCCESS",
+                message_visibility: true,
                 status: true,
                 code: 1000,
                 message: `${formatTableName(table)} status updated successfully`,
@@ -235,7 +367,14 @@ module.exports = function registerMasterResponder({
             });
         } catch (err) {
             logger.error(`Error (status ${table}):`, err);
-            return cb(null, { status: false, code: 2004, error: err.message });
+            return cb(null, {
+                header_type: "ERROR",
+                message_visibility: true,
+                status: false,
+                code: 2004,
+                message: err.message,
+                error: err.message
+            });
         }
     });
 
@@ -347,6 +486,8 @@ module.exports = function registerMasterResponder({
             });
 
             return cb(null, {
+                header_type: "SUCCESS",
+                message_visibility: false,
                 status: true,
                 code: 1000,
                 message: `${formatTableName(table)} list fetched successfully`,
@@ -356,61 +497,16 @@ module.exports = function registerMasterResponder({
         } catch (err) {
             logger.error(`Error (advancefilter ${table}):`, err);
             return cb(null, {
+                header_type: "ERROR",
+                message_visibility: true,
                 status: false,
                 code: 2004,
+                message: err.message,
                 error: err.message
             });
         }
     });
 
-
-    // ---------------- CLONE ----------------
-    responder.on(api('clone'), async (req, cb) => {
-        try {
-            const uuid = req[uuidColumn] || req.uuid;
-            const created_by = req.body?.created_by || null;
-
-            const fetchSQL = `SELECT * FROM ${table} WHERE ${uuidColumn} = $1 AND is_deleted = FALSE`;
-            const { rows } = await pool.query(fetchSQL, [uuid]);
-
-            if (!rows.length) {
-                return cb(null, { status: false, code: 2003, error: `${table} not found` });
-            }
-
-            const record = rows[0];
-            delete record[uuidColumn];
-            delete record.created_at;
-            delete record.modified_at;
-            delete record.deleted_at;
-            delete record.deleted_by;
-
-            record.created_by = created_by;
-
-            const columns = Object.keys(record);
-            const values = Object.values(record);
-
-            const placeholders = columns.map((_, i) => `$${i + 1}`).join(',');
-
-            const insertSQL = `
-                INSERT INTO ${table} (${columns.join(',')})
-                VALUES (${placeholders})
-                RETURNING *
-            `;
-
-            const cloned = await pool.query(insertSQL, values);
-
-            return cb(null, {
-                status: true,
-                code: 1000,
-                message: `${table} cloned successfully`,
-                data: cloned.rows[0]
-            });
-
-        } catch (err) {
-            logger.error(`Error (clone ${table}):`, err);
-            return cb(null, { status: false, code: 2004, error: err.message });
-        }
-    });
 
     /* ======================================================
      LIST + SEARCH + PAGINATION (COMMON FOR ALL MASTERS)
@@ -470,6 +566,8 @@ module.exports = function registerMasterResponder({
             const result = await pool.query(dataQuery, params);
 
             return cb(null, {
+                header_type: "SUCCESS",
+                message_visibility: false,
                 status: true,
                 code: 1000,
                 message: `${formatTableName(table)} list fetched successfully`,
@@ -485,8 +583,149 @@ module.exports = function registerMasterResponder({
         } catch (err) {
             logger.error(`Error (${key}-listpagination):`, err);
             return cb(null, {
+                header_type: "ERROR",
+                message_visibility: true,
                 status: false,
                 code: 2004,
+                message: err.message,
+                error: err.message
+            });
+        }
+    });
+
+    responder.on(`lock-${key}`, async (req, cb) => {
+        const client = await pool.connect();
+        try {
+            const { uuid } = req;
+            const { user_id } = req.body;
+
+            if (!user_id) {
+                return cb(null, {
+                    status: false,
+                    code: 2001,
+                    error: 'User ID required'
+                });
+            }
+
+            await client.query('BEGIN');
+
+            // Check existing lock
+            const { rows } = await client.query(
+                `
+            SELECT locked_by, locked_at
+            FROM ${table}
+            WHERE ${uuidColumn} = $1
+            FOR UPDATE
+            `,
+                [uuid]
+            );
+
+            if (!rows.length) {
+                await client.query('ROLLBACK');
+                return cb(null, {
+                    header_type: "ERROR",
+                    message_visibility: false,
+                    status: false,
+                    code: 2004,
+                    message: 'Record not found',
+                    error: 'Record not found'
+                });
+            }
+
+            const { locked_by, locked_at } = rows[0];
+
+            // Auto-unlock logic (1 min)
+            const isExpired =
+                locked_at &&
+                new Date(locked_at).getTime() + 1 * 60 * 1000 < Date.now();
+
+            if (locked_by && locked_by !== user_id && !isExpired) {
+                await client.query('ROLLBACK');
+                return cb(null, {
+                    status: false,
+                    code: 2008,
+                    error: 'Record is locked by another user'
+                });
+            }
+
+            // Lock record
+            await client.query(
+                `
+            UPDATE ${table}
+            SET locked_by = $1,
+                locked_at = NOW()
+            WHERE ${uuidColumn} = $2
+            `,
+                [user_id, uuid]
+            );
+
+            await client.query('COMMIT');
+
+            return cb(null, {
+                header_type: "SUCCESS",
+                message_visibility: false,
+                status: true, code: 1000,
+                message: `${formatTableName(table)} Record locked successfully`,
+            });
+
+        } catch (err) {
+            await client.query('ROLLBACK');
+            return cb(null, {
+                header_type: "ERROR",
+                message_visibility: true,
+                status: false,
+                code: 2004,
+                message: err.message,
+                error: err.message
+            });
+        } finally {
+            client.release();
+        }
+    });
+
+
+    responder.on(`unlock-${key}`, async (req, cb) => {
+        try {
+            const { uuid } = req;
+            const { user_id } = req.body;
+
+            const result = await pool.query(
+                `
+            UPDATE ${table}
+            SET locked_by = NULL,
+                locked_at = NULL
+            WHERE ${uuidColumn} = $1
+              AND locked_by = $2
+            `,
+                [uuid, user_id]
+            );
+
+            if (!result.rowCount) {
+                return cb(null, {
+                    header_type: "ERROR",
+                    message_visibility: true,
+                    status: false,
+                    code: 2003,
+                    message: 'Unable to unlock record',
+                    error: 'This record is currently being edited by another user'
+                });
+            }
+
+            return cb(null, {
+                header_type: "SUCCESS",
+                message_visibility: false,
+                status: true,
+                code: 1000,
+                message: `${formatTableName(table)} Record unlocked successfully`,
+            });
+
+        } catch (err) {
+            return cb(null, {
+                header_type: "ERROR",
+                message_visibility: true,
+                status: false,
+                code: 2004,
+                message: err.message,
                 error: err.message
             });
         }

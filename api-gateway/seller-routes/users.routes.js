@@ -38,7 +38,14 @@ router.get('/list', async (req, res) => {
             stack: err.stack,
             error_code: 2004
         });
-        res.status(500).json({ error: err.message });
+        res.status(500).json({
+    header_type: "ERROR",
+    message_visibility: true,
+    status: false,
+    code: 2004,
+    message: err.message,
+    error: err.message
+});
     }
 });
 
@@ -77,7 +84,14 @@ router.post('/pagination-list', async (req, res) => {
             error_code: 2004
         });
 
-        res.status(500).json({ error: err.message });
+        res.status(500).json({
+    header_type: "ERROR",
+    message_visibility: true,
+    status: false,
+    code: 2004,
+    message: err.message,
+    error: err.message
+});
     }
 });
 
@@ -131,7 +145,14 @@ router.post('/login', async (req, res) => {
             error_code: 2004
         });
 
-        res.status(500).json({ error: err.message });
+        res.status(500).json({
+    header_type: "ERROR",
+    message_visibility: true,
+    status: false,
+    code: 2004,
+    message: err.message,
+    error: err.message
+});
     }
 });
 
@@ -171,7 +192,14 @@ router.post('/logout', async (req, res) => {
             error_code: 2004
         });
 
-        res.status(500).json({ error: err.message });
+        res.status(500).json({
+    header_type: "ERROR",
+    message_visibility: true,
+    status: false,
+    code: 2004,
+    message: err.message,
+    error: err.message
+});
     }
 });
 

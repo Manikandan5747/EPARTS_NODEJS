@@ -32,7 +32,14 @@ router.post('/create', async (req, res) => {
 
     } catch (err) {
         logger.error('Error in payment-mode/create:', err.message);
-        res.status(500).json({ error: err.message });
+        res.status(500).json({
+    header_type: "ERROR",
+    message_visibility: true,
+    status: false,
+    code: 2004,
+    message: err.message,
+    error: err.message
+});
     }
 });
 
@@ -61,7 +68,14 @@ router.get('/list', async (req, res) => {
 
     } catch (err) {
         logger.error('Error in payment-mode/list:', err.message);
-        res.status(500).json({ error: err.message });
+        res.status(500).json({
+    header_type: "ERROR",
+    message_visibility: true,
+    status: false,
+    code: 2004,
+    message: err.message,
+    error: err.message
+});
     }
 });
 
@@ -91,7 +105,14 @@ router.get('/findbyid/:id', async (req, res) => {
 
     } catch (err) {
         logger.error('Error in payment-mode/findbyid:', err.message);
-        res.status(500).json({ error: err.message });
+        res.status(500).json({
+    header_type: "ERROR",
+    message_visibility: true,
+    status: false,
+    code: 2004,
+    message: err.message,
+    error: err.message
+});
     }
 });
 
@@ -122,7 +143,14 @@ router.post('/update/:id', async (req, res) => {
 
     } catch (err) {
         logger.error('Error in payment-mode/update:', err.message);
-        res.status(500).json({ error: err.message });
+        res.status(500).json({
+    header_type: "ERROR",
+    message_visibility: true,
+    status: false,
+    code: 2004,
+    message: err.message,
+    error: err.message
+});
     }
 });
 
@@ -153,7 +181,14 @@ router.post('/delete/:id', async (req, res) => {
 
     } catch (err) {
         logger.error('Error in payment-mode/delete:', err.message);
-        res.status(500).json({ error: err.message });
+        res.status(500).json({
+    header_type: "ERROR",
+    message_visibility: true,
+    status: false,
+    code: 2004,
+    message: err.message,
+    error: err.message
+});
     }
 });
 
@@ -184,7 +219,14 @@ router.post('/status/:id', async (req, res) => {
 
     } catch (err) {
         logger.error('Error in payment-mode/status:', err.message);
-        res.status(500).json({ error: err.message });
+        res.status(500).json({
+    header_type: "ERROR",
+    message_visibility: true,
+    status: false,
+    code: 2004,
+    message: err.message,
+    error: err.message
+});
     }
 });
 
@@ -213,7 +255,14 @@ router.post('/pagination-list', async (req, res) => {
         res.json(result);
 
     } catch (err) {
-        res.status(500).json({ error: err.message });
+        res.status(500).json({
+    header_type: "ERROR",
+    message_visibility: true,
+    status: false,
+    code: 2004,
+    message: err.message,
+    error: err.message
+});
     }
 });
 

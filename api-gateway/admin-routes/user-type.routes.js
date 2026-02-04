@@ -34,7 +34,14 @@ router.post('/create', async (req, res) => {
 
     } catch (err) {
         logger.error("Error in usertype/create:", err.message);
-        res.status(500).json({ error: err.message });
+        res.status(500).json({
+    header_type: "ERROR",
+    message_visibility: true,
+    status: false,
+    code: 2004,
+    message: err.message,
+    error: err.message
+});
     }
 });
 
@@ -63,7 +70,14 @@ router.get('/list', async (req, res) => {
 
     } catch (err) {
         logger.error("Error in usertype/list:", err.message);
-        res.status(500).json({ error: err.message });
+        res.status(500).json({
+    header_type: "ERROR",
+    message_visibility: true,
+    status: false,
+    code: 2004,
+    message: err.message,
+    error: err.message
+});
     }
 });
 
@@ -95,7 +109,14 @@ router.get('/findbyid/:id', async (req, res) => {
 
     } catch (err) {
         logger.error("Error in usertype/findbyid:", err.message);
-        res.status(500).json({ error: err.message });
+        res.status(500).json({
+    header_type: "ERROR",
+    message_visibility: true,
+    status: false,
+    code: 2004,
+    message: err.message,
+    error: err.message
+});
     }
 });
 
@@ -128,7 +149,14 @@ router.post('/update/:id', async (req, res) => {
 
     } catch (err) {
         logger.error("Error in usertype/update:", err.message);
-        res.status(500).json({ error: err.message });
+        res.status(500).json({
+    header_type: "ERROR",
+    message_visibility: true,
+    status: false,
+    code: 2004,
+    message: err.message,
+    error: err.message
+});
     }
 });
 
@@ -161,7 +189,14 @@ router.post('/delete/:id', async (req, res) => {
 
     } catch (err) {
         logger.error("Error in usertype/delete:", err.message);
-        res.status(500).json({ error: err.message });
+        res.status(500).json({
+    header_type: "ERROR",
+    message_visibility: true,
+    status: false,
+    code: 2004,
+    message: err.message,
+    error: err.message
+});
     }
 });
 
@@ -194,7 +229,14 @@ router.post('/status/:id', async (req, res) => {
 
     } catch (err) {
         logger.error("Error in usertype/status:", err.message);
-        res.status(500).json({ error: err.message });
+        res.status(500).json({
+    header_type: "ERROR",
+    message_visibility: true,
+    status: false,
+    code: 2004,
+    message: err.message,
+    error: err.message
+});
     }
 });
 
@@ -225,7 +267,14 @@ router.post('/pagination-list', async (req, res) => {
         res.json(result);
 
     } catch (err) {
-        res.status(500).json({ error: err.message });
+        res.status(500).json({
+    header_type: "ERROR",
+    message_visibility: true,
+    status: false,
+    code: 2004,
+    message: err.message,
+    error: err.message
+});
     }
 });
 
@@ -258,7 +307,14 @@ router.post('/clone/:id', async (req, res) => {
 
     } catch (err) {
         logger.error("Error in usertype/clone:", err.message);
-        res.status(500).json({ error: err.message });
+        res.status(500).json({
+    header_type: "ERROR",
+    message_visibility: true,
+    status: false,
+    code: 2004,
+    message: err.message,
+    error: err.message
+});
     }
 });
 

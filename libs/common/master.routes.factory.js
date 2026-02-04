@@ -20,9 +20,12 @@ module.exports = function createMasterRoutes({
             const error = validateMaster(entityName, 'create', req.body);
             if (error) {
                 return res.status(500).json({
+                    header_type: "ERROR",
+                    message_visibility: true,
                     status: false,
                     code: 2001,
-                    error
+                    error,
+                    message: "Validation failed"
                 });
             }
 
@@ -46,7 +49,14 @@ module.exports = function createMasterRoutes({
             res.status(201).json(result);
         } catch (err) {
             logger.error(err.message);
-            res.status(500).json({ error: err.message });
+            res.status(500).json({
+                header_type: "ERROR",
+                message_visibility: true,
+                status: false,
+                code: 2004,
+                message: err.message,
+                error: err.message
+            });
         }
     });
 
@@ -69,7 +79,14 @@ module.exports = function createMasterRoutes({
 
             res.json(result);
         } catch (err) {
-            res.status(500).json({ error: err.message });
+            res.status(500).json({
+                header_type: "ERROR",
+                message_visibility: true,
+                status: false,
+                code: 2004,
+                message: err.message,
+                error: err.message
+            });
         }
     });
 
@@ -95,7 +112,14 @@ module.exports = function createMasterRoutes({
 
             res.json(result);
         } catch (err) {
-            res.status(500).json({ error: err.message });
+            res.status(500).json({
+                header_type: "ERROR",
+                message_visibility: true,
+                status: false,
+                code: 2004,
+                message: err.message,
+                error: err.message
+            });
         }
     });
 
@@ -122,7 +146,14 @@ module.exports = function createMasterRoutes({
 
             res.json(result);
         } catch (err) {
-            res.status(500).json({ error: err.message });
+            res.status(500).json({
+                header_type: "ERROR",
+                message_visibility: true,
+                status: false,
+                code: 2004,
+                message: err.message,
+                error: err.message
+            });
         }
     });
 
@@ -149,7 +180,14 @@ module.exports = function createMasterRoutes({
 
             res.json(result);
         } catch (err) {
-            res.status(500).json({ error: err.message });
+            res.status(500).json({
+                header_type: "ERROR",
+                message_visibility: true,
+                status: false,
+                code: 2004,
+                message: err.message,
+                error: err.message
+            });
         }
     });
 
@@ -164,7 +202,14 @@ module.exports = function createMasterRoutes({
 
             res.json(result);
         } catch (err) {
-            res.status(500).json({ error: err.message });
+            res.status(500).json({
+                header_type: "ERROR",
+                message_visibility: true,
+                status: false,
+                code: 2004,
+                message: err.message,
+                error: err.message
+            });
         }
     });
 
@@ -178,7 +223,14 @@ module.exports = function createMasterRoutes({
 
             res.json(result);
         } catch (err) {
-            res.status(500).json({ error: err.message });
+            res.status(500).json({
+                header_type: "ERROR",
+                message_visibility: true,
+                status: false,
+                code: 2004,
+                message: err.message,
+                error: err.message
+            });
         }
     });
 
@@ -218,6 +270,90 @@ module.exports = function createMasterRoutes({
             return res.status(500).json({
                 status: false,
                 code: 2004,
+                header_type: "ERROR",
+                message_visibility: true,
+                status: false,
+                code: 2004,
+                message: err.message,
+                error: err.message
+            });
+        }
+    });
+
+    router.post('/lock/:id', async (req, res) => {
+        try {
+            const result = await requester.send({
+                type: `lock-${entityName}`,
+                uuid: req.params.id,
+                body: { user_id: req.body.user_id }
+            });
+
+            if (!result.status) {
+                await saveErrorLog({
+                    api_name: `lock-${entityName}`,
+                    method: 'POST',
+                    payload: {
+                        uuid: req.params.id,
+                        user_id: req.body.user_id
+                    },
+                    message: result.error,
+                    stack: result.stack || '',
+                    error_code: result.code || 2004
+                });
+
+                return res.status(500).json(result);
+            }
+
+            return res.json(result);
+
+        } catch (err) {
+            logger.error(err.message);
+            return res.status(500).json({
+                header_type: "ERROR",
+                message_visibility: true,
+                status: false,
+                code: 2004,
+                message: err.message,
+                error: err.message
+            });
+        }
+    });
+
+
+    router.post('/unlock/:id', async (req, res) => {
+        try {
+            const result = await requester.send({
+                type: `unlock-${entityName}`,
+                uuid: req.params.id,
+                body: { user_id: req.body.user_id }
+            });
+
+            if (!result.status) {
+                await saveErrorLog({
+                    api_name: `unlock-${entityName}`,
+                    method: 'POST',
+                    payload: {
+                        uuid: req.params.id,
+                        user_id: req.body.user_id
+                    },
+                    message: result.error,
+                    stack: result.stack || '',
+                    error_code: result.code || 2004
+                });
+
+                return res.status(500).json(result);
+            }
+
+            return res.json(result);
+
+        } catch (err) {
+            logger.error(err.message);
+            return res.status(500).json({
+                header_type: "ERROR",
+                message_visibility: true,
+                status: false,
+                code: 2004,
+                message: err.message,
                 error: err.message
             });
         }

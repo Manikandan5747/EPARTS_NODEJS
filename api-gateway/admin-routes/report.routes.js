@@ -14,7 +14,14 @@ router.get('/report-master', async (req, res) => {
         res.send(result);
     } catch (err) {
         logger.error("Error in report-master/list:", err.message);
-        res.status(500).json({ error: err.message });
+        res.status(500).json({
+    header_type: "ERROR",
+    message_visibility: true,
+    status: false,
+    code: 2004,
+    message: err.message,
+    error: err.message
+});
     }
 });
 
@@ -28,7 +35,14 @@ router.get('/show-report', async (req, res) => {
         res.send(result);
     } catch (err) {
         logger.error("Error in show-report/list:", err.message);
-        res.status(500).json({ error: err.message });
+        res.status(500).json({
+    header_type: "ERROR",
+    message_visibility: true,
+    status: false,
+    code: 2004,
+    message: err.message,
+    error: err.message
+});
     }
 });
 

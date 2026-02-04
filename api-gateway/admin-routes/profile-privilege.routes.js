@@ -33,7 +33,14 @@ router.post('/save', async (req, res) => {
 
     } catch (err) {
         logger.error("Error in profile-privilege/save:", err.message);
-        res.status(500).json({ error: err.message });
+        res.status(500).json({
+    header_type: "ERROR",
+    message_visibility: true,
+    status: false,
+    code: 2004,
+    message: err.message,
+    error: err.message
+});
     }
 });
 
@@ -63,7 +70,14 @@ router.get('/list', async (req, res) => {
 
     } catch (err) {
         logger.error("Error in profile-privilege/list:", err.message);
-        res.status(500).json({ error: err.message });
+        res.status(500).json({
+    header_type: "ERROR",
+    message_visibility: true,
+    status: false,
+    code: 2004,
+    message: err.message,
+    error: err.message
+});
     }
 });
 
@@ -94,7 +108,14 @@ router.get('/list/:profile_id', async (req, res) => {
 
     } catch (err) {
         logger.error("Error in profile-privilege/listByProfile:", err.message);
-        res.status(500).json({ error: err.message });
+        res.status(500).json({
+    header_type: "ERROR",
+    message_visibility: true,
+    status: false,
+    code: 2004,
+    message: err.message,
+    error: err.message
+});
     }
 });
 

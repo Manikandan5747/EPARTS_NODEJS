@@ -41,7 +41,14 @@ router.post('/create', multipartMiddleware, async (req, res) => {
         res.status(201).send(result);
     } catch (err) {
         logger.error('Error in cmssocialmediainfo/create:', err.message);
-        res.status(500).json({ error: err.message });
+        res.status(500).json({
+    header_type: "ERROR",
+    message_visibility: true,
+    status: false,
+    code: 2004,
+    message: err.message,
+    error: err.message
+});
     }
 });
 
@@ -66,7 +73,14 @@ router.get('/list', async (req, res) => {
         res.send(result);
     } catch (err) {
         logger.error('Error in cmssocialmediainfo/list:', err.message);
-        res.status(500).json({ error: err.message });
+        res.status(500).json({
+    header_type: "ERROR",
+    message_visibility: true,
+    status: false,
+    code: 2004,
+    message: err.message,
+    error: err.message
+});
     }
 });
 
@@ -94,7 +108,14 @@ router.get('/findbyid/:id', async (req, res) => {
         res.json(result);
     } catch (err) {
         logger.error('Error in cmssocialmediainfo/findbyid:', err.message);
-        res.status(500).json({ error: err.message });
+        res.status(500).json({
+    header_type: "ERROR",
+    message_visibility: true,
+    status: false,
+    code: 2004,
+    message: err.message,
+    error: err.message
+});
     }
 });
 
@@ -129,7 +150,14 @@ router.post('/update/:id', multipartMiddleware, async (req, res) => {
         res.send(result);
     } catch (err) {
         logger.error('Error in cmssocialmediainfo/update:', err.message);
-        res.status(500).json({ error: err.message });
+        res.status(500).json({
+    header_type: "ERROR",
+    message_visibility: true,
+    status: false,
+    code: 2004,
+    message: err.message,
+    error: err.message
+});
     }
 });
 
@@ -158,7 +186,14 @@ router.post('/delete/:id', async (req, res) => {
         res.send(result);
     } catch (err) {
         logger.error('Error in cmssocialmediainfo/delete:', err.message);
-        res.status(500).json({ error: err.message });
+        res.status(500).json({
+    header_type: "ERROR",
+    message_visibility: true,
+    status: false,
+    code: 2004,
+    message: err.message,
+    error: err.message
+});
     }
 });
 
@@ -187,7 +222,14 @@ router.post('/status/:id', async (req, res) => {
         res.send(result);
     } catch (err) {
         logger.error('Error in cmssocialmediainfo/status:', err.message);
-        res.status(500).json({ error: err.message });
+        res.status(500).json({
+    header_type: "ERROR",
+    message_visibility: true,
+    status: false,
+    code: 2004,
+    message: err.message,
+    error: err.message
+});
     }
 });
 
@@ -215,7 +257,14 @@ router.post('/pagination-list', async (req, res) => {
         res.json(result);
     } catch (err) {
         logger.error('Error in cmssocialmediainfo/pagination-list:', err.message);
-        res.status(500).json({ error: err.message });
+        res.status(500).json({
+    header_type: "ERROR",
+    message_visibility: true,
+    status: false,
+    code: 2004,
+    message: err.message,
+    error: err.message
+});
     }
 });
 

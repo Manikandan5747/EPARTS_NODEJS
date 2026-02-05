@@ -121,36 +121,36 @@ module.exports = function apiAccess() {
       console.log(`✅ Permission allowed: ${requiredPermission}`);
 
       /* ---------------- 8. DATA ACCESS (LIST / VIEW ONLY) ---------------- */
-        console.log("🔎 Applying DATA ACCESS rules");
+      console.log("🔎 Applying DATA ACCESS rules");
 
-        const accessResult = await pool.query(
-          `SELECT listaccess
+      const accessResult = await pool.query(
+        `SELECT listaccess
            FROM role_data_access
            WHERE role_id = $1
              AND module_id = $2`,
-          [role_id, module_id]
-        );
+        [role_id, module_id]
+      );
 
-        if (accessResult.rowCount === 0) {
-          return errorHandler({ name: "NoDataAccess" }, req, res);
-        }
+      if (accessResult.rowCount === 0) {
+        return errorHandler({ name: "NoDataAccess" }, req, res);
+      }
 
-        const access_type = accessResult.rows[0].listaccess;
-        console.log("📊 access_type:", access_type);
+      const access_type = accessResult.rows[0].listaccess;
+      console.log("📊 access_type:", access_type);
 
-        /* -------- YOUR IF LOGIC (AS REQUESTED) -------- */
-        if (access_type === 3) {
-          req.dataAccessScope = { type: 'PUBLIC',user_id };
-        }
-        else if (access_type === 2) {
-          req.dataAccessScope = { type: 'PRIVATE', user_id };
-        }
-        else {
-          return errorHandler({ name: "NoDataAccess" }, req, res);
-        }
+      /* -------- YOUR IF LOGIC (AS REQUESTED) -------- */
+      if (access_type === 3) {
+        req.dataAccessScope = { type: 'PUBLIC', user_id };
+      }
+      else if (access_type === 2) {
+        req.dataAccessScope = { type: 'PRIVATE', user_id };
+      }
+      else {
+        return errorHandler({ name: "NoDataAccess" }, req, res);
+      }
 
-        console.log("🔐 dataAccessScope:", req.dataAccessScope);
-      
+      console.log("🔐 dataAccessScope:", req.dataAccessScope);
+
 
       /* ---------------- NEXT ---------------- */
       next();

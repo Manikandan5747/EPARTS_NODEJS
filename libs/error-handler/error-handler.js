@@ -51,9 +51,14 @@ const sendErrorProd = (err, res) => {
     message: err.message,
     stack: err.stack,
     code: err.code,
+    header_type: "ERROR",
+    message_visibility: true,
   });
 
   res.status(err.statusCode || 500).json({
+    header_type: "ERROR",
+    message_visibility: true,
+    code: 2004,
     status: err.status,
     message: err.message || 'Unexpected error occurred',
     fields: err.fields || [],

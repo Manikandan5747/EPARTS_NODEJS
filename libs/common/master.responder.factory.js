@@ -626,7 +626,7 @@ module.exports = function registerMasterResponder({
 
             return cb(null, {
                 header_type: "SUCCESS",
-                message_visibility: false,
+                message_visibility: true,
                 status: true,
                 code: 1000,
                 message: `${formatTableName(table)} list fetched successfully`,

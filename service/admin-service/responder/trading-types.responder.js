@@ -309,7 +309,7 @@ responder.on('advancefilter-trading-type', async (req, cb) => {
         let extraParams = [];
 
         // If PRIVATE → only show own created data
-        if (accessScope.type === 'PRIVATE') {
+        if (accessScope && accessScope.type === 'PRIVATE') {
             extraWhere = ' AND TT.created_by = $extraUser';
             extraParams.push(accessScope.user_id);
         }

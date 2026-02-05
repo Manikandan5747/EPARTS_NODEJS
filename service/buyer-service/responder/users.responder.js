@@ -82,7 +82,14 @@ responder.on('list-users', async (req, cb) => {
 
     } catch (err) {
         logger.error("Responder Error (list users):", err);
-        return cb(null, { status: false, code: 2004, error: err.message });
+        return cb(null, {
+    header_type: "ERROR",
+    message_visibility: true,
+    status: false,
+    code: 2004,
+    message: err.message,
+    error: err.message
+});
     }
 });
 
@@ -148,7 +155,14 @@ responder.on('advancefilter-users', async (req, cb) => {
 
     } catch (err) {
         console.error('[advancefilter-users] error:', err);
-        return cb(null, { status: false, code: 2004, error: err.message });
+        return cb(null, {
+    header_type: "ERROR",
+    message_visibility: true,
+    status: false,
+    code: 2004,
+    message: err.message,
+    error: err.message
+});
     }
 });
 
@@ -359,7 +373,14 @@ responder.on("buyer-login", async (req, cb) => {
 
     } catch (err) {
         logger.error("Responder Error (login):", err);
-        return cb(null, { status: false, code: 2004, error: err.message });
+        return cb(null, {
+    header_type: "ERROR",
+    message_visibility: true,
+    status: false,
+    code: 2004,
+    message: err.message,
+    error: err.message
+});
     }
 });
 

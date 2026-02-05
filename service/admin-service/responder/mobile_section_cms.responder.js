@@ -72,7 +72,14 @@ responder.on('create-mobilesectioncms', async (req, cb) => {
 
     } catch (err) {
         logger.error('Responder Error (create Mobile Section Cms):', err);
-        return cb(null, { status: false, code: 2004, error: err.message });
+        return cb(null, {
+    header_type: "ERROR",
+    message_visibility: true,
+    status: false,
+    code: 2004,
+    message: err.message,
+    error: err.message
+});
     }
 });
 
@@ -98,7 +105,14 @@ responder.on('list-mobilesectioncms', async (req, cb) => {
 
     } catch (err) {
         logger.error('Responder Error (list Mobile Section Cms):', err);
-        return cb(null, { status: false, code: 2004, error: err.message });
+        return cb(null, {
+    header_type: "ERROR",
+    message_visibility: true,
+    status: false,
+    code: 2004,
+    message: err.message,
+    error: err.message
+});
     }
 });
 
@@ -123,7 +137,14 @@ responder.on('getById-mobilesectioncms', async (req, cb) => {
 
     } catch (err) {
         logger.error('Responder Error (get Mobile Section Cms):', err);
-        return cb(null, { status: false, code: 2004, error: err.message });
+        return cb(null, {
+    header_type: "ERROR",
+    message_visibility: true,
+    status: false,
+    code: 2004,
+    message: err.message,
+    error: err.message
+});
     }
 });
 
@@ -214,7 +235,14 @@ responder.on('update-mobilesectioncms', async (req, cb) => {
 
     } catch (err) {
         logger.error('Responder Error (update Mobile Section Cms):', err);
-        return cb(null, { status: false, code: 2004, error: err.message });
+        return cb(null, {
+    header_type: "ERROR",
+    message_visibility: true,
+    status: false,
+    code: 2004,
+    message: err.message,
+    error: err.message
+});
     }
 });
 
@@ -255,7 +283,14 @@ responder.on('delete-mobilesectioncms', async (req, cb) => {
 
     } catch (err) {
         logger.error('Responder Error (delete Mobile Section Cms):', err);
-        return cb(null, { status: false, code: 2004, error: err.message });
+        return cb(null, {
+    header_type: "ERROR",
+    message_visibility: true,
+    status: false,
+    code: 2004,
+    message: err.message,
+    error: err.message
+});
     }
 });
 
@@ -296,7 +331,14 @@ responder.on('status-mobilesectioncms', async (req, cb) => {
 
     } catch (err) {
         logger.error('Responder Error (status Mobile Section Cms):', err);
-        return cb(null, { status: false, code: 2004, error: err.message });
+        return cb(null, {
+    header_type: "ERROR",
+    message_visibility: true,
+    status: false,
+    code: 2004,
+    message: err.message,
+    error: err.message
+});
     }
 });
 
@@ -360,7 +402,14 @@ responder.on('advancefilter-mobilesectioncms', async (req, cb) => {
 
     } catch (err) {
         logger.error('[advancefilter-Mobile Section Cms] error:', err);
-        return cb(null, { status: false, code: 2004, error: err.message });
+        return cb(null, {
+    header_type: "ERROR",
+    message_visibility: true,
+    status: false,
+    code: 2004,
+    message: err.message,
+    error: err.message
+});
     }
 });
 

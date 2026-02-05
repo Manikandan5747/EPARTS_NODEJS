@@ -51,7 +51,14 @@ responder.on('create-payment-mode', async (req, cb) => {
 
     } catch (err) {
         logger.error('create-payment-mode error:', err);
-        return cb(null, { status: false, code: 2004, error: err.message });
+        return cb(null, {
+    header_type: "ERROR",
+    message_visibility: true,
+    status: false,
+    code: 2004,
+    message: err.message,
+    error: err.message
+});
     }
 });
 
@@ -73,7 +80,14 @@ responder.on('list-payment-mode', async (_, cb) => {
         });
 
     } catch (err) {
-        return cb(null, { status: false, code: 2004, error: err.message });
+        return cb(null, {
+    header_type: "ERROR",
+    message_visibility: true,
+    status: false,
+    code: 2004,
+    message: err.message,
+    error: err.message
+});
     }
 });
 
@@ -95,7 +109,14 @@ responder.on('getById-payment-mode', async (req, cb) => {
         return cb(null, { status: true, code: 1000, data: result.rows[0] });
 
     } catch (err) {
-        return cb(null, { status: false, code: 2004, error: err.message });
+        return cb(null, {
+    header_type: "ERROR",
+    message_visibility: true,
+    status: false,
+    code: 2004,
+    message: err.message,
+    error: err.message
+});
     }
 });
 
@@ -134,7 +155,14 @@ responder.on('update-payment-mode', async (req, cb) => {
         });
 
     } catch (err) {
-        return cb(null, { status: false, code: 2004, error: err.message });
+        return cb(null, {
+    header_type: "ERROR",
+    message_visibility: true,
+    status: false,
+    code: 2004,
+    message: err.message,
+    error: err.message
+});
     }
 });
 
@@ -165,7 +193,14 @@ responder.on('delete-payment-mode', async (req, cb) => {
         return cb(null, { status: true, code: 1000, message: 'Payment mode deleted successfully' });
 
     } catch (err) {
-        return cb(null, { status: false, code: 2004, error: err.message });
+        return cb(null, {
+    header_type: "ERROR",
+    message_visibility: true,
+    status: false,
+    code: 2004,
+    message: err.message,
+    error: err.message
+});
     }
 });
 
@@ -196,7 +231,14 @@ responder.on('status-payment-mode', async (req, cb) => {
         return cb(null, { status: true, code: 1000, message: 'Status updated successfully' });
 
     } catch (err) {
-        return cb(null, { status: false, code: 2004, error: err.message });
+        return cb(null, {
+    header_type: "ERROR",
+    message_visibility: true,
+    status: false,
+    code: 2004,
+    message: err.message,
+    error: err.message
+});
     }
 });
 
@@ -238,6 +280,13 @@ responder.on('advancefilter-payment-mode', async (req, cb) => {
         return cb(null, { status: true, code: 1000, result });
 
     } catch (err) {
-        return cb(null, { status: false, code: 2004, error: err.message });
+        return cb(null, {
+    header_type: "ERROR",
+    message_visibility: true,
+    status: false,
+    code: 2004,
+    message: err.message,
+    error: err.message
+});
     }
 });

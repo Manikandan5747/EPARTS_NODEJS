@@ -124,7 +124,14 @@ responder.on('create-users', async (req, cb) => {
 
     } catch (err) {
         logger.error("Responder Error (create user):", err);
-        return cb(null, { status: false, code: 2004, error: err.message });
+        return cb(null, {
+    header_type: "ERROR",
+    message_visibility: true,
+    status: false,
+    code: 2004,
+    message: err.message,
+    error: err.message
+});
     }
 });
 
@@ -192,7 +199,14 @@ responder.on('list-users', async (req, cb) => {
 
     } catch (err) {
         logger.error("Responder Error (list users):", err);
-        return cb(null, { status: false, code: 2004, error: err.message });
+        return cb(null, {
+    header_type: "ERROR",
+    message_visibility: true,
+    status: false,
+    code: 2004,
+    message: err.message,
+    error: err.message
+});
     }
 });
 
@@ -260,7 +274,14 @@ responder.on('getById-users', async (req, cb) => {
 
     } catch (err) {
         logger.error("Responder Error (getById user):", err);
-        return cb(null, { status: false, code: 2004, error: err.message });
+        return cb(null, {
+    header_type: "ERROR",
+    message_visibility: true,
+    status: false,
+    code: 2004,
+    message: err.message,
+    error: err.message
+});
     }
 });
 
@@ -386,7 +407,14 @@ responder.on('update-users', async (req, cb) => {
 
     } catch (err) {
         logger.error("Responder Error (update user):", err);
-        return cb(null, { status: false, code: 2004, error: err.message });
+        return cb(null, {
+    header_type: "ERROR",
+    message_visibility: true,
+    status: false,
+    code: 2004,
+    message: err.message,
+    error: err.message
+});
     }
 });
 
@@ -439,7 +467,14 @@ responder.on('delete-users', async (req, cb) => {
 
     } catch (err) {
         logger.error("Responder Error (delete user):", err);
-        return cb(null, { status: false, code: 2004, error: err.message });
+        return cb(null, {
+    header_type: "ERROR",
+    message_visibility: true,
+    status: false,
+    code: 2004,
+    message: err.message,
+    error: err.message
+});
     }
 });
 
@@ -497,7 +532,14 @@ responder.on('status-users', async (req, cb) => {
 
     } catch (err) {
         logger.error("Responder Error (status user):", err);
-        return cb(null, { status: false, code: 2004, error: err.message });
+        return cb(null, {
+    header_type: "ERROR",
+    message_visibility: true,
+    status: false,
+    code: 2004,
+    message: err.message,
+    error: err.message
+});
     }
 });
 
@@ -582,7 +624,14 @@ responder.on('advancefilter-users', async (req, cb) => {
 
     } catch (err) {
         console.error('[advancefilter-users] error:', err);
-        return cb(null, { status: false, code: 2004, error: err.message });
+        return cb(null, {
+    header_type: "ERROR",
+    message_visibility: true,
+    status: false,
+    code: 2004,
+    message: err.message,
+    error: err.message
+});
     }
 });
 
@@ -652,7 +701,14 @@ responder.on('clone-users', async (req, cb) => {
 
     } catch (err) {
         console.error("clone-users error:", err);
-        return cb(null, { status: false, code: 2004, error: err.message });
+        return cb(null, {
+    header_type: "ERROR",
+    message_visibility: true,
+    status: false,
+    code: 2004,
+    message: err.message,
+    error: err.message
+});
     }
 });
 
@@ -813,7 +869,14 @@ responder.on("admin-login", async (req, cb) => {
 
     } catch (err) {
         logger.error("Responder Error (login):", err);
-        return cb(null, { status: false, code: 2004, error: err.message });
+        return cb(null, {
+    header_type: "ERROR",
+    message_visibility: true,
+    status: false,
+    code: 2004,
+    message: err.message,
+    error: err.message
+});
     }
 });
 

@@ -148,7 +148,14 @@ module.exports = function registerMasterResponder({
     //         });
     //     } catch (err) {
     //         logger.error(`Error (getById ${table}):`, err);
-    //         return cb(null, { status: false, code: 2004, error: err.message });
+    //         return cb(null, {
+    // header_type: "ERROR",
+    // message_visibility: true,
+    // status: false,
+    // code: 2004,
+    // message: err.message,
+    // error: err.message
+// });
     //     }
     // });
 
@@ -554,7 +561,14 @@ module.exports = function registerMasterResponder({
 
     //     } catch (err) {
     //         logger.error(`Error (advancefilter ${table}):`, err);
-    //         return cb(null, { status: false, code: 2004, error: err.message });
+    //         return cb(null, {
+//     header_type: "ERROR",
+//     message_visibility: true,
+//     status: false,
+//     code: 2004,
+//     message: err.message,
+//     error: err.message
+// });
     //     }
     // });
 

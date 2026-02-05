@@ -41,7 +41,14 @@ responder.on('report-master', async (req, cb) => {
             stack: err.stack,
             error_code: 2004
         });
-        return cb(null, { status: false, code: 2004, error: err.message });
+        return cb(null, {
+    header_type: "ERROR",
+    message_visibility: true,
+    status: false,
+    code: 2004,
+    message: err.message,
+    error: err.message
+});
     }
 });
 
@@ -116,7 +123,14 @@ responder.on('show-report', async (req, cb) => {
     //         stack: err.stack,
     //         error_code: 2004
     //     });
-    //     return cb(null, { status: false, code: 2004, error: err.message });
+    //     return cb(null, {
+    header_type: "ERROR",
+    message_visibility: true,
+    status: false,
+    code: 2004,
+    message: err.message,
+    error: err.message
+});
     // }
 });
 
@@ -146,7 +160,14 @@ responder.on('report-master', async (req, cb) => {
             error_code: 2004
         });
 
-        return cb(null, { status: false, code: 2004, error: err.message });
+        return cb(null, {
+    header_type: "ERROR",
+    message_visibility: true,
+    status: false,
+    code: 2004,
+    message: err.message,
+    error: err.message
+});
     }
 });
 
@@ -177,7 +198,14 @@ responder.on('report-fields-list', async (req, cb) => {
             stack: err.stack,
             error_code: 2004
         });
-        return cb(null, { status: false, code: 2004, error: err.message });
+        return cb(null, {
+    header_type: "ERROR",
+    message_visibility: true,
+    status: false,
+    code: 2004,
+    message: err.message,
+    error: err.message
+});
     }
 });
 
@@ -216,7 +244,14 @@ responder.on('report-field-insert', async (req, cb) => {
             stack: err.stack,
             error_code: 2004
         });
-        return cb(null, { status: false, code: 2004, error: err.message });
+        return cb(null, {
+    header_type: "ERROR",
+    message_visibility: true,
+    status: false,
+    code: 2004,
+    message: err.message,
+    error: err.message
+});
     }
 });
 
@@ -250,7 +285,14 @@ responder.on('report-field-update', async (req, cb) => {
             stack: err.stack,
             error_code: 2004
         });
-        return cb(null, { status: false, code: 2004, error: err.message });
+        return cb(null, {
+    header_type: "ERROR",
+    message_visibility: true,
+    status: false,
+    code: 2004,
+    message: err.message,
+    error: err.message
+});
     }
 });
 
@@ -272,7 +314,14 @@ responder.on('report-field-delete', async (req, cb) => {
             stack: err.stack,
             error_code: 2004
         });
-        return cb(null, { status: false, code: 2004, error: err.message });
+        return cb(null, {
+    header_type: "ERROR",
+    message_visibility: true,
+    status: false,
+    code: 2004,
+    message: err.message,
+    error: err.message
+});
     }
 });
 
@@ -295,7 +344,14 @@ responder.on('report-mappings-list', async (req, cb) => {
         });
 
     } catch (err) {
-        return cb(null, { status: false, code: 2004, error: err.message });
+        return cb(null, {
+    header_type: "ERROR",
+    message_visibility: true,
+    status: false,
+    code: 2004,
+    message: err.message,
+    error: err.message
+});
     }
 });
 
@@ -321,7 +377,14 @@ responder.on('report-mapping-insert', async (req, cb) => {
 
     } catch (err) {
         console.log("err", err);
-        return cb(null, { status: false, code: 2004, error: err.message });
+        return cb(null, {
+    header_type: "ERROR",
+    message_visibility: true,
+    status: false,
+    code: 2004,
+    message: err.message,
+    error: err.message
+});
     }
 });
 
@@ -340,7 +403,14 @@ responder.on('report-mapping-update', async (req, cb) => {
         return cb(null, { status: true, code: 1000, message: "Mapping updated successfully" });
 
     } catch (err) {
-        return cb(null, { status: false, code: 2004, error: err.message });
+        return cb(null, {
+    header_type: "ERROR",
+    message_visibility: true,
+    status: false,
+    code: 2004,
+    message: err.message,
+    error: err.message
+});
     }
 });
 
@@ -351,7 +421,14 @@ responder.on('report-mapping-delete', async (req, cb) => {
         return cb(null, { status: true, code: 1000, message: "Mapping deleted successfully" });
 
     } catch (err) {
-        return cb(null, { status: false, code: 2004, error: err.message });
+        return cb(null, {
+    header_type: "ERROR",
+    message_visibility: true,
+    status: false,
+    code: 2004,
+    message: err.message,
+    error: err.message
+});
     }
 });
 
@@ -375,7 +452,14 @@ responder.on('meta-tables', async (req, cb) => {
         });
 
     } catch (err) {
-        return cb(null, { status: false, code: 2004, error: err.message });
+        return cb(null, {
+    header_type: "ERROR",
+    message_visibility: true,
+    status: false,
+    code: 2004,
+    message: err.message,
+    error: err.message
+});
     }
 });
 
@@ -397,7 +481,14 @@ responder.on('meta-columns', async (req, cb) => {
         });
 
     } catch (err) {
-        return cb(null, { status: false, code: 2004, error: err.message });
+        return cb(null, {
+    header_type: "ERROR",
+    message_visibility: true,
+    status: false,
+    code: 2004,
+    message: err.message,
+    error: err.message
+});
     }
 });
 

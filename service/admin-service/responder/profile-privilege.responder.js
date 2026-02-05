@@ -149,7 +149,14 @@ responder.on('save-profile_privilege', async (req, cb) => {
 
     } catch (err) {
         logger.error("save-profile_privilege Error:", err);
-        return cb(null, { status: false, code: 2004, error: err.message });
+        return cb(null, {
+    header_type: "ERROR",
+    message_visibility: true,
+    status: false,
+    code: 2004,
+    message: err.message,
+    error: err.message
+});
     }
 });
 
@@ -182,7 +189,14 @@ responder.on('list-profile_privilege', async (req, cb) => {
 
     } catch (err) {
         logger.error("list-profile_privilege Error:", err);
-        return cb(null, { status: false, code: 2004, error: err.message });
+        return cb(null, {
+    header_type: "ERROR",
+    message_visibility: true,
+    status: false,
+    code: 2004,
+    message: err.message,
+    error: err.message
+});
     }
 });
 
@@ -215,6 +229,13 @@ responder.on('listByProfile-profile_privilege', async (req, cb) => {
 
     } catch (err) {
         logger.error("listByProfile-profile_privilege Error:", err);
-        return cb(null, { status: false, code: 2004, error: err.message });
+        return cb(null, {
+    header_type: "ERROR",
+    message_visibility: true,
+    status: false,
+    code: 2004,
+    message: err.message,
+    error: err.message
+});
     }
 });

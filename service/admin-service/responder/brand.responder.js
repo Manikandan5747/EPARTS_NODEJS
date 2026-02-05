@@ -78,7 +78,14 @@ responder.on('create-brand', async (req, cb) => {
 
     } catch (err) {
         logger.error('Responder Error (create brand):', err);
-        return cb(null, { status: false, code: 2004, error: err.message });
+        return cb(null, {
+    header_type: "ERROR",
+    message_visibility: true,
+    status: false,
+    code: 2004,
+    message: err.message,
+    error: err.message
+});
     }
 });
 
@@ -104,7 +111,14 @@ responder.on('list-brand', async (req, cb) => {
 
     } catch (err) {
         logger.error('Responder Error (list brand):', err);
-        return cb(null, { status: false, code: 2004, error: err.message });
+        return cb(null, {
+    header_type: "ERROR",
+    message_visibility: true,
+    status: false,
+    code: 2004,
+    message: err.message,
+    error: err.message
+});
     }
 });
 
@@ -129,7 +143,14 @@ responder.on('getById-brand', async (req, cb) => {
 
     } catch (err) {
         logger.error('Responder Error (get brand):', err);
-        return cb(null, { status: false, code: 2004, error: err.message });
+        return cb(null, {
+    header_type: "ERROR",
+    message_visibility: true,
+    status: false,
+    code: 2004,
+    message: err.message,
+    error: err.message
+});
     }
 });
 
@@ -229,7 +250,14 @@ responder.on('update-brand', async (req, cb) => {
 
     } catch (err) {
         logger.error('Responder Error (update brand):', err);
-        return cb(null, { status: false, code: 2004, error: err.message });
+        return cb(null, {
+    header_type: "ERROR",
+    message_visibility: true,
+    status: false,
+    code: 2004,
+    message: err.message,
+    error: err.message
+});
     }
 });
 
@@ -270,7 +298,14 @@ responder.on('delete-brand', async (req, cb) => {
 
     } catch (err) {
         logger.error('Responder Error (delete brand):', err);
-        return cb(null, { status: false, code: 2004, error: err.message });
+        return cb(null, {
+    header_type: "ERROR",
+    message_visibility: true,
+    status: false,
+    code: 2004,
+    message: err.message,
+    error: err.message
+});
     }
 });
 
@@ -311,7 +346,14 @@ responder.on('status-brand', async (req, cb) => {
 
     } catch (err) {
         logger.error('Responder Error (status brand):', err);
-        return cb(null, { status: false, code: 2004, error: err.message });
+        return cb(null, {
+    header_type: "ERROR",
+    message_visibility: true,
+    status: false,
+    code: 2004,
+    message: err.message,
+    error: err.message
+});
     }
 });
 
@@ -377,7 +419,14 @@ responder.on('advancefilter-brand', async (req, cb) => {
 
     } catch (err) {
         logger.error('[advancefilter-brand] error:', err);
-        return cb(null, { status: false, code: 2004, error: err.message });
+        return cb(null, {
+    header_type: "ERROR",
+    message_visibility: true,
+    status: false,
+    code: 2004,
+    message: err.message,
+    error: err.message
+});
     }
 });
 

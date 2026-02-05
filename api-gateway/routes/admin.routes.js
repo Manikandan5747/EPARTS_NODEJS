@@ -21,7 +21,7 @@ router.use('/currency', (req, res, next) => require('../admin-routes/currency.ro
 
 router.use('/setting', (req, res, next) => require('../admin-routes/settings.routes.js')(req, res, next));
 
-router.use('/trading-type', apiAccess(),(req, res, next) => require('../admin-routes/trading-types.routes.js')(req, res, next));
+router.use('/trading-type', apiAccess(), (req, res, next) => require('../admin-routes/trading-types.routes.js')(req, res, next));
 
 router.use('/product-type', (req, res, next) => require('../admin-routes/product-types.routes.js')(req, res, next));
 
@@ -105,6 +105,7 @@ router.use('/services-cms', (req, res, next) => require('../admin-routes/service
 
 router.use('/cms-company-info', (req, res, next) => require('../admin-routes/cms_company_info.routes.js')(req, res, next));
 
+router.use('/cms-homepage-banner', (req, res, next) => require('../admin-routes/cms_homepage_banner_section.routes.js')(req, res, next));
 
 router.use('/profile', (req, res, next) => require('../admin-routes/profile.routes.js')(req, res, next));
 

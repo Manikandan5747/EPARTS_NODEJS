@@ -79,7 +79,14 @@ responder.on('create-usertype', async (req, cb) => {
 
     } catch (err) {
         logger.error("Responder Error (create User Type ):", err);
-        return cb(null, { status: false, code: 2004, error: err.message });
+        return cb(null, {
+    header_type: "ERROR",
+    message_visibility: true,
+    status: false,
+    code: 2004,
+    message: err.message,
+    error: err.message
+});
     }
 });
 
@@ -132,7 +139,14 @@ responder.on('list-usertype', async (req, cb) => {
 
     } catch (err) {
         logger.error("Responder Error (list User Type ):", err);
-        return cb(null, { status: false, code: 2004, error: err.message });
+        return cb(null, {
+    header_type: "ERROR",
+    message_visibility: true,
+    status: false,
+    code: 2004,
+    message: err.message,
+    error: err.message
+});
     }
 });
 
@@ -159,7 +173,14 @@ responder.on('getById-usertype', async (req, cb) => {
 
     } catch (err) {
         logger.error("Responder Error (getById User Type):", err);
-        return cb(null, { status: false, code: 2004, error: err.message });
+        return cb(null, {
+    header_type: "ERROR",
+    message_visibility: true,
+    status: false,
+    code: 2004,
+    message: err.message,
+    error: err.message
+});
     }
 });
 
@@ -240,7 +261,14 @@ responder.on('update-usertype', async (req, cb) => {
 
     } catch (err) {
         logger.error("Responder Error (update User Type):", err);
-        return cb(null, { status: false, code: 2004, error: err.message });
+        return cb(null, {
+    header_type: "ERROR",
+    message_visibility: true,
+    status: false,
+    code: 2004,
+    message: err.message,
+    error: err.message
+});
     }
 });
 
@@ -278,7 +306,14 @@ responder.on('delete-usertype', async (req, cb) => {
 
     } catch (err) {
         logger.error("Responder Error (delete User Type):", err);
-        return cb(null, { status: false, code: 2004, error: err.message });
+        return cb(null, {
+    header_type: "ERROR",
+    message_visibility: true,
+    status: false,
+    code: 2004,
+    message: err.message,
+    error: err.message
+});
     }
 });
 
@@ -315,7 +350,14 @@ responder.on('status-usertype', async (req, cb) => {
 
     } catch (err) {
         logger.error("Responder Error (delete User Type):", err);
-        return cb(null, { status: false, code: 2004, error: err.message });
+        return cb(null, {
+    header_type: "ERROR",
+    message_visibility: true,
+    status: false,
+    code: 2004,
+    message: err.message,
+    error: err.message
+});
     }
 });
 
@@ -390,7 +432,14 @@ responder.on('advancefilter-usertype', async (req, cb) => {
 
     } catch (err) {
         console.error('[userroleReportNew] error:', err);
-        return cb(null, { status: false, code: 2004, error: err.message });
+        return cb(null, {
+    header_type: "ERROR",
+    message_visibility: true,
+    status: false,
+    code: 2004,
+    message: err.message,
+    error: err.message
+});
     }
 });
 
@@ -444,7 +493,14 @@ responder.on('clone-usertype', async (req, cb) => {
 
     } catch (err) {
         console.error("clone UserType error:", err);
-        return cb(null, { status: false, code: 2004, error: err.message });
+        return cb(null, {
+    header_type: "ERROR",
+    message_visibility: true,
+    status: false,
+    code: 2004,
+    message: err.message,
+    error: err.message
+});
     }
 });
 

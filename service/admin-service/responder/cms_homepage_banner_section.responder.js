@@ -9,20 +9,23 @@ const redisHost = process.env.COTE_DISCOVERY_REDIS_HOST || '127.0.0.1';
 const redisPort = process.env.COTE_DISCOVERY_REDIS_PORT || 6379;
 
 const responder = new cote.Responder({
-    name: 'services_cms responder',
-    key: 'services_cms',
+    name: 'cms_homepage_banner_section responder',
+    key: 'cms_homepage_banner_section',
     redis: { host: redisHost, port: redisPort }
 });
 
 // --------------------------------------------------
 // CREATE 
 // --------------------------------------------------
-responder.on('create-servicescms', async (req, cb) => {
+responder.on('create-cmshomepagebannersection', async (req, cb) => {
     try {
         const {
             title,
             content,
-            icon,
+            landscapeurl,
+            portraiturl,
+            filetype,
+            image,
             created_by, 
             assigned_to
         } = req.body;
@@ -35,10 +38,20 @@ responder.on('create-servicescms', async (req, cb) => {
             return cb(null, { status: false, code: 2001, error: 'content is required' });
         }
 
+        // -----------------------------
+        // GIF VALIDATION 
+        // -----------------------------
+        if (filetype && !filetype.toLowerCase().endsWith('.gif')) {
+            return cb(null, {
+                status: false,
+                code: 2003,
+                error: 'Only GIF files are allowed'
+            });
+        }
 
         // CHECK DUPLICATION
         const check = await pool.query(
-            `SELECT service_id FROM services_cms
+            `SELECT banner_id FROM cms_homepage_banner_section
              WHERE (UPPER(title) = UPPER($1)
                 OR content = $2)
                AND is_deleted = FALSE`,
@@ -46,18 +59,21 @@ responder.on('create-servicescms', async (req, cb) => {
         );
 
         if (check.rowCount > 0) {
-            return cb(null, { status: false, code: 2002, error: 'Services Cms already exists' });
+            return cb(null, { status: false, code: 2002, error: 'Cms Homepage Banner Section already exists' });
         }
 
         const insert = await pool.query(
-            `INSERT INTO services_cms
-             ( title, content, icon, created_by,assigned_to)
-             VALUES ($1, $2, $3, $4, $5)
+            `INSERT INTO cms_homepage_banner_section
+             ( title, content,landscapeurl,portraiturl,filetype,image,created_by,assigned_to)
+             VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
              RETURNING *`,
             [
                 title.trim(),
                 content.trim(),
-                icon || null,
+                landscapeurl.trim(),
+                portraiturl.trim(),
+                filetype || null,
+                image || null,
                 created_by || null,
                 created_by
             ]
@@ -66,12 +82,12 @@ responder.on('create-servicescms', async (req, cb) => {
         return cb(null, {
             status: true,
             code: 1000,
-            message: 'Services Cms created successfully',
+            message: 'Cms Homepage Banner Section created successfully',
             data: insert.rows[0]
         });
 
     } catch (err) {
-        logger.error('Responder Error (create Services Cms):', err);
+        logger.error('Responder Error (create Cms Homepage Banner Section):', err);
         return cb(null, {
     header_type: "ERROR",
     message_visibility: true,
@@ -86,11 +102,11 @@ responder.on('create-servicescms', async (req, cb) => {
 // --------------------------------------------------
 // LIST 
 // --------------------------------------------------
-responder.on('list-servicescms', async (req, cb) => {
+responder.on('list-cmshomepagebannersection', async (req, cb) => {
     try {
         const result = await pool.query(
             `SELECT 
-        co.* FROM services_cms co
+        co.* FROM cms_homepage_banner_section co
      WHERE co.is_deleted = FALSE
      ORDER BY co.created_at ASC`
         );
@@ -98,13 +114,13 @@ responder.on('list-servicescms', async (req, cb) => {
 
         return cb(null, {
             status: true,
-            code: 1000, message: "Services Cms list fetched successfully",
+            code: 1000, message: "Cms Homepage Banner Section list fetched successfully",
             count: result.rowCount,
             data: result.rows
         });
 
     } catch (err) {
-        logger.error('Responder Error (list Services Cms):', err);
+        logger.error('Responder Error (list Cms Homepage Banner Section):', err);
         return cb(null, {
     header_type: "ERROR",
     message_visibility: true,
@@ -119,24 +135,24 @@ responder.on('list-servicescms', async (req, cb) => {
 // --------------------------------------------------
 // GET LIST BY UUID
 // --------------------------------------------------
-responder.on('getById-servicescms', async (req, cb) => {
+responder.on('getById-cmshomepagebannersection', async (req, cb) => {
     try {
-        const { service_uuid } = req;
+        const { banner_uuid } = req;
 
         const result = await pool.query(
-            `SELECT * FROM services_cms
-             WHERE service_uuid = $1 AND is_deleted = FALSE`,
-            [service_uuid]
+            `SELECT * FROM cms_homepage_banner_section
+             WHERE banner_uuid = $1 AND is_deleted = FALSE`,
+            [banner_uuid]
         );
 
         if (result.rowCount === 0) {
-            return cb(null, { status: false, code: 2003, error: 'Services Cms not found' });
+            return cb(null, { status: false, code: 2003, error: 'Cms Homepage Banner Section not found' });
         }
 
         return cb(null, { status: true, code: 1000, data: result.rows[0] });
 
     } catch (err) {
-        logger.error('Responder Error (get Services Cms):', err);
+        logger.error('Responder Error (get Cms Homepage Banner Section):', err);
         return cb(null, {
     header_type: "ERROR",
     message_visibility: true,
@@ -152,25 +168,28 @@ responder.on('getById-servicescms', async (req, cb) => {
 // --------------------------------------------------
 // UPDATE 
 // --------------------------------------------------
-responder.on('update-servicescms', async (req, cb) => {
+responder.on('update-cmshomepagebannersection', async (req, cb) => {
     try {
         const {
-            service_uuid,
+            banner_uuid,
             title,
             content,
-            icon,
+            landscapeurl,
+            portraiturl,
+            filetype,
+            image,
             modified_by, is_active
         } = req.body;
 
         // -----------------------------
         // VALIDATION
         // -----------------------------
-        if (!service_uuid) {
-            return cb(null, { status: false, code: 2001, error: 'Services Cms UUID is required' });
+        if (!banner_uuid) {
+            return cb(null, { status: false, code: 2001, error: 'Cms Homepage Banner Section UUID is required' });
         }
 
         if (!title || !title.trim()) {
-            return cb(null, { status: false, code: 2001, error: 'Services Cms title is required' });
+            return cb(null, { status: false, code: 2001, error: 'Cms Homepage Banner Section title is required' });
         }
 
 
@@ -178,63 +197,82 @@ responder.on('update-servicescms', async (req, cb) => {
         // CHECK RECORD EXISTS
         // -----------------------------
         const exists = await pool.query(
-            `SELECT service_id, icon FROM services_cms
-             WHERE service_uuid = $1 AND is_deleted = FALSE`,
-            [service_uuid]
+            `SELECT banner_id FROM cms_homepage_banner_section
+             WHERE banner_uuid = $1 AND is_deleted = FALSE`,
+            [banner_uuid]
         );
 
         if (exists.rowCount === 0) {
-            return cb(null, { status: false, code: 2003, error: 'Services Cms not found' });
+            return cb(null, { status: false, code: 2003, error: 'Cms Homepage Banner Section not found' });
         }
 
-        const existingImagePath = exists.rows[0].icon;
+        const existingImagePath = exists.rows[0].image;
+        const existingVideoPath = exists.rows[0].filetype;
+
+           // -----------------------------
+        // GIF VALIDATION
+        // -----------------------------
+        if (filetype && !filetype.toLowerCase().endsWith('.gif')) {
+            return cb(null, {
+                status: false,
+                code: 2003,
+                error: 'Only GIF files are allowed'
+            });
+        }
 
         // -----------------------------
         // DUPLICATE CHECK (EXCLUDE SELF)
         // -----------------------------
         const check = await pool.query(
-            `SELECT service_uuid FROM services_cms
+            `SELECT banner_uuid FROM cms_homepage_banner_section
              WHERE (UPPER(title) = UPPER($1)
                 OR content = $2)
                AND is_deleted = FALSE
-               AND service_uuid != $3`,
-            [title.trim(), content, service_uuid]
+               AND banner_uuid != $3`,
+            [title.trim(), content, banner_uuid]
         );
 
         if (check.rowCount > 0) {
-            return cb(null, { status: false, code: 2002, error: 'Services Cms already exists' });
+            return cb(null, { status: false, code: 2002, error: 'Cms Homepage Banner Section already exists' });
         }
 
         // -----------------------------
         // UPDATE
         // -----------------------------
         const update = await pool.query(
-            `UPDATE services_cms
+            `UPDATE cms_homepage_banner_section
              SET title = $1,
                  content = $2,
-                 icon = $3,
-                 modified_by = $4,is_active=$5,
+                 landscapeurl = $3,
+            portraiturl = $4,
+            filetype = $5,
+                 image = $6,
+                 modified_by = $7,is_active=$8,
                  modified_at = NOW()
-             WHERE service_uuid = $6
+             WHERE banner_uuid = $9
              RETURNING *`,
             [
                 title.trim(),
-                content,
-                icon || existingImagePath, 
-                modified_by || null, is_active,
-                service_uuid
+                content.trim(),
+                landscapeurl.trim(),
+                portraiturl.trim(),
+                filetype || existingVideoPath,
+                image || existingImagePath, 
+                modified_by || null, 
+                is_active,
+                banner_uuid
             ]
         );
 
         return cb(null, {
             status: true,
             code: 1000,
-            message: 'Services Cms updated successfully',
+            message: 'Cms Homepage Banner Section updated successfully',
             data: update.rows[0]
         });
 
     } catch (err) {
-        logger.error('Responder Error (update Services Cms):', err);
+        logger.error('Responder Error (update Cms Homepage Banner Section):', err);
         return cb(null, {
     header_type: "ERROR",
     message_visibility: true,
@@ -250,39 +288,39 @@ responder.on('update-servicescms', async (req, cb) => {
 // --------------------------------------------------
 // DELETE (SOFT DELETE)
 // --------------------------------------------------
-responder.on('delete-servicescms', async (req, cb) => {
+responder.on('delete-cmshomepagebannersection', async (req, cb) => {
     try {
-        const service_uuid = req.service_uuid;
+        const banner_uuid = req.banner_uuid;
         const deleted_by = req.body.deleted_by;
 
         const check = await pool.query(
-            `SELECT service_id FROM services_cms
-             WHERE service_uuid = $1 AND is_deleted = FALSE`,
-            [service_uuid]
+            `SELECT banner_id FROM cms_homepage_banner_section
+             WHERE banner_uuid = $1 AND is_deleted = FALSE`,
+            [banner_uuid]
         );
 
         if (check.rowCount === 0) {
-            return cb(null, { status: false, code: 2003, error: 'Services Cms not found' });
+            return cb(null, { status: false, code: 2003, error: 'Cms Homepage Banner Section not found' });
         }
 
         await pool.query(
-            `UPDATE services_cms
+            `UPDATE cms_homepage_banner_section
              SET is_deleted = TRUE,
                  is_active = FALSE,
                  deleted_by = $1,
                  deleted_at = NOW()
-             WHERE service_uuid = $2`,
-            [deleted_by || null, service_uuid]
+             WHERE banner_uuid = $2`,
+            [deleted_by || null, banner_uuid]
         );
 
         return cb(null, {
             status: true,
             code: 1000,
-            message: 'Services Cms deleted successfully'
+            message: 'Cms Homepage Banner Section deleted successfully'
         });
 
     } catch (err) {
-        logger.error('Responder Error (delete Services Cms):', err);
+        logger.error('Responder Error (delete Cms Homepage Banner Section):', err);
         return cb(null, {
     header_type: "ERROR",
     message_visibility: true,
@@ -297,40 +335,40 @@ responder.on('delete-servicescms', async (req, cb) => {
 // --------------------------------------------------
 // STATUS CHANGE 
 // --------------------------------------------------
-responder.on('status-servicescms', async (req, cb) => {
+responder.on('status-cmshomepagebannersection', async (req, cb) => {
     try {
-        const service_uuid = req.service_uuid;
+        const banner_uuid = req.banner_uuid;
         const modified_by = req.body.modified_by;
 
         const check = await pool.query(
-            `SELECT is_active FROM services_cms
-             WHERE service_uuid = $1 AND is_deleted = FALSE`,
-            [service_uuid]
+            `SELECT is_active FROM cms_homepage_banner_section
+             WHERE banner_uuid = $1 AND is_deleted = FALSE`,
+            [banner_uuid]
         );
 
         if (check.rowCount === 0) {
-            return cb(null, { status: false, code: 2003, error: 'Services Cms not found' });
+            return cb(null, { status: false, code: 2003, error: 'Cms Homepage Banner Section not found' });
         }
 
         const newStatus = !check.rows[0].is_active;
 
         await pool.query(
-            `UPDATE services_cms
+            `UPDATE cms_homepage_banner_section
              SET is_active = $1,
                  modified_by = $2,
                  modified_at = NOW()
-             WHERE service_uuid = $3`,
-            [newStatus, modified_by || null, service_uuid]
+             WHERE banner_uuid = $3`,
+            [newStatus, modified_by || null, banner_uuid]
         );
 
         return cb(null, {
             status: true,
             code: 1000,
-            message: 'Services Cms status updated successfully'
+            message: 'Cms Homepage Banner Section status updated successfully'
         });
 
     } catch (err) {
-        logger.error('Responder Error (status Services Cms):', err);
+        logger.error('Responder Error (status Cms Homepage Banner Section):', err);
         return cb(null, {
     header_type: "ERROR",
     message_visibility: true,
@@ -345,7 +383,7 @@ responder.on('status-servicescms', async (req, cb) => {
 // --------------------------------------------------
 // ADVANCE FILTER 
 // --------------------------------------------------
-responder.on('advancefilter-servicescms', async (req, cb) => {
+responder.on('advancefilter-cmshomepagebannersection', async (req, cb) => {
     try {
 
         const result = await buildAdvancedSearchQuery({
@@ -353,7 +391,7 @@ responder.on('advancefilter-servicescms', async (req, cb) => {
             reqBody: req.body,
 
             /* ---------------- Table & Alias ---------------- */
-            table: 'services_cms',
+            table: 'cms_homepage_banner_section',
             alias: 'C',
             defaultSort: 'created_at',
 
@@ -367,6 +405,8 @@ responder.on('advancefilter-servicescms', async (req, cb) => {
             allowedFields: [
                 'title',
                 'content',
+                'landscapeurl',
+                'portraiturl',
                 'is_active',
                 'created_at',
                 'modified_at',
@@ -401,7 +441,7 @@ responder.on('advancefilter-servicescms', async (req, cb) => {
         });
 
     } catch (err) {
-        logger.error('[advancefilter-Services Cms] error:', err);
+        logger.error('[advancefilter-Cms Homepage Banner Section] error:', err);
         return cb(null, {
     header_type: "ERROR",
     message_visibility: true,
@@ -418,7 +458,7 @@ responder.on('advancefilter-servicescms', async (req, cb) => {
 // --------------------------------------------------
 //  LIST (SEARCH + PAGINATION)
 // --------------------------------------------------
-responder.on("servicescms-list", async (req, cb) => {
+responder.on("cmshomepagebannersection-list", async (req, cb) => {
     try {
         const {
             search = "",
@@ -444,7 +484,7 @@ responder.on("servicescms-list", async (req, cb) => {
         /* ---------------- TOTAL COUNT ---------------- */
         const countResult = await pool.query(
             `SELECT COUNT(*) AS total
-             FROM services_cms
+             FROM cms_homepage_banner_section
              ${whereSql}`,
             params
         );
@@ -456,7 +496,7 @@ responder.on("servicescms-list", async (req, cb) => {
 
         const result = await pool.query(
             `SELECT *
-             FROM services_cms
+             FROM cms_homepage_banner_section
              ${whereSql}
              ORDER BY title ASC
              LIMIT $${idx} OFFSET $${idx + 1}`,
@@ -476,7 +516,7 @@ responder.on("servicescms-list", async (req, cb) => {
         });
 
     } catch (err) {
-        logger.error("Responder Error (Services Cms-list):", err);
+        logger.error("Responder Error (Cms Homepage Banner Section-list):", err);
         return cb(null, {
             status: false,
             code: 2004,

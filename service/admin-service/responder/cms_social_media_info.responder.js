@@ -64,7 +64,14 @@ responder.on('create-cmssocialmediainfo', async (req, cb) => {
 
     } catch (err) {
         logger.error('Responder Error (create Cms Social Media Info):', err);
-        return cb(null, { status: false, code: 2004, error: err.message });
+        return cb(null, {
+    header_type: "ERROR",
+    message_visibility: true,
+    status: false,
+    code: 2004,
+    message: err.message,
+    error: err.message
+});
     }
 });
 
@@ -90,7 +97,14 @@ responder.on('list-cmssocialmediainfo', async (req, cb) => {
 
     } catch (err) {
         logger.error('Responder Error (list Cms Social Media Info):', err);
-        return cb(null, { status: false, code: 2004, error: err.message });
+        return cb(null, {
+    header_type: "ERROR",
+    message_visibility: true,
+    status: false,
+    code: 2004,
+    message: err.message,
+    error: err.message
+});
     }
 });
 
@@ -115,7 +129,14 @@ responder.on('getById-cmssocialmediainfo', async (req, cb) => {
 
     } catch (err) {
         logger.error('Responder Error (get Cms Social Media Info):', err);
-        return cb(null, { status: false, code: 2004, error: err.message });
+        return cb(null, {
+    header_type: "ERROR",
+    message_visibility: true,
+    status: false,
+    code: 2004,
+    message: err.message,
+    error: err.message
+});
     }
 });
 
@@ -202,7 +223,14 @@ responder.on('update-cmssocialmediainfo', async (req, cb) => {
 
     } catch (err) {
         logger.error('Responder Error (update Cms Social Media Info):', err);
-        return cb(null, { status: false, code: 2004, error: err.message });
+        return cb(null, {
+    header_type: "ERROR",
+    message_visibility: true,
+    status: false,
+    code: 2004,
+    message: err.message,
+    error: err.message
+});
     }
 });
 
@@ -243,7 +271,14 @@ responder.on('delete-cmssocialmediainfo', async (req, cb) => {
 
     } catch (err) {
         logger.error('Responder Error (delete Cms Social Media Info):', err);
-        return cb(null, { status: false, code: 2004, error: err.message });
+        return cb(null, {
+    header_type: "ERROR",
+    message_visibility: true,
+    status: false,
+    code: 2004,
+    message: err.message,
+    error: err.message
+});
     }
 });
 
@@ -284,7 +319,14 @@ responder.on('status-cmssocialmediainfo', async (req, cb) => {
 
     } catch (err) {
         logger.error('Responder Error (status Cms Social Media Info):', err);
-        return cb(null, { status: false, code: 2004, error: err.message });
+        return cb(null, {
+    header_type: "ERROR",
+    message_visibility: true,
+    status: false,
+    code: 2004,
+    message: err.message,
+    error: err.message
+});
     }
 });
 
@@ -347,7 +389,14 @@ responder.on('advancefilter-cmssocialmediainfo', async (req, cb) => {
 
     } catch (err) {
         logger.error('[advancefilter-Cms Social Media Info] error:', err);
-        return cb(null, { status: false, code: 2004, error: err.message });
+        return cb(null, {
+    header_type: "ERROR",
+    message_visibility: true,
+    status: false,
+    code: 2004,
+    message: err.message,
+    error: err.message
+});
     }
 });
 

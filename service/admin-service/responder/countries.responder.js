@@ -99,7 +99,14 @@ responder.on('create-country', async (req, cb) => {
 
     } catch (err) {
         logger.error('Responder Error (create country):', err);
-        return cb(null, { status: false, code: 2004, error: err.message });
+        return cb(null, {
+    header_type: "ERROR",
+    message_visibility: true,
+    status: false,
+    code: 2004,
+    message: err.message,
+    error: err.message
+});
     }
 });
 
@@ -130,7 +137,14 @@ responder.on('list-country', async (req, cb) => {
 
     } catch (err) {
         logger.error('Responder Error (list country):', err);
-        return cb(null, { status: false, code: 2004, error: err.message });
+        return cb(null, {
+    header_type: "ERROR",
+    message_visibility: true,
+    status: false,
+    code: 2004,
+    message: err.message,
+    error: err.message
+});
     }
 });
 
@@ -162,7 +176,14 @@ responder.on('getById-country', async (req, cb) => {
 
     } catch (err) {
         logger.error('Responder Error (get country):', err);
-        return cb(null, { status: false, code: 2004, error: err.message });
+        return cb(null, {
+    header_type: "ERROR",
+    message_visibility: true,
+    status: false,
+    code: 2004,
+    message: err.message,
+    error: err.message
+});
     }
 });
 
@@ -280,7 +301,14 @@ responder.on('update-country', async (req, cb) => {
 
     } catch (err) {
         logger.error('Responder Error (update country):', err);
-        return cb(null, { status: false, code: 2004, error: err.message });
+        return cb(null, {
+    header_type: "ERROR",
+    message_visibility: true,
+    status: false,
+    code: 2004,
+    message: err.message,
+    error: err.message
+});
     }
 });
 
@@ -321,7 +349,14 @@ responder.on('delete-country', async (req, cb) => {
 
     } catch (err) {
         logger.error('Responder Error (delete country):', err);
-        return cb(null, { status: false, code: 2004, error: err.message });
+        return cb(null, {
+    header_type: "ERROR",
+    message_visibility: true,
+    status: false,
+    code: 2004,
+    message: err.message,
+    error: err.message
+});
     }
 });
 
@@ -362,7 +397,14 @@ responder.on('status-country', async (req, cb) => {
 
     } catch (err) {
         logger.error('Responder Error (status country):', err);
-        return cb(null, { status: false, code: 2004, error: err.message });
+        return cb(null, {
+    header_type: "ERROR",
+    message_visibility: true,
+    status: false,
+    code: 2004,
+    message: err.message,
+    error: err.message
+});
     }
 });
 
@@ -444,7 +486,14 @@ responder.on('advancefilter-country', async (req, cb) => {
 
     } catch (err) {
         logger.error('[advancefilter-country] error:', err);
-        return cb(null, { status: false, code: 2004, error: err.message });
+        return cb(null, {
+    header_type: "ERROR",
+    message_visibility: true,
+    status: false,
+    code: 2004,
+    message: err.message,
+    error: err.message
+});
     }
 });
 
@@ -498,7 +547,14 @@ responder.on('clone-country', async (req, cb) => {
 
     } catch (err) {
         logger.error('Responder Error (clone country):', err);
-        return cb(null, { status: false, code: 2004, error: err.message });
+        return cb(null, {
+    header_type: "ERROR",
+    message_visibility: true,
+    status: false,
+    code: 2004,
+    message: err.message,
+    error: err.message
+});
     }
 });
 

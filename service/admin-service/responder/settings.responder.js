@@ -122,7 +122,14 @@ responder.on('list-setting', async (req, cb) => {
 
     } catch (err) {
         logger.error("Responder Error (list settings):", err);
-        return cb(null, { status: false, code: 2004, error: err.message });
+        return cb(null, {
+    header_type: "ERROR",
+    message_visibility: true,
+    status: false,
+    code: 2004,
+    message: err.message,
+    error: err.message
+});
     }
 });
 
@@ -368,7 +375,14 @@ responder.on('advancefilter-setting', async (req, cb) => {
 
     } catch (err) {
         console.error('[advancefilter-setting] error:', err);
-        return cb(null, { status: false, code: 2004, error: err.message });
+        return cb(null, {
+    header_type: "ERROR",
+    message_visibility: true,
+    status: false,
+    code: 2004,
+    message: err.message,
+    error: err.message
+});
     }
 });
 

@@ -59,7 +59,14 @@ responder.on('create-trading-type', async (req, cb) => {
 
     } catch (err) {
         logger.error('Responder Error (create trading type):', err);
-        return cb(null, { status: false, code: 2004, error: err.message });
+        return cb(null, {
+    header_type: "ERROR",
+    message_visibility: true,
+    status: false,
+    code: 2004,
+    message: err.message,
+    error: err.message
+});
     }
 });
 
@@ -85,7 +92,14 @@ responder.on('list-trading-type', async (req, cb) => {
 
     } catch (err) {
         logger.error('Responder Error (list trading types):', err);
-        return cb(null, { status: false, code: 2004, error: err.message });
+        return cb(null, {
+    header_type: "ERROR",
+    message_visibility: true,
+    status: false,
+    code: 2004,
+    message: err.message,
+    error: err.message
+});
     }
 });
 
@@ -114,7 +128,14 @@ responder.on('getById-trading-type', async (req, cb) => {
 
     } catch (err) {
         logger.error('Responder Error (getById trading type):', err);
-        return cb(null, { status: false, code: 2004, error: err.message });
+        return cb(null, {
+    header_type: "ERROR",
+    message_visibility: true,
+    status: false,
+    code: 2004,
+    message: err.message,
+    error: err.message
+});
     }
 });
 
@@ -174,7 +195,14 @@ responder.on('update-trading-type', async (req, cb) => {
 
     } catch (err) {
         logger.error('Responder Error (update trading type):', err);
-        return cb(null, { status: false, code: 2004, error: err.message });
+        return cb(null, {
+    header_type: "ERROR",
+    message_visibility: true,
+    status: false,
+    code: 2004,
+    message: err.message,
+    error: err.message
+});
     }
 });
 
@@ -213,7 +241,14 @@ responder.on('delete-trading-type', async (req, cb) => {
 
     } catch (err) {
         logger.error('Responder Error (delete trading type):', err);
-        return cb(null, { status: false, code: 2004, error: err.message });
+        return cb(null, {
+    header_type: "ERROR",
+    message_visibility: true,
+    status: false,
+    code: 2004,
+    message: err.message,
+    error: err.message
+});
     }
 });
 
@@ -252,7 +287,14 @@ responder.on('status-trading-type', async (req, cb) => {
 
     } catch (err) {
         logger.error('Responder Error (status trading type):', err);
-        return cb(null, { status: false, code: 2004, error: err.message });
+        return cb(null, {
+    header_type: "ERROR",
+    message_visibility: true,
+    status: false,
+    code: 2004,
+    message: err.message,
+    error: err.message
+});
     }
 });
 
@@ -316,7 +358,14 @@ responder.on('advancefilter-trading-type', async (req, cb) => {
 
     } catch (err) {
         logger.error('Responder Error (advancefilter trading type):', err);
-        return cb(null, { status: false, code: 2004, error: err.message });
+        return cb(null, {
+    header_type: "ERROR",
+    message_visibility: true,
+    status: false,
+    code: 2004,
+    message: err.message,
+    error: err.message
+});
     }
 });
 

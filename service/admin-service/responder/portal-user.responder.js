@@ -120,7 +120,14 @@ responder.on("create-portal-users", async (req, cb) => {
 
     } catch (err) {
         logger.error("Responder Error (create-users):", err);
-        return cb(null, { status: false, code: 2004, error: err.message });
+        return cb(null, {
+    header_type: "ERROR",
+    message_visibility: true,
+    status: false,
+    code: 2004,
+    message: err.message,
+    error: err.message
+});
     }
 });
 
@@ -185,7 +192,14 @@ responder.on('list-portal-users', async (req, cb) => {
 
     } catch (err) {
         logger.error("Responder Error (list portal users):", err);
-        return cb(null, { status: false, code: 2004, error: err.message });
+        return cb(null, {
+    header_type: "ERROR",
+    message_visibility: true,
+    status: false,
+    code: 2004,
+    message: err.message,
+    error: err.message
+});
     }
 });
 
@@ -457,7 +471,14 @@ responder.on('delete-portal-users', async (req, cb) => {
 
     } catch (err) {
         logger.error("Responder Error (delete portal user):", err);
-        return cb(null, { status: false, code: 2004, error: err.message });
+        return cb(null, {
+    header_type: "ERROR",
+    message_visibility: true,
+    status: false,
+    code: 2004,
+    message: err.message,
+    error: err.message
+});
     }
 });
 
@@ -516,7 +537,14 @@ responder.on('status-portal-users', async (req, cb) => {
 
     } catch (err) {
         logger.error("Responder Error (status user):", err);
-        return cb(null, { status: false, code: 2004, error: err.message });
+        return cb(null, {
+    header_type: "ERROR",
+    message_visibility: true,
+    status: false,
+    code: 2004,
+    message: err.message,
+    error: err.message
+});
     }
 });
 
@@ -588,7 +616,14 @@ responder.on('advancefilter-portal-users', async (req, cb) => {
 
     } catch (err) {
         console.error('[advancefilter-portal-users] error:', err);
-        return cb(null, { status: false, code: 2004, error: err.message });
+        return cb(null, {
+    header_type: "ERROR",
+    message_visibility: true,
+    status: false,
+    code: 2004,
+    message: err.message,
+    error: err.message
+});
     }
 });
 
@@ -675,7 +710,14 @@ responder.on('clone-portal-users', async (req, cb) => {
 
     } catch (err) {
         logger.error("Responder Error (clone-portal-users):", err);
-        return cb(null, { status: false, code: 2004, error: err.message });
+        return cb(null, {
+    header_type: "ERROR",
+    message_visibility: true,
+    status: false,
+    code: 2004,
+    message: err.message,
+    error: err.message
+});
     }
 });
 

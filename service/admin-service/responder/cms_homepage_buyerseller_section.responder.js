@@ -84,7 +84,14 @@ responder.on('create-cmshomepagebuyersellersection', async (req, cb) => {
 
     } catch (err) {
         logger.error('Responder Error (create Cms Homepage Buyerseller Section):', err);
-        return cb(null, { status: false, code: 2004, error: err.message });
+        return cb(null, {
+    header_type: "ERROR",
+    message_visibility: true,
+    status: false,
+    code: 2004,
+    message: err.message,
+    error: err.message
+});
     }
 });
 
@@ -110,7 +117,14 @@ responder.on('list-cmshomepagebuyersellersection', async (req, cb) => {
 
     } catch (err) {
         logger.error('Responder Error (list Cms Homepage Buyerseller Section):', err);
-        return cb(null, { status: false, code: 2004, error: err.message });
+        return cb(null, {
+    header_type: "ERROR",
+    message_visibility: true,
+    status: false,
+    code: 2004,
+    message: err.message,
+    error: err.message
+});
     }
 });
 
@@ -135,7 +149,14 @@ responder.on('getById-cmshomepagebuyersellersection', async (req, cb) => {
 
     } catch (err) {
         logger.error('Responder Error (get Cms Homepage Buyerseller Section):', err);
-        return cb(null, { status: false, code: 2004, error: err.message });
+        return cb(null, {
+    header_type: "ERROR",
+    message_visibility: true,
+    status: false,
+    code: 2004,
+    message: err.message,
+    error: err.message
+});
     }
 });
 
@@ -252,7 +273,14 @@ responder.on('update-cmshomepagebuyersellersection', async (req, cb) => {
 
     } catch (err) {
         logger.error('Responder Error (update Cms Homepage Buyerseller Section):', err);
-        return cb(null, { status: false, code: 2004, error: err.message });
+        return cb(null, {
+    header_type: "ERROR",
+    message_visibility: true,
+    status: false,
+    code: 2004,
+    message: err.message,
+    error: err.message
+});
     }
 });
 
@@ -293,7 +321,14 @@ responder.on('delete-cmshomepagebuyersellersection', async (req, cb) => {
 
     } catch (err) {
         logger.error('Responder Error (delete Cms Homepage Buyerseller Section):', err);
-        return cb(null, { status: false, code: 2004, error: err.message });
+        return cb(null, {
+    header_type: "ERROR",
+    message_visibility: true,
+    status: false,
+    code: 2004,
+    message: err.message,
+    error: err.message
+});
     }
 });
 
@@ -334,7 +369,14 @@ responder.on('status-cmshomepagebuyersellersection', async (req, cb) => {
 
     } catch (err) {
         logger.error('Responder Error (status Cms Homepage Buyerseller Section):', err);
-        return cb(null, { status: false, code: 2004, error: err.message });
+        return cb(null, {
+    header_type: "ERROR",
+    message_visibility: true,
+    status: false,
+    code: 2004,
+    message: err.message,
+    error: err.message
+});
     }
 });
 
@@ -402,7 +444,14 @@ responder.on('advancefilter-cmshomepagebuyersellersection', async (req, cb) => {
 
     } catch (err) {
         logger.error('[advancefilter-Cms Homepage Buyerseller Section] error:', err);
-        return cb(null, { status: false, code: 2004, error: err.message });
+        return cb(null, {
+    header_type: "ERROR",
+    message_visibility: true,
+    status: false,
+    code: 2004,
+    message: err.message,
+    error: err.message
+});
     }
 });
 

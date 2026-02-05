@@ -37,10 +37,10 @@ module.exports = {
   productConditionsResponder: require('./responder/product_conditions.responder'),
   modelResponder: require('./responder/model.responder'),
 
-   brandResponder: require('./responder/brand.responder'),
+  brandResponder: require('./responder/brand.responder'),
   mobileSectionCmsResponder: require('./responder/mobile_section_cms.responder'),
 
-  
+
   webVersionResponder: require('./responder/web_version.responder'),
   prefixRefNoResponder: require('./responder/prefix_refno.responder'),
   cmsFooterLinksResponder: require('./responder/cms_footer_links.responder'),
@@ -53,12 +53,12 @@ module.exports = {
   cmsHomePageBuyerSellerSectionResponder: require('./responder/cms_homepage_buyerseller_section.responder'),
   servicesCmsResponder: require('./responder/services_cms.responder'),
   cmsCompanyResponder: require('./responder/cms_company_info.responder'),
+  cmsHomepageBannerSectionResponder: require('./responder/cms_homepage_banner_section.responder'),
 
-  
   moduleResponder: require('./responder/module.responder'),
   profilesResponder: require('./responder/profile.responder'),
   profilesPrivilegeResponder: require('./responder/profile-privilege.responder'),
-  roleDataAccessResponder :require('./responder/role-data-access.responder')
+  roleDataAccessResponder: require('./responder/role-data-access.responder')
 
 };
 

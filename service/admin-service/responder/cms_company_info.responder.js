@@ -84,7 +84,14 @@ responder.on('create-cmscompanyinfo', async (req, cb) => {
 
     } catch (err) {
         logger.error('Responder Error (create Cms Company Info):', err);
-        return cb(null, { status: false, code: 2004, error: err.message });
+        return cb(null, {
+    header_type: "ERROR",
+    message_visibility: true,
+    status: false,
+    code: 2004,
+    message: err.message,
+    error: err.message
+});
     }
 });
 
@@ -110,7 +117,14 @@ responder.on('list-cmscompanyinfo', async (req, cb) => {
 
     } catch (err) {
         logger.error('Responder Error (list Cms Company Info):', err);
-        return cb(null, { status: false, code: 2004, error: err.message });
+        return cb(null, {
+    header_type: "ERROR",
+    message_visibility: true,
+    status: false,
+    code: 2004,
+    message: err.message,
+    error: err.message
+});
     }
 });
 
@@ -135,7 +149,14 @@ responder.on('getById-cmscompanyinfo', async (req, cb) => {
 
     } catch (err) {
         logger.error('Responder Error (get Cms Company Info):', err);
-        return cb(null, { status: false, code: 2004, error: err.message });
+        return cb(null, {
+    header_type: "ERROR",
+    message_visibility: true,
+    status: false,
+    code: 2004,
+    message: err.message,
+    error: err.message
+});
     }
 });
 
@@ -257,7 +278,14 @@ responder.on('update-cmscompanyinfo', async (req, cb) => {
 
     } catch (err) {
         logger.error('Responder Error (update Cms Company Info):', err);
-        return cb(null, { status: false, code: 2004, error: err.message });
+        return cb(null, {
+    header_type: "ERROR",
+    message_visibility: true,
+    status: false,
+    code: 2004,
+    message: err.message,
+    error: err.message
+});
     }
 });
 
@@ -298,7 +326,14 @@ responder.on('delete-cmscompanyinfo', async (req, cb) => {
 
     } catch (err) {
         logger.error('Responder Error (delete Cms Company Info):', err);
-        return cb(null, { status: false, code: 2004, error: err.message });
+        return cb(null, {
+    header_type: "ERROR",
+    message_visibility: true,
+    status: false,
+    code: 2004,
+    message: err.message,
+    error: err.message
+});
     }
 });
 
@@ -339,7 +374,14 @@ responder.on('status-cmscompanyinfo', async (req, cb) => {
 
     } catch (err) {
         logger.error('Responder Error (status Cms Company Info):', err);
-        return cb(null, { status: false, code: 2004, error: err.message });
+        return cb(null, {
+    header_type: "ERROR",
+    message_visibility: true,
+    status: false,
+    code: 2004,
+    message: err.message,
+    error: err.message
+});
     }
 });
 
@@ -408,7 +450,14 @@ responder.on('advancefilter-cmscompanyinfo', async (req, cb) => {
 
     } catch (err) {
         logger.error('[advancefilter-Cms Company Info] error:', err);
-        return cb(null, { status: false, code: 2004, error: err.message });
+        return cb(null, {
+    header_type: "ERROR",
+    message_visibility: true,
+    status: false,
+    code: 2004,
+    message: err.message,
+    error: err.message
+});
     }
 });
 

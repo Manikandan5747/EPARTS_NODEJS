@@ -81,7 +81,14 @@ responder.on('create-role', async (req, cb) => {
     } catch (err) {
         logger.error("Responder Error (create role):", err);
 
-        return cb(null, { status: false, code: 2004, error: err.message });
+        return cb(null, {
+    header_type: "ERROR",
+    message_visibility: true,
+    status: false,
+    code: 2004,
+    message: err.message,
+    error: err.message
+});
     }
 });
 
@@ -135,7 +142,14 @@ responder.on('list-role', async (req, cb) => {
 
     } catch (err) {
         logger.error("Responder Error (list roles):", err);
-        return cb(null, { status: false, code: 2004, error: err.message });
+        return cb(null, {
+    header_type: "ERROR",
+    message_visibility: true,
+    status: false,
+    code: 2004,
+    message: err.message,
+    error: err.message
+});
     }
 });
 
@@ -162,7 +176,14 @@ responder.on('getById-role', async (req, cb) => {
 
     } catch (err) {
         logger.error("Responder Error (getById role):", err);
-        return cb(null, { status: false, code: 2004, error: err.message });
+        return cb(null, {
+    header_type: "ERROR",
+    message_visibility: true,
+    status: false,
+    code: 2004,
+    message: err.message,
+    error: err.message
+});
     }
 });
 
@@ -245,7 +266,14 @@ responder.on('update-role', async (req, cb) => {
 
     } catch (err) {
         logger.error("Responder Error (update role):", err);
-        return cb(null, { status: false, code: 2004, error: err.message });
+        return cb(null, {
+    header_type: "ERROR",
+    message_visibility: true,
+    status: false,
+    code: 2004,
+    message: err.message,
+    error: err.message
+});
     }
 });
 
@@ -282,7 +310,14 @@ responder.on('delete-role', async (req, cb) => {
 
     } catch (err) {
         logger.error("Responder Error (delete role):", err);
-        return cb(null, { status: false, code: 2004, error: err.message });
+        return cb(null, {
+    header_type: "ERROR",
+    message_visibility: true,
+    status: false,
+    code: 2004,
+    message: err.message,
+    error: err.message
+});
     }
 });
 
@@ -321,7 +356,14 @@ responder.on('status-role', async (req, cb) => {
 
     } catch (err) {
         logger.error("Responder Error (delete role):", err);
-        return cb(null, { status: false, code: 2004, error: err.message });
+        return cb(null, {
+    header_type: "ERROR",
+    message_visibility: true,
+    status: false,
+    code: 2004,
+    message: err.message,
+    error: err.message
+});
     }
 });
 
@@ -449,7 +491,14 @@ responder.on('clone-role', async (req, cb) => {
 
     } catch (err) {
         console.error("cloneRole error:", err);
-        return cb(null, { status: false, code: 2004, error: err.message });
+        return cb(null, {
+    header_type: "ERROR",
+    message_visibility: true,
+    status: false,
+    code: 2004,
+    message: err.message,
+    error: err.message
+});
     }
 });
 

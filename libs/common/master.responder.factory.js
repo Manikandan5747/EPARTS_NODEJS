@@ -236,7 +236,7 @@ module.exports = function registerMasterResponder({
 
         try {
             const uuid = req[uuidColumn] || req.uuid;
-            const isEditMode = req.isEdit == 1; // 1 = Edit, 2 = View
+            const mode = req.mode;
             const user_id = req.body?.user_id;
 
             await client.query('BEGIN');
@@ -278,7 +278,7 @@ module.exports = function registerMasterResponder({
                 new Date(row.locked_at).getTime() + 60 * 1000 < Date.now();
 
             // 3️⃣ EDIT MODE → handle locking
-            if (isEditMode) {
+            if (mode == 'edit') {
 
                 if (!user_id) {
                     await client.query('ROLLBACK');

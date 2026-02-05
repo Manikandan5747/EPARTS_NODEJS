@@ -94,13 +94,13 @@ module.exports = function createMasterRoutes({
     router.get('/findbyid/:id', async (req, res) => {
         try {
 
-            const isEdit = Number(req.query.isEdit || 2); // 1 = edit, 2 = view
-            const user_id = req.query.user_id;            // 👈 from query
+            const mode = req.query.mode || 'view'; 
+            const user_id = req.query.user_id;         
 
             const result = await requester.send({
                 type: api('getById'),
                 uuid: req.params.id,
-                isEdit,
+                mode,
                 body: { user_id }   
             });
 

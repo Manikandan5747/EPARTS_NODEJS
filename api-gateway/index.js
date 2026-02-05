@@ -10,7 +10,7 @@ const logger = require('@libs/logger/logger');
 const path = require('path');
 app.use(bodyParser.json())
 const cors = require('cors');
-const setupStaticFiles = require('@libs/folders-paths/setup-static-files'); 
+const setupStaticFiles = require('@libs/folders-paths/setup-static-files');
 // API AUTHENTICATION – ACCESS TOKEN CHECKING FOR EACH REQUEST
 const AdminStartAuthApi = require("@libs/JWT/admin-auth-api");
 const BuyerStartAuthApi = require("@libs/JWT/buyer-auth-api");
@@ -73,11 +73,23 @@ const assignAssignedTo = (req, res, next) => {
 // /* -------------------------------
 //    PROTECTED ROUTES wITH ACCESSTOKEN 
 // -------------------------------- */
-app.use('/api', checkApiKey,assignAssignedTo,  AdminRoutes);
-app.use('/buyer', checkApiKey,  BuyerRoutes);
-app.use('/seller', checkApiKey,  SellerRoutes);
+app.use('/api', checkApiKey, assignAssignedTo, AdminRoutes);
+app.use('/buyer', checkApiKey, BuyerRoutes);
+app.use('/seller', checkApiKey, SellerRoutes);
 
 
+/* -------------------------------
+   GLOBAL ERROR HANDLER
+-------------------------------- */
+// app.use((err, req, res, next) => {
+//     logger.error("GLOBAL ERROR:", err);
+
+//     res.status(err.status || 500).json({
+//         success: false,
+//         message: err.message || "Server is down. Please try again later.",
+//         error_code: err.error_code || "SERVER_ERROR"
+//     });
+// });
 
 // GLOBAL ERROR HANDLER
 app.use(errorHandler);

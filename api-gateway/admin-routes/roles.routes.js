@@ -34,13 +34,13 @@ router.post('/create', async (req, res) => {
     } catch (err) {
         logger.error("Error in roles/create:", err.message);
         res.status(500).json({
-    header_type: "ERROR",
-    message_visibility: true,
-    status: false,
-    code: 2004,
-    message: err.message,
-    error: err.message
-});
+            header_type: "ERROR",
+            message_visibility: true,
+            status: false,
+            code: 2004,
+            message: err.message,
+            error: err.message
+        });
     }
 });
 
@@ -67,13 +67,13 @@ router.get('/list', async (req, res) => {
     } catch (err) {
         logger.error("Error in roles/list:", err.message);
         res.status(500).json({
-    header_type: "ERROR",
-    message_visibility: true,
-    status: false,
-    code: 2004,
-    message: err.message,
-    error: err.message
-});
+            header_type: "ERROR",
+            message_visibility: true,
+            status: false,
+            code: 2004,
+            message: err.message,
+            error: err.message
+        });
     }
 });
 
@@ -82,9 +82,16 @@ router.get('/list', async (req, res) => {
 // --------------------------------------
 router.get('/findbyid/:id', async (req, res) => {
     try {
+
+        const mode = req.query.mode || 'view';
+        const user_id = req.query.user_id;
+
+
         const result = await roleRequester.send({
             type: 'getById-role',
-            role_uuid: req.params.id
+            role_uuid: req.params.id,
+            mode,
+            body: { user_id }
         });
         // If responder returned  server error → return HTTP 500
         if (!result.status) {
@@ -102,14 +109,7 @@ router.get('/findbyid/:id', async (req, res) => {
         res.json(result);
     } catch (err) {
         logger.error("Error in roles/findbyid:", err.message);
-        res.status(500).json({
-    header_type: "ERROR",
-    message_visibility: true,
-    status: false,
-    code: 2004,
-    message: err.message,
-    error: err.message
-});
+        res.status(500).json({ error: err.message });
     }
 });
 
@@ -140,13 +140,13 @@ router.post('/update/:id', async (req, res) => {
     } catch (err) {
         logger.error("Error in roles/update:", err.message);
         res.status(500).json({
-    header_type: "ERROR",
-    message_visibility: true,
-    status: false,
-    code: 2004,
-    message: err.message,
-    error: err.message
-});
+            header_type: "ERROR",
+            message_visibility: true,
+            status: false,
+            code: 2004,
+            message: err.message,
+            error: err.message
+        });
     }
 });
 
@@ -177,13 +177,13 @@ router.post('/delete/:id', async (req, res) => {
     } catch (err) {
         logger.error("Error in roles/delete:", err.message);
         res.status(500).json({
-    header_type: "ERROR",
-    message_visibility: true,
-    status: false,
-    code: 2004,
-    message: err.message,
-    error: err.message
-});
+            header_type: "ERROR",
+            message_visibility: true,
+            status: false,
+            code: 2004,
+            message: err.message,
+            error: err.message
+        });
     }
 });
 
@@ -214,13 +214,13 @@ router.post('/status/:id', async (req, res) => {
     } catch (err) {
         logger.error("Error in roles/delete:", err.message);
         res.status(500).json({
-    header_type: "ERROR",
-    message_visibility: true,
-    status: false,
-    code: 2004,
-    message: err.message,
-    error: err.message
-});
+            header_type: "ERROR",
+            message_visibility: true,
+            status: false,
+            code: 2004,
+            message: err.message,
+            error: err.message
+        });
     }
 });
 
@@ -249,13 +249,13 @@ router.post('/pagination-list', async (req, res) => {
         res.json(result);
     } catch (err) {
         res.status(500).json({
-    header_type: "ERROR",
-    message_visibility: true,
-    status: false,
-    code: 2004,
-    message: err.message,
-    error: err.message
-});
+            header_type: "ERROR",
+            message_visibility: true,
+            status: false,
+            code: 2004,
+            message: err.message,
+            error: err.message
+        });
     }
 });
 
@@ -287,13 +287,58 @@ router.post('/clone/:id', async (req, res) => {
     } catch (err) {
         logger.error("Error in roles/clone:", err.message);
         res.status(500).json({
-    header_type: "ERROR",
-    message_visibility: true,
-    status: false,
-    code: 2004,
-    message: err.message,
-    error: err.message
+            header_type: "ERROR",
+            message_visibility: true,
+            status: false,
+            code: 2004,
+            message: err.message,
+            error: err.message
+        });
+    }
 });
+
+
+
+// --------------------------------------
+// Unlock Record (Save / Cancel)
+// --------------------------------------
+
+router.post('/unlock/:id', async (req, res) => {
+    try {
+        const result = await roleRequester.send({
+            type: `unlock-role`,
+            uuid: req.params.id,
+            body: { user_id: req.body.user_id }
+        });
+
+        if (!result.status) {
+            await saveErrorLog({
+                api_name: `unlock-role`,
+                method: 'POST',
+                payload: {
+                    uuid: req.params.id,
+                    user_id: req.body.user_id
+                },
+                message: result.error,
+                stack: result.stack || '',
+                error_code: result.code || 2004
+            });
+
+            return res.status(500).json(result);
+        }
+
+        return res.json(result);
+
+    } catch (err) {
+        logger.error(err.message);
+        return res.status(500).json({
+            header_type: "ERROR",
+            message_visibility: true,
+            status: false,
+            code: 2004,
+            message: err.message,
+            error: err.message
+        });
     }
 });
 

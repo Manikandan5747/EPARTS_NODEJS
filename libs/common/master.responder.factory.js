@@ -231,6 +231,8 @@ module.exports = function registerMasterResponder({
     // });
 
     // ---------------- GET BY ID (WITH AUTO LOCK FOR EDIT) ----------------
+    
+    
     responder.on(api('getById'), async (req, cb) => {
         const client = await pool.connect();
 

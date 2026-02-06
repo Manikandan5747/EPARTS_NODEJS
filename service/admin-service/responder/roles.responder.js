@@ -67,7 +67,7 @@ responder.on('create-role', async (req, cb) => {
             `INSERT INTO user_role 
                     (role_name, dept_id, cmp_id,hierarchy_level, created_by,assigned_to)
                 VALUES ($1, $2, $3, $4,$5,$6)`,
-            [role_name, dept_id, cmp_id,hierarchy_level, created_by,assigned_to]
+            [role_name, dept_id, cmp_id, hierarchy_level, created_by, assigned_to]
         );
 
         const result = {
@@ -82,13 +82,13 @@ responder.on('create-role', async (req, cb) => {
         logger.error("Responder Error (create role):", err);
 
         return cb(null, {
-    header_type: "ERROR",
-    message_visibility: true,
-    status: false,
-    code: 2004,
-    message: err.message,
-    error: err.message
-});
+            header_type: "ERROR",
+            message_visibility: true,
+            status: false,
+            code: 2004,
+            message: err.message,
+            error: err.message
+        });
     }
 });
 
@@ -143,47 +143,145 @@ responder.on('list-role', async (req, cb) => {
     } catch (err) {
         logger.error("Responder Error (list roles):", err);
         return cb(null, {
-    header_type: "ERROR",
-    message_visibility: true,
-    status: false,
-    code: 2004,
-    message: err.message,
-    error: err.message
-});
+            header_type: "ERROR",
+            message_visibility: true,
+            status: false,
+            code: 2004,
+            message: err.message,
+            error: err.message
+        });
     }
 });
 
 // --------------------------------------------------
-// LIST ROLES BY ID
+// GET ROLE BY ID WITH EDIT LOCKING
 // --------------------------------------------------
 responder.on('getById-role', async (req, cb) => {
+    const client = await pool.connect();
 
     try {
-        const { role_uuid } = req;
+        const { role_uuid, mode } = req;
+        const user_id = req.body?.user_id;
 
-        const result = await pool.query(
-            `SELECT role_id,role_uuid,role_name,hierarchy_level, dept_id,is_deleted,deleted_at,deleted_by, cmp_id, is_active, assigned_at, assigned_to
-             FROM user_role
-             WHERE role_uuid = $1 AND is_deleted = FALSE`,
+        const LOCK_MINUTES = 1;
+        const LOCK_MS = LOCK_MINUTES * 60 * 1000;
+
+        await client.query('BEGIN');
+
+        // 1️⃣ Fetch role with DB row lock
+        const { rows, rowCount } = await client.query(
+            `
+            SELECT 
+                R.role_id,
+                R.role_uuid,
+                R.role_name,
+                R.hierarchy_level,
+                R.dept_id,
+                R.is_deleted,
+                R.deleted_at,
+                R.deleted_by,
+                R.cmp_id,
+                R.is_active,
+                R.locked_by,
+                R.locked_at,
+                U.username AS locked_by_name
+            FROM user_role R
+            LEFT JOIN users U ON U.user_uuid = R.locked_by
+            WHERE R.role_uuid = $1
+              AND R.is_deleted = FALSE
+            FOR UPDATE OF R
+            `,
             [role_uuid]
         );
 
-        if (result.rowCount === 0) {
-            return cb(null, { status: false, code: 2003, error: "Role not found" });
+        if (!rowCount) {
+            await client.query('ROLLBACK');
+            return cb(null, {
+                status: false,
+                code: 2003,
+                error: "Role not found"
+            });
         }
 
-        return cb(null, { status: true, code: 1000, data: result.rows[0] });
+        const row = rows[0];
+
+        // 2️⃣ Check lock expiry
+        const isExpired =
+            row.locked_at &&
+            new Date(row.locked_at).getTime() + LOCK_MS < Date.now();
+
+        // --------------------------------------------------
+        // 3️⃣ EDIT MODE → LOCK HANDLING
+        // --------------------------------------------------
+        if (mode === 'edit') {
+
+            if (!user_id) {
+                await client.query('ROLLBACK');
+                return cb(null, {
+                    status: false,
+                    code: 2001,
+                    error: "User ID required for edit"
+                });
+            }
+
+            // 🔒 Locked by another active user
+            if (row.locked_by && row.locked_by !== user_id && !isExpired) {
+                await client.query('ROLLBACK');
+                return cb(null, {
+                    status: false,
+                    code: 2008,
+                    error: `This record is currently being edited by ${row.locked_by_name || 'another user'}.`
+                });
+            }
+
+            // 🔓 Acquire / refresh lock
+            if (!row.locked_by || isExpired || row.locked_by === user_id) {
+                await client.query(
+                    `
+                    UPDATE user_role
+                    SET locked_by = $1,
+                        locked_at = NOW()
+                    WHERE role_uuid = $2
+                    `,
+                    [user_id, role_uuid]
+                );
+
+                row.locked_by = user_id;
+                row.locked_at = new Date();
+            }
+        }
+
+        await client.query('COMMIT');
+
+        // 4️⃣ Final lock status
+        row.lock_status =
+            row.locked_at &&
+            new Date(row.locked_at).getTime() + LOCK_MS >= Date.now();
+
+        return cb(null, {
+            status: true,
+            code: 1000,
+            message: "Role fetched successfully",
+            data: row,
+            lock: {
+                status: row.lock_status,
+                by: row.locked_by,
+                by_name: row.locked_by_name,
+                at: row.locked_at
+            }
+        });
 
     } catch (err) {
+        await client.query('ROLLBACK');
         logger.error("Responder Error (getById role):", err);
+
         return cb(null, {
-    header_type: "ERROR",
-    message_visibility: true,
-    status: false,
-    code: 2004,
-    message: err.message,
-    error: err.message
-});
+            status: false,
+            code: 2004,
+            error: err.message
+        });
+    } finally {
+        client.release();
     }
 });
 
@@ -194,7 +292,7 @@ responder.on('getById-role', async (req, cb) => {
 responder.on('update-role', async (req, cb) => {
     try {
         const { role_uuid, body } = req;
-        const { role_name, dept_id, cmp_id, modified_by,hierarchy_level,is_active } = body;
+        const { role_name, dept_id, cmp_id, modified_by, hierarchy_level, is_active } = body;
 
         if (!role_uuid) {
             return cb(null, { status: false, code: 2001, error: "Role ID is required" });
@@ -267,13 +365,13 @@ responder.on('update-role', async (req, cb) => {
     } catch (err) {
         logger.error("Responder Error (update role):", err);
         return cb(null, {
-    header_type: "ERROR",
-    message_visibility: true,
-    status: false,
-    code: 2004,
-    message: err.message,
-    error: err.message
-});
+            header_type: "ERROR",
+            message_visibility: true,
+            status: false,
+            code: 2004,
+            message: err.message,
+            error: err.message
+        });
     }
 });
 
@@ -311,13 +409,13 @@ responder.on('delete-role', async (req, cb) => {
     } catch (err) {
         logger.error("Responder Error (delete role):", err);
         return cb(null, {
-    header_type: "ERROR",
-    message_visibility: true,
-    status: false,
-    code: 2004,
-    message: err.message,
-    error: err.message
-});
+            header_type: "ERROR",
+            message_visibility: true,
+            status: false,
+            code: 2004,
+            message: err.message,
+            error: err.message
+        });
     }
 });
 
@@ -357,13 +455,13 @@ responder.on('status-role', async (req, cb) => {
     } catch (err) {
         logger.error("Responder Error (delete role):", err);
         return cb(null, {
-    header_type: "ERROR",
-    message_visibility: true,
-    status: false,
-    code: 2004,
-    message: err.message,
-    error: err.message
-});
+            header_type: "ERROR",
+            message_visibility: true,
+            status: false,
+            code: 2004,
+            message: err.message,
+            error: err.message
+        });
     }
 });
 
@@ -374,7 +472,7 @@ responder.on('status-role', async (req, cb) => {
 responder.on('advancefilter-role', async (req, cb) => {
     try {
 
-           const accessScope = req.dataAccessScope;
+        const accessScope = req.dataAccessScope;
         let extraWhere = '';
         let extraParams = [];
 
@@ -400,7 +498,7 @@ responder.on('advancefilter-role', async (req, cb) => {
 
             /* -------------- Fields user can search/sort -------------- */
             allowedFields: [
-                'role_name', 'dept_id', 'cmp_id','hierarchy_level',
+                'role_name', 'dept_id', 'cmp_id', 'hierarchy_level',
                 'is_active', 'created_at', 'modified_at',
                 'createdByName', 'updatedByName'
             ],
@@ -423,7 +521,7 @@ responder.on('advancefilter-role', async (req, cb) => {
             baseWhere: `
                 UR.is_deleted = FALSE ${extraWhere}
             `,
-             baseParams: extraParams
+            baseParams: extraParams
         });
 
         /* ----------------- SEND RESULT ----------------- */
@@ -492,13 +590,62 @@ responder.on('clone-role', async (req, cb) => {
     } catch (err) {
         console.error("cloneRole error:", err);
         return cb(null, {
-    header_type: "ERROR",
-    message_visibility: true,
-    status: false,
-    code: 2004,
-    message: err.message,
-    error: err.message
+            header_type: "ERROR",
+            message_visibility: true,
+            status: false,
+            code: 2004,
+            message: err.message,
+            error: err.message
+        });
+    }
 });
+
+
+
+responder.on(`unlock-role`, async (req, cb) => {
+    try {
+        const { uuid } = req;
+        const { user_id } = req.body;
+
+        const result = await pool.query(
+            `
+            UPDATE user_role
+            SET locked_by = NULL,
+                locked_at = NULL
+            WHERE role_uuid = $1
+              AND locked_by = $2
+            `,
+            [uuid, user_id]
+        );
+
+        if (!result.rowCount) {
+            return cb(null, {
+                header_type: "ERROR",
+                message_visibility: true,
+                status: false,
+                code: 2003,
+                message: 'Unable to unlock record',
+                error: 'This record is currently being edited by another user'
+            });
+        }
+
+        return cb(null, {
+            header_type: "SUCCESS",
+            message_visibility: false,
+            status: true,
+            code: 1000,
+            message: `Role Record unlocked successfully`,
+        });
+
+    } catch (err) {
+        return cb(null, {
+            header_type: "ERROR",
+            message_visibility: true,
+            status: false,
+            code: 2004,
+            message: err.message,
+            error: err.message
+        });
     }
 });
 

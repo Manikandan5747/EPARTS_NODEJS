@@ -1,5 +1,5 @@
 require('module-alias/register');
-
+const pool = require('@libs/db/postgresql_index');
 const express = require('express');
 const logger = require('@libs/logger/logger');
 const { saveErrorLog } = require('@libs/common/common-util');
@@ -17,6 +17,7 @@ module.exports = function createMasterRoutes({
     router.post('/create', async (req, res) => {
         try {
             console.log("entityName", entityName);
+
             const error = validateMaster(entityName, 'create', req.body);
             if (error) {
                 return res.status(500).json({
@@ -29,6 +30,39 @@ module.exports = function createMasterRoutes({
                 });
             }
 
+            /* ------------------------------------------
+               Convert brand_id → brand_uuid for MODEL
+            ------------------------------------------- */
+            if (entityName === 'model') {
+                const { brand_uuid } = req.body;
+
+                if (!brand_uuid) {
+                    return res.status(400).json({
+                        status: false,
+                        code: 2001,
+                        message: "brand_uuid is required"
+                    });
+                }
+
+                const brandResult = await pool.query(
+                    `SELECT brand_id FROM brand WHERE brand_uuid = $1 AND is_deleted = FALSE`,
+                    [brand_uuid]
+                );
+
+                if (brandResult.rowCount === 0) {
+                    return res.status(404).json({
+                        status: false,
+                        code: 2003,
+                        message: "Brand not found"
+                    });
+                }
+
+                // Replace brand_id with brand_uuid
+                req.body.brand_id = brandResult.rows[0].brand_id;
+                delete req.body.brand_uuid;
+            }
+
+            /* ---------------- CALL RESPONDER ---------------- */
             const result = await requester.send({
                 type: api('create'),
                 body: req.body
@@ -47,6 +81,7 @@ module.exports = function createMasterRoutes({
             }
 
             res.status(201).json(result);
+
         } catch (err) {
             logger.error(err.message);
             res.status(500).json({
@@ -59,6 +94,7 @@ module.exports = function createMasterRoutes({
             });
         }
     });
+
 
     /* ---------------- LIST ---------------- */
     router.get('/list', async (req, res) => {
@@ -94,14 +130,14 @@ module.exports = function createMasterRoutes({
     router.get('/findbyid/:id', async (req, res) => {
         try {
 
-            const mode = req.query.mode || 'view'; 
-            const user_id = req.query.user_id;         
+            const mode = req.query.mode || 'view';
+            const user_id = req.query.user_id;
 
             const result = await requester.send({
                 type: api('getById'),
                 uuid: req.params.id,
                 mode,
-                body: { user_id }   
+                body: { user_id }
             });
 
             if (!result.status) {
@@ -132,6 +168,40 @@ module.exports = function createMasterRoutes({
     /* ---------------- UPDATE ---------------- */
     router.post('/update/:id', async (req, res) => {
         try {
+
+
+            /* ------------------------------------------
+            Convert brand_id → brand_uuid for MODEL
+         ------------------------------------------- */
+            if (api('update') === 'update-model') {
+                const { brand_uuid } = req.body;
+
+                if (!brand_uuid) {
+                    return res.status(400).json({
+                        status: false,
+                        code: 2001,
+                        message: "brand_uuid is required"
+                    });
+                }
+
+                const brandResult = await pool.query(
+                    `SELECT brand_id FROM brand WHERE brand_uuid = $1 AND is_deleted = FALSE`,
+                    [brand_uuid]
+                );
+
+                if (brandResult.rowCount === 0) {
+                    return res.status(404).json({
+                        status: false,
+                        code: 2003,
+                        message: "Brand not found"
+                    });
+                }
+
+                // Replace brand_id with brand_uuid
+                req.body.brand_id = brandResult.rows[0].brand_id;
+                delete req.body.brand_uuid;
+            }
+
             const result = await requester.send({
                 type: api('update'),
                 uuid: req.params.id,

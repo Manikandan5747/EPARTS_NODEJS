@@ -30,14 +30,35 @@ responder.on('create-country', async (req, cb) => {
         } = req.body;
 
         if (!name || !name.trim()) {
-            return cb(null, { status: false, code: 2001, error: 'Country name is required' });
+            return cb(null, {
+                header_type: "VALIDATION",
+                message_visibility: true,
+                status: false,
+                code: 2001,
+                error: 'Country name is required',
+                message: 'Country name is required'
+            });
         }
 
         if (!country_code || !country_code.trim()) {
-            return cb(null, { status: false, code: 2001, error: 'Country code is required' });
+            return cb(null, {
+                header_type: "VALIDATION",
+                message_visibility: true,
+                status: false,
+                code: 2001,
+                error: 'Country code is required',
+                message: 'Country code is required'
+            });
         }
         if (!code || !code.trim()) {
-            return cb(null, { status: false, code: 2001, error: 'Code is required' });
+            return cb(null, {
+                header_type: "VALIDATION",
+                message_visibility: true,
+                status: false,
+                message: "Code is required",
+                code: 2001,
+                error: 'Code is required'
+            });
         }
 
         // Validate currency_uuid and fetch currency_id
@@ -52,9 +73,12 @@ responder.on('create-country', async (req, cb) => {
 
         if (countryResult.rowCount === 0) {
             return cb(null, {
+                header_type: "VALIDATION",
+                message_visibility: true,
                 status: false,
                 code: 2001,
-                error: 'Invalid or inactive currency'
+                error: 'Invalid or inactive currency',
+                message: 'Invalid or inactive currency'
             });
         }
 
@@ -70,7 +94,14 @@ responder.on('create-country', async (req, cb) => {
         );
 
         if (check.rowCount > 0) {
-            return cb(null, { status: false, code: 2002, error: 'Country already exists' });
+            return cb(null, {
+                header_type: "VALIDATION",
+                message_visibility: true,
+                status: false,
+                code: 2002,
+                error: 'Country already exists',
+                message: 'Country already exists'
+            });
         }
 
         const insert = await pool.query(
@@ -91,6 +122,8 @@ responder.on('create-country', async (req, cb) => {
         );
 
         return cb(null, {
+            header_type: "SUCCESS",
+            message_visibility: true,
             status: true,
             code: 1000,
             message: 'Country created successfully',
@@ -100,13 +133,13 @@ responder.on('create-country', async (req, cb) => {
     } catch (err) {
         logger.error('Responder Error (create country):', err);
         return cb(null, {
-    header_type: "ERROR",
-    message_visibility: true,
-    status: false,
-    code: 2004,
-    message: err.message,
-    error: err.message
-});
+            header_type: "ERROR",
+            message_visibility: true,
+            status: false,
+            code: 2004,
+            message: err.message,
+            error: err.message
+        });
     }
 });
 
@@ -128,8 +161,10 @@ responder.on('list-country', async (req, cb) => {
 
 
         return cb(null, {
+            header_type: "SUCCESS",
+            message_visibility: true,
             status: true,
-            code: 1000, 
+            code: 1000,
             message: "Country list fetched successfully",
             count: result.rowCount,
             data: result.rows
@@ -138,13 +173,13 @@ responder.on('list-country', async (req, cb) => {
     } catch (err) {
         logger.error('Responder Error (list country):', err);
         return cb(null, {
-    header_type: "ERROR",
-    message_visibility: true,
-    status: false,
-    code: 2004,
-    message: err.message,
-    error: err.message
-});
+            header_type: "ERROR",
+            message_visibility: true,
+            status: false,
+            code: 2004,
+            message: err.message,
+            error: err.message
+        });
     }
 });
 
@@ -168,22 +203,31 @@ responder.on('getById-country', async (req, cb) => {
         );
 
         if (result.rowCount === 0) {
-            return cb(null, { status: false, code: 2003, error: 'Country not found' });
+            return cb(null, {
+                header_type: "VALIDATION",
+                message_visibility: true,
+                status: false, code: 2003, error: 'Country not found',
+                message: "Country not found"
+            });
         }
 
-        return cb(null, { status: true, code: 1000, 
-             message: "Country fetched successfully",data: result.rows[0] });
+        return cb(null, {
+            header_type: "SUCCESS",
+            message_visibility: true,
+            status: true, code: 1000,
+            message: "Country fetched successfully", data: result.rows[0]
+        });
 
     } catch (err) {
         logger.error('Responder Error (get country):', err);
         return cb(null, {
-    header_type: "ERROR",
-    message_visibility: true,
-    status: false,
-    code: 2004,
-    message: err.message,
-    error: err.message
-});
+            header_type: "ERROR",
+            message_visibility: true,
+            status: false,
+            code: 2004,
+            message: err.message,
+            error: err.message
+        });
     }
 });
 
@@ -207,11 +251,25 @@ responder.on('update-country', async (req, cb) => {
         // VALIDATION
         // -----------------------------
         if (!country_uuid) {
-            return cb(null, { status: false, code: 2001, error: 'Country UUID is required' });
+            return cb(null, {
+                header_type: "VALIDATION",
+                message_visibility: true,
+                status: false,
+                code: 2001,
+                error: 'Country UUID is required',
+                message: 'Country UUID is required'
+            });
         }
 
         if (!name || !name.trim()) {
-            return cb(null, { status: false, code: 2001, error: 'Country name is required' });
+            return cb(null, {
+                header_type: "VALIDATION",
+                message_visibility: true,
+                status: false,
+                code: 2001,
+                error: 'Country name is required',
+                message: 'Country name is required',
+            });
         }
 
         // Validate currency_uuid and fetch currency_id
@@ -226,9 +284,12 @@ responder.on('update-country', async (req, cb) => {
 
         if (countryResult.rowCount === 0) {
             return cb(null, {
+                header_type: "ERROR",
+                message_visibility: true,
                 status: false,
                 code: 2001,
-                error: 'Invalid or inactive currency'
+                error: 'Invalid or inactive currency',
+                message: 'Invalid or inactive currency'
             });
         }
 
@@ -244,7 +305,14 @@ responder.on('update-country', async (req, cb) => {
         );
 
         if (exists.rowCount === 0) {
-            return cb(null, { status: false, code: 2003, error: 'Country not found' });
+            return cb(null, {
+                header_type: "ERROR",
+                message_visibility: true,
+                status: false,
+                code: 2003,
+                error: 'Country not found',
+                message: 'Country not found',
+            });
         }
 
         const existingFlagPath = exists.rows[0].flag_icon_path;
@@ -262,7 +330,14 @@ responder.on('update-country', async (req, cb) => {
         );
 
         if (check.rowCount > 0) {
-            return cb(null, { status: false, code: 2002, error: 'Country already exists' });
+            return cb(null, {
+                header_type: "ERROR",
+                message_visibility: true,
+                status: false,
+                code: 2002,
+                message: 'Country already exists',
+                error: 'Country already exists'
+            });
         }
 
         // -----------------------------
@@ -293,6 +368,8 @@ responder.on('update-country', async (req, cb) => {
         );
 
         return cb(null, {
+            header_type: "SUCCESS",
+            message_visibility: true,
             status: true,
             code: 1000,
             message: 'Country updated successfully',
@@ -302,13 +379,13 @@ responder.on('update-country', async (req, cb) => {
     } catch (err) {
         logger.error('Responder Error (update country):', err);
         return cb(null, {
-    header_type: "ERROR",
-    message_visibility: true,
-    status: false,
-    code: 2004,
-    message: err.message,
-    error: err.message
-});
+            header_type: "ERROR",
+            message_visibility: true,
+            status: false,
+            code: 2004,
+            message: err.message,
+            error: err.message
+        });
     }
 });
 
@@ -328,7 +405,14 @@ responder.on('delete-country', async (req, cb) => {
         );
 
         if (check.rowCount === 0) {
-            return cb(null, { status: false, code: 2003, error: 'Country not found' });
+            return cb(null, {
+                header_type: "ERROR",
+                message_visibility: true,
+                status: false,
+                code: 2003,
+                message: 'Country not found',
+                error: 'Country not found'
+            });
         }
 
         await pool.query(
@@ -342,6 +426,8 @@ responder.on('delete-country', async (req, cb) => {
         );
 
         return cb(null, {
+            header_type: "SUCCESS",
+            message_visibility: true,
             status: true,
             code: 1000,
             message: 'Country deleted successfully'
@@ -350,13 +436,13 @@ responder.on('delete-country', async (req, cb) => {
     } catch (err) {
         logger.error('Responder Error (delete country):', err);
         return cb(null, {
-    header_type: "ERROR",
-    message_visibility: true,
-    status: false,
-    code: 2004,
-    message: err.message,
-    error: err.message
-});
+            header_type: "ERROR",
+            message_visibility: true,
+            status: false,
+            code: 2004,
+            message: err.message,
+            error: err.message
+        });
     }
 });
 
@@ -375,7 +461,14 @@ responder.on('status-country', async (req, cb) => {
         );
 
         if (check.rowCount === 0) {
-            return cb(null, { status: false, code: 2003, error: 'Country not found' });
+            return cb(null, {
+                header_type: "ERROR",
+                message_visibility: true,
+                status: false,
+                code: 2003,
+                error: 'Country not found',
+                message: 'Country not found'
+            });
         }
 
         const newStatus = !check.rows[0].is_active;
@@ -390,6 +483,8 @@ responder.on('status-country', async (req, cb) => {
         );
 
         return cb(null, {
+            header_type: "SUCCESS",
+            message_visibility: true,
             status: true,
             code: 1000,
             message: 'Country status updated successfully'
@@ -398,13 +493,13 @@ responder.on('status-country', async (req, cb) => {
     } catch (err) {
         logger.error('Responder Error (status country):', err);
         return cb(null, {
-    header_type: "ERROR",
-    message_visibility: true,
-    status: false,
-    code: 2004,
-    message: err.message,
-    error: err.message
-});
+            header_type: "ERROR",
+            message_visibility: true,
+            status: false,
+            code: 2004,
+            message: err.message,
+            error: err.message
+        });
     }
 });
 
@@ -479,82 +574,24 @@ responder.on('advancefilter-country', async (req, cb) => {
         });
 
         return cb(null, {
+            header_type: "SUCCESS",
+            message_visibility: true,
             status: true,
             code: 1000,
+            message: 'Countries fetched successfully',
             result
         });
 
     } catch (err) {
         logger.error('[advancefilter-country] error:', err);
         return cb(null, {
-    header_type: "ERROR",
-    message_visibility: true,
-    status: false,
-    code: 2004,
-    message: err.message,
-    error: err.message
-});
-    }
-});
-
-
-// --------------------------------------------------
-// CLONE COUNTRY
-// --------------------------------------------------
-responder.on('clone-country', async (req, cb) => {
-    try {
-        const country_uuid = req.country_uuid;
-        const { created_by } = req.body;
-
-        const fetch = await pool.query(
-            `SELECT name, country_code, iso_code, currency_id,
-                    flag_icon_path, description, is_active
-             FROM countries
-             WHERE country_uuid = $1 AND is_deleted = FALSE`,
-            [country_uuid]
-        );
-
-        if (!fetch.rowCount) {
-            return cb(null, { status: false, code: 2003, error: 'Country not found' });
-        }
-
-        const c = fetch.rows[0];
-
-        const insert = await pool.query(
-            `INSERT INTO countries
-             (country_uuid, name, country_code, iso_code, currency_id,
-              flag_icon_path, description, is_active, created_by)
-             VALUES (gen_random_uuid(), $1, $2, $3, $4, $5, $6, $7, $8)
-             RETURNING *`,
-            [
-                c.name + ' (Copy)',
-                c.country_code + '_COPY',
-                c.iso_code,
-                c.currency_id,
-                c.flag_icon_path,
-                c.description,
-                c.is_active,
-                created_by || null
-            ]
-        );
-
-        return cb(null, {
-            status: true,
-            code: 1000,
-            message: 'Country cloned successfully',
-            data: insert.rows[0]
+            header_type: "ERROR",
+            message_visibility: true,
+            status: false,
+            code: 2004,
+            message: err.message,
+            error: err.message
         });
-
-    } catch (err) {
-        logger.error('Responder Error (clone country):', err);
-        return cb(null, {
-    header_type: "ERROR",
-    message_visibility: true,
-    status: false,
-    code: 2004,
-    message: err.message,
-    error: err.message
-});
     }
 });
 
@@ -628,6 +665,9 @@ responder.on("country-list", async (req, cb) => {
         );
 
         return cb(null, {
+            header_type: "SUCCESS",
+            message_visibility: false,
+            message: "Countries fetched successfully",
             status: true,
             code: 1000,
             data: {

@@ -20,7 +20,18 @@ registerMasterResponder({
     alias: 'PT',
     uuidColumn: 'jurisdiction_uuid',
     allowedFields: ['code', 'name', 'is_active', 'created_at', 'modified_at'],
-    dateFields :[  'last_integrated_date']  
+    dateFields: ['last_integrated_date'],
+    customFields: {
+        parent_jurisdiction_name: {
+            select: 'JM.name',
+            search: 'JM.name',
+            sort: 'JM.name'
+        }
+    },
+
+    joinSql: `
+        LEFT JOIN jurisdiction JM
+            ON PT.jurisdiction_uuid = JM.parent_jurisdiction`
 });
 
 module.exports = responder;

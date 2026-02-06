@@ -15,11 +15,23 @@ const responder = new cote.Responder({
 registerMasterResponder({
     responder,
     pool,
-    key:'model',
+    key: 'model',
     table: 'model',
     alias: 'PT',
     uuidColumn: 'model_uuid',
-    allowedFields: ['code', 'name', 'is_active', 'created_at', 'modified_at']
+    allowedFields: ['code', 'name', 'is_active', 'created_at', 'modified_at'],
+    dateFields: [],
+    customFields: {
+        brand_name: {
+            select: 'BD.name',
+            search: 'BD.name',
+            sort: 'BD.name'
+        }
+    },
+
+    joinSql: `
+        LEFT JOIN brand BD
+            ON PT.brand_id = BD.brand_id`
 });
 
 module.exports = responder;

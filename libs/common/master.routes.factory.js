@@ -4,17 +4,29 @@ const express = require('express');
 const logger = require('@libs/logger/logger');
 const { saveErrorLog } = require('@libs/common/common-util');
 const validateMaster = require('@libs/common/validate-master');
+const multipart = require('connect-multiparty');
+const path = require('path');
 
 module.exports = function createMasterRoutes({
     requester,
-    entityName
+    entityName,
+    foreignKeyMap,
+    fileFields = [],
+    uploadFolder = ''
 }) {
     const router = express.Router();
 
     const api = (action) => `${action}-${entityName}`;
+    const uploadDir = path.join('/app/assets', uploadFolder);
+
+    const multipartMiddleware = multipart({
+        uploadDir,
+        maxFilesSize: 5 * 1024 * 1024 // 5MB
+    });
+
 
     /* ---------------- CREATE ---------------- */
-    router.post('/create', async (req, res) => {
+    router.post('/create', multipartMiddleware, async (req, res) => {
         try {
             console.log("entityName", entityName);
 
@@ -30,38 +42,16 @@ module.exports = function createMasterRoutes({
                 });
             }
 
-            /* ------------------------------------------
-               Convert brand_id → brand_uuid for MODEL
-            ------------------------------------------- */
-            if (entityName === 'model') {
-                const { brand_uuid } = req.body;
-
-                if (!brand_uuid) {
-                    return res.status(400).json({
-                        status: false,
-                        code: 2001,
-                        message: "brand_uuid is required"
-                    });
-                }
-
-                const brandResult = await pool.query(
-                    `SELECT brand_id FROM brand WHERE brand_uuid = $1 AND is_deleted = FALSE`,
-                    [brand_uuid]
-                );
-
-                if (brandResult.rowCount === 0) {
-                    return res.status(404).json({
-                        status: false,
-                        code: 2003,
-                        message: "Brand not found"
-                    });
-                }
-
-                // Replace brand_id with brand_uuid
-                req.body.brand_id = brandResult.rows[0].brand_id;
-                delete req.body.brand_uuid;
+            // 🔹 attach uploaded files
+            if (fileFields.length > 0) {
+                const fileData = extractFiles(req, fileFields);
+                req.body = { ...req.body, ...fileData };
             }
 
+            console.log("req.body", req.body);
+
+            // 🔹 Resolve FK generically
+            req.body = await resolveForeignKeys(req.body, pool, foreignKeyMap);
             /* ---------------- CALL RESPONDER ---------------- */
             const result = await requester.send({
                 type: api('create'),
@@ -94,7 +84,6 @@ module.exports = function createMasterRoutes({
             });
         }
     });
-
 
     /* ---------------- LIST ---------------- */
     router.get('/list', async (req, res) => {
@@ -169,38 +158,23 @@ module.exports = function createMasterRoutes({
     router.post('/update/:id', async (req, res) => {
         try {
 
+            // 🔹 attach uploaded files
+            if (fileFields.length > 0 && req.files) {
+                const fileData = extractFiles(req, fileFields);
 
-            /* ------------------------------------------
-            Convert brand_id → brand_uuid for MODEL
-         ------------------------------------------- */
-            if (api('update') === 'update-model') {
-                const { brand_uuid } = req.body;
+                // remove null values → keep old image
+                Object.keys(fileData).forEach(key => {
+                    if (!fileData[key]) delete fileData[key];
+                });
 
-                if (!brand_uuid) {
-                    return res.status(400).json({
-                        status: false,
-                        code: 2001,
-                        message: "brand_uuid is required"
-                    });
-                }
-
-                const brandResult = await pool.query(
-                    `SELECT brand_id FROM brand WHERE brand_uuid = $1 AND is_deleted = FALSE`,
-                    [brand_uuid]
-                );
-
-                if (brandResult.rowCount === 0) {
-                    return res.status(404).json({
-                        status: false,
-                        code: 2003,
-                        message: "Brand not found"
-                    });
-                }
-
-                // Replace brand_id with brand_uuid
-                req.body.brand_id = brandResult.rows[0].brand_id;
-                delete req.body.brand_uuid;
+                req.body = { ...req.body, ...fileData };
             }
+
+
+            console.log("req.body", req.body);
+
+            // 🔹 Resolve FK generically
+            req.body = await resolveForeignKeys(req.body, pool, foreignKeyMap);
 
             const result = await requester.send({
                 type: api('update'),
@@ -395,7 +369,6 @@ module.exports = function createMasterRoutes({
         }
     });
 
-
     router.post('/unlock/:id', async (req, res) => {
         try {
             const result = await requester.send({
@@ -435,6 +408,41 @@ module.exports = function createMasterRoutes({
         }
     });
 
+    async function resolveForeignKeys(body, pool, foreignKeyMap = {}) {
+        for (const field in foreignKeyMap) {
+            const { table, uuidColumn, idColumn, targetField } = foreignKeyMap[field];
+
+            if (!body[field]) continue;
+
+            const result = await pool.query(
+                `SELECT ${idColumn} FROM ${table}
+             WHERE ${uuidColumn} = $1 AND is_deleted = FALSE`,
+                [body[field]]
+            );
+
+            if (result.rowCount === 0) {
+                throw new Error(`${table} not found`);
+            }
+
+            body[targetField] = result.rows[0][idColumn];
+            delete body[field];
+        }
+
+        return body;
+    }
+
+    function extractFiles(req, fileFields) {
+        const filesData = {};
+
+        const getPath = (file) =>
+            file?.path ? file.path.replace(/\\/g, '/') : null;
+
+        fileFields.forEach(field => {
+            filesData[field] = getPath(req.files?.[field]);
+        });
+
+        return filesData;
+    }
 
     return router;
 };

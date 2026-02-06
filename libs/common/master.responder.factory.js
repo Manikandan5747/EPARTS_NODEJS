@@ -155,7 +155,7 @@ module.exports = function registerMasterResponder({
     // code: 2004,
     // message: err.message,
     // error: err.message
-// });
+    // });
     //     }
     // });
 
@@ -231,8 +231,8 @@ module.exports = function registerMasterResponder({
     // });
 
     // ---------------- GET BY ID (WITH AUTO LOCK FOR EDIT) ----------------
-    
-    
+
+
     responder.on(api('getById'), async (req, cb) => {
         const client = await pool.connect();
 
@@ -512,69 +512,7 @@ module.exports = function registerMasterResponder({
         }
     });
 
-    // ---------------- ADVANCE FILTER ----------------
-    // responder.on(api('advancefilter'), async (req, cb) => {
-    //     try {
 
-    //         const accessScope = req.dataAccessScope;
-    //         let extraWhere = '';
-    //         let extraParams = [];
-
-    //         // If PRIVATE → only show own created data
-    //         if (accessScope.type === 'PRIVATE') {
-    //             extraWhere = ` AND ${alias}.created_by = $extraUser`;
-    //             extraParams.push(accessScope.user_id);
-    //         }
-
-    //         // Define joins dynamically if needed
-    //         const joinSQL = `
-    //         LEFT JOIN users creators ON ${alias}.created_by = creators.user_uuid
-    //         LEFT JOIN users updaters ON ${alias}.modified_by = updaters.user_uuid
-    //     `;
-
-    //         const result = await buildAdvancedSearchQuery({
-    //             pool,
-    //             reqBody: req.body,
-    //             table,
-    //             alias,
-    //             defaultSort: 'created_at',
-    //             allowedFields,
-    //             joinSql: joinSQL,      // pass joins here
-    //             baseWhere: `${alias}.is_deleted = FALSE ${extraWhere}`,
-    //             customFields: {        // optional virtual fields
-    //                 createdByName: {
-    //                     select: 'creators.username',
-    //                     search: 'creators.username',
-    //                     sort: 'creators.username'
-    //                 },
-    //                 updatedByName: {
-    //                     select: 'updaters.username',
-    //                     search: 'updaters.username',
-    //                     sort: 'updaters.username'
-    //                 }
-    //             }
-    //         });
-
-    //         return cb(null, {
-    //             status: true, code: 1000,
-    //             message: `${formatTableName(table)} list fetched successfully`,
-    //             result
-    //         });
-
-    //     } catch (err) {
-    //         logger.error(`Error (advancefilter ${table}):`, err);
-    //         return cb(null, {
-//     header_type: "ERROR",
-//     message_visibility: true,
-//     status: false,
-//     code: 2004,
-//     message: err.message,
-//     error: err.message
-// });
-    //     }
-    // });
-
-    // ---------------- ADVANCE FILTER ----------------
     responder.on(api('advancefilter'), async (req, cb) => {
         try {
 
@@ -733,6 +671,8 @@ module.exports = function registerMasterResponder({
             });
         }
     });
+
+
 
     responder.on(`lock-${key}`, async (req, cb) => {
         const client = await pool.connect();

@@ -4,11 +4,8 @@ const requester = require('@libs/requesters/admin-requesters/account_type-reques
 
 module.exports = createMasterRoutes({
     requester,
-    entityName: 'account_type'
+    entityName: 'account_type',
+    foreignKeyMap: {},
+    fileFields: [],
+    uploadFolder: ''
 });
-
-
-
-
-
-

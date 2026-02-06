@@ -4,11 +4,8 @@ const requester = require('@libs/requesters/admin-requesters/address_type_master
 
 module.exports = createMasterRoutes({
     requester,
-    entityName: 'address_type_master'
+    entityName: 'address_type_master',
+    foreignKeyMap: {},
+    fileFields: [],
+    uploadFolder: ''
 });
-
-
-
-
-
-

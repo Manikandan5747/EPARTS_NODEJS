@@ -4,11 +4,8 @@ const requester = require('@libs/requesters/admin-requesters/category-request-st
 
 module.exports = createMasterRoutes({
     requester,
-    entityName: 'category-request-status'
+    entityName: 'category-request-status',
+    foreignKeyMap: {},
+    fileFields: [],
+    uploadFolder: ''
 });
-
-
-
-
-
-

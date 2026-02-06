@@ -28,7 +28,6 @@ module.exports = {
   packageTypeResponder: require('./responder/package_type.responder'),
   jurisdictionResponder: require('./responder/jurisdiction.responder'),
   taxCodeMasterResponder: require('./responder/tax_code_master.responder'),
-
   manufacturerResponder: require('./responder/manufacturer.responder'),
   accountTypeResponder: require('./responder/account_type.responder'),
   addressTypeResponder: require('./responder/address_type_master.responder'),
@@ -36,25 +35,9 @@ module.exports = {
   payoutScheduleResponder: require('./responder/payout_schedule.responder'),
   productConditionsResponder: require('./responder/product_conditions.responder'),
   modelResponder: require('./responder/model.responder'),
-
   brandResponder: require('./responder/brand.responder'),
-  mobileSectionCmsResponder: require('./responder/mobile_section_cms.responder'),
-
-
   webVersionResponder: require('./responder/web_version.responder'),
   prefixRefNoResponder: require('./responder/prefix_refno.responder'),
-  cmsFooterLinksResponder: require('./responder/cms_footer_links.responder'),
-  usefulLinksCmsResponder: require('./responder/useful_links_cms.responder'),
-  navLinksCmsResponder: require('./responder/nav_links_cms.responder'),
-
-  cmsHomePageFeaturesResponder: require('./responder/cms_homepage_features_section.responder'),
-  cmsSocialMediaInfoResponder: require('./responder/cms_social_media_info.responder'),
-  cmsHomePageAboutSectionResponder: require('./responder/cms_homepage_about_section.responder'),
-  cmsHomePageBuyerSellerSectionResponder: require('./responder/cms_homepage_buyerseller_section.responder'),
-  servicesCmsResponder: require('./responder/services_cms.responder'),
-  cmsCompanyResponder: require('./responder/cms_company_info.responder'),
-  cmsHomepageBannerSectionResponder: require('./responder/cms_homepage_banner_section.responder'),
-
   moduleResponder: require('./responder/module.responder'),
   profilesResponder: require('./responder/profile.responder'),
   profilesPrivilegeResponder: require('./responder/profile-privilege.responder'),

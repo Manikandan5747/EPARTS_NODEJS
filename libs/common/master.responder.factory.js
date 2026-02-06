@@ -608,6 +608,22 @@ module.exports = function registerMasterResponder({
             let params = [];
             let idx = 1;
 
+            if (key == 'cities') {
+                const stateResult = await pool.query(
+                    `SELECT state_id FROM states
+             WHERE state_uuid = $1 AND is_deleted = FALSE`, [req.state_uuid]);
+
+                if (stateResult.rowCount === 0) {
+                    return cb(null, {
+                        status: false,
+                        code: 2003,
+                        error: "State not found"
+                    });
+                }
+
+                const state_id = stateResult.rows[0].state_id;
+                whereSql += ` AND ${alias}.state_id = ${state_id}`;
+            }
             /* -------- SEARCH (SAFE) -------- */
             if (search && searchableFields.length) {
                 const conditions = searchableFields.map(

@@ -4,19 +4,27 @@ const express = require('express');
 const logger = require('@libs/logger/logger');
 const { saveErrorLog } = require('@libs/common/common-util');
 const validateMaster = require('@libs/common/validate-master');
+
+
 const multipart = require('connect-multiparty');
 const path = require('path');
+
+
+
 
 module.exports = function createMasterRoutes({
     requester,
     entityName,
     foreignKeyMap,
     fileFields = [],
-    uploadFolder = ''
+    uploadFolder = '',
+    filterKey = null,
 }) {
     const router = express.Router();
 
     const api = (action) => `${action}-${entityName}`;
+
+
     const uploadDir = path.join('/app/assets', uploadFolder);
 
     const multipartMiddleware = multipart({
@@ -52,6 +60,7 @@ module.exports = function createMasterRoutes({
 
             // 🔹 Resolve FK generically
             req.body = await resolveForeignKeys(req.body, pool, foreignKeyMap);
+            console.log("body1 req.body", req.body);
             /* ---------------- CALL RESPONDER ---------------- */
             const result = await requester.send({
                 type: api('create'),
@@ -155,7 +164,7 @@ module.exports = function createMasterRoutes({
     });
 
     /* ---------------- UPDATE ---------------- */
-    router.post('/update/:id', async (req, res) => {
+    router.post('/update/:id', multipartMiddleware, async (req, res) => {
         try {
 
             // 🔹 attach uploaded files
@@ -287,18 +296,32 @@ module.exports = function createMasterRoutes({
     /* ---------------- LIST + SEARCH + PAGINATION ---------------- */
     router.get('/listpagination', async (req, res) => {
         try {
+
             const {
                 search = '',
                 page = 1,
                 limit = 10
             } = req.query;
 
-            const result = await requester.send({
+            let payload = {
                 type: `${entityName}-listpagination`,
                 search,
                 page: Number(page),
                 limit: Number(limit)
-            });
+            }
+            if (filterKey == 'state_uuid') {
+                let state_uuid = req.query && req.query.state_uuid;
+                if (!state_uuid) {
+                    return cb(null, {
+                        status: false,
+                        code: 2001,
+                        error: "State UUID is required"
+                    });
+                }
+                payload.state_uuid = req.query.state_uuid
+            }
+            const result = await requester.send(payload);
+
 
             if (!result.status) {
                 await saveErrorLog({
@@ -409,6 +432,7 @@ module.exports = function createMasterRoutes({
     });
 
     async function resolveForeignKeys(body, pool, foreignKeyMap = {}) {
+
         for (const field in foreignKeyMap) {
             const { table, uuidColumn, idColumn, targetField } = foreignKeyMap[field];
 
@@ -443,6 +467,7 @@ module.exports = function createMasterRoutes({
 
         return filesData;
     }
+
 
     return router;
 };

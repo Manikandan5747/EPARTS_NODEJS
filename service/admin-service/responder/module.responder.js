@@ -102,13 +102,13 @@ responder.on('create-module', async (req, cb) => {
     } catch (err) {
         logger.error("Responder Error (create module):", err);
         return cb(null, {
-    header_type: "ERROR",
-    message_visibility: true,
-    status: false,
-    code: 2004,
-    message: err.message,
-    error: err.message
-});
+            header_type: "ERROR",
+            message_visibility: true,
+            status: false,
+            code: 2004,
+            message: err.message,
+            error: err.message
+        });
     }
 });
 
@@ -144,13 +144,13 @@ responder.on('list-module', async (req, cb) => {
     } catch (err) {
         logger.error("Responder Error (list module):", err);
         return cb(null, {
-    header_type: "ERROR",
-    message_visibility: true,
-    status: false,
-    code: 2004,
-    message: err.message,
-    error: err.message
-});
+            header_type: "ERROR",
+            message_visibility: true,
+            status: false,
+            code: 2004,
+            message: err.message,
+            error: err.message
+        });
     }
 });
 
@@ -202,13 +202,13 @@ responder.on('getById-module', async (req, cb) => {
     } catch (err) {
         logger.error("Responder Error (getById module):", err);
         return cb(null, {
-    header_type: "ERROR",
-    message_visibility: true,
-    status: false,
-    code: 2004,
-    message: err.message,
-    error: err.message
-});
+            header_type: "ERROR",
+            message_visibility: true,
+            status: false,
+            code: 2004,
+            message: err.message,
+            error: err.message
+        });
     }
 });
 
@@ -317,13 +317,13 @@ responder.on('update-module', async (req, cb) => {
     } catch (err) {
         logger.error("Responder Error (update module):", err);
         return cb(null, {
-    header_type: "ERROR",
-    message_visibility: true,
-    status: false,
-    code: 2004,
-    message: err.message,
-    error: err.message
-});
+            header_type: "ERROR",
+            message_visibility: true,
+            status: false,
+            code: 2004,
+            message: err.message,
+            error: err.message
+        });
     }
 });
 
@@ -365,13 +365,13 @@ responder.on('delete-module', async (req, cb) => {
     } catch (err) {
         logger.error("Responder Error (delete module):", err);
         return cb(null, {
-    header_type: "ERROR",
-    message_visibility: true,
-    status: false,
-    code: 2004,
-    message: err.message,
-    error: err.message
-});
+            header_type: "ERROR",
+            message_visibility: true,
+            status: false,
+            code: 2004,
+            message: err.message,
+            error: err.message
+        });
     }
 });
 
@@ -413,13 +413,13 @@ responder.on('status-module', async (req, cb) => {
     } catch (err) {
         logger.error("Responder Error (status module):", err);
         return cb(null, {
-    header_type: "ERROR",
-    message_visibility: true,
-    status: false,
-    code: 2004,
-    message: err.message,
-    error: err.message
-});
+            header_type: "ERROR",
+            message_visibility: true,
+            status: false,
+            code: 2004,
+            message: err.message,
+            error: err.message
+        });
     }
 });
 
@@ -497,13 +497,13 @@ responder.on('advancefilter-module', async (req, cb) => {
     } catch (err) {
         logger.error("Advance Filter Module Error:", err);
         return cb(null, {
-    header_type: "ERROR",
-    message_visibility: true,
-    status: false,
-    code: 2004,
-    message: err.message,
-    error: err.message
-});
+            header_type: "ERROR",
+            message_visibility: true,
+            status: false,
+            code: 2004,
+            message: err.message,
+            error: err.message
+        });
     }
 });
 

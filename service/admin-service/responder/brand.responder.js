@@ -3,9 +3,7 @@ const cote = require('cote');
 const pool = require('@libs/db/postgresql_index');
 const registerMasterResponder = require('@libs/common/master.responder.factory');
 
-
 const redisHost = process.env.COTE_DISCOVERY_REDIS_HOST || '127.0.0.1';
-
 const responder = new cote.Responder({
     name: 'brand responder',
     key: 'brand',
@@ -19,7 +17,7 @@ registerMasterResponder({
     table: 'brand',
     alias: 'PT',
     uuidColumn: 'brand_uuid',
-    allowedFields: ['code', 'name','description', 'is_active', 'created_at', 'modified_at'],
+    allowedFields: ['code', 'name', 'description', 'is_active', 'created_at', 'modified_at'],
     dateFields: ['last_integrated_date'],
     customFields: {},
     joinSql: ``

@@ -125,13 +125,13 @@ responder.on('create-users', async (req, cb) => {
     } catch (err) {
         logger.error("Responder Error (create user):", err);
         return cb(null, {
-    header_type: "ERROR",
-    message_visibility: true,
-    status: false,
-    code: 2004,
-    message: err.message,
-    error: err.message
-});
+            header_type: "ERROR",
+            message_visibility: true,
+            status: false,
+            code: 2004,
+            message: err.message,
+            error: err.message
+        });
     }
 });
 
@@ -200,13 +200,13 @@ responder.on('list-users', async (req, cb) => {
     } catch (err) {
         logger.error("Responder Error (list users):", err);
         return cb(null, {
-    header_type: "ERROR",
-    message_visibility: true,
-    status: false,
-    code: 2004,
-    message: err.message,
-    error: err.message
-});
+            header_type: "ERROR",
+            message_visibility: true,
+            status: false,
+            code: 2004,
+            message: err.message,
+            error: err.message
+        });
     }
 });
 
@@ -275,13 +275,13 @@ responder.on('getById-users', async (req, cb) => {
     } catch (err) {
         logger.error("Responder Error (getById user):", err);
         return cb(null, {
-    header_type: "ERROR",
-    message_visibility: true,
-    status: false,
-    code: 2004,
-    message: err.message,
-    error: err.message
-});
+            header_type: "ERROR",
+            message_visibility: true,
+            status: false,
+            code: 2004,
+            message: err.message,
+            error: err.message
+        });
     }
 });
 
@@ -297,7 +297,7 @@ responder.on('update-users', async (req, cb) => {
             username, fullname,
             email,
             phone_number,
-            role_id,profile_icon,
+            role_id, profile_icon,
             modified_by, reporting_to, is_active,
         } = body;
 
@@ -408,13 +408,13 @@ responder.on('update-users', async (req, cb) => {
     } catch (err) {
         logger.error("Responder Error (update user):", err);
         return cb(null, {
-    header_type: "ERROR",
-    message_visibility: true,
-    status: false,
-    code: 2004,
-    message: err.message,
-    error: err.message
-});
+            header_type: "ERROR",
+            message_visibility: true,
+            status: false,
+            code: 2004,
+            message: err.message,
+            error: err.message
+        });
     }
 });
 
@@ -468,13 +468,13 @@ responder.on('delete-users', async (req, cb) => {
     } catch (err) {
         logger.error("Responder Error (delete user):", err);
         return cb(null, {
-    header_type: "ERROR",
-    message_visibility: true,
-    status: false,
-    code: 2004,
-    message: err.message,
-    error: err.message
-});
+            header_type: "ERROR",
+            message_visibility: true,
+            status: false,
+            code: 2004,
+            message: err.message,
+            error: err.message
+        });
     }
 });
 
@@ -533,13 +533,13 @@ responder.on('status-users', async (req, cb) => {
     } catch (err) {
         logger.error("Responder Error (status user):", err);
         return cb(null, {
-    header_type: "ERROR",
-    message_visibility: true,
-    status: false,
-    code: 2004,
-    message: err.message,
-    error: err.message
-});
+            header_type: "ERROR",
+            message_visibility: true,
+            status: false,
+            code: 2004,
+            message: err.message,
+            error: err.message
+        });
     }
 });
 
@@ -550,8 +550,8 @@ responder.on('status-users', async (req, cb) => {
 responder.on('advancefilter-users', async (req, cb) => {
     try {
 
-        
-   const accessScope = req.dataAccessScope;
+
+        const accessScope = req.dataAccessScope;
         let extraWhere = '';
         let extraParams = [];
 
@@ -614,7 +614,7 @@ responder.on('advancefilter-users', async (req, cb) => {
             baseWhere: `
                 U.is_deleted = FALSE ${extraWhere}
             `,
-             baseParams: extraParams
+            baseParams: extraParams
         });
 
         return cb(null, {
@@ -625,13 +625,13 @@ responder.on('advancefilter-users', async (req, cb) => {
     } catch (err) {
         console.error('[advancefilter-users] error:', err);
         return cb(null, {
-    header_type: "ERROR",
-    message_visibility: true,
-    status: false,
-    code: 2004,
-    message: err.message,
-    error: err.message
-});
+            header_type: "ERROR",
+            message_visibility: true,
+            status: false,
+            code: 2004,
+            message: err.message,
+            error: err.message
+        });
     }
 });
 
@@ -702,13 +702,13 @@ responder.on('clone-users', async (req, cb) => {
     } catch (err) {
         console.error("clone-users error:", err);
         return cb(null, {
-    header_type: "ERROR",
-    message_visibility: true,
-    status: false,
-    code: 2004,
-    message: err.message,
-    error: err.message
-});
+            header_type: "ERROR",
+            message_visibility: true,
+            status: false,
+            code: 2004,
+            message: err.message,
+            error: err.message
+        });
     }
 });
 
@@ -870,13 +870,13 @@ responder.on("admin-login", async (req, cb) => {
     } catch (err) {
         logger.error("Responder Error (login):", err);
         return cb(null, {
-    header_type: "ERROR",
-    message_visibility: true,
-    status: false,
-    code: 2004,
-    message: err.message,
-    error: err.message
-});
+            header_type: "ERROR",
+            message_visibility: true,
+            status: false,
+            code: 2004,
+            message: err.message,
+            error: err.message
+        });
     }
 });
 

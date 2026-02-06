@@ -120,13 +120,13 @@ responder.on('list-state', async (req, cb) => {
     } catch (err) {
         logger.error('Responder Error (list state):', err);
         return cb(null, {
-    header_type: "ERROR",
-    message_visibility: true,
-    status: false,
-    code: 2004,
-    message: err.message,
-    error: err.message
-});
+            header_type: "ERROR",
+            message_visibility: true,
+            status: false,
+            code: 2004,
+            message: err.message,
+            error: err.message
+        });
     }
 });
 
@@ -159,13 +159,13 @@ responder.on('getById-state', async (req, cb) => {
     } catch (err) {
         logger.error('Responder Error (getById state):', err);
         return cb(null, {
-    header_type: "ERROR",
-    message_visibility: true,
-    status: false,
-    code: 2004,
-    message: err.message,
-    error: err.message
-});
+            header_type: "ERROR",
+            message_visibility: true,
+            status: false,
+            code: 2004,
+            message: err.message,
+            error: err.message
+        });
     }
 });
 
@@ -243,13 +243,13 @@ responder.on('update-state', async (req, cb) => {
     } catch (err) {
         logger.error('Responder Error (update state):', err);
         return cb(null, {
-    header_type: "ERROR",
-    message_visibility: true,
-    status: false,
-    code: 2004,
-    message: err.message,
-    error: err.message
-});
+            header_type: "ERROR",
+            message_visibility: true,
+            status: false,
+            code: 2004,
+            message: err.message,
+            error: err.message
+        });
     }
 });
 
@@ -285,13 +285,13 @@ responder.on('delete-state', async (req, cb) => {
     } catch (err) {
         logger.error('Responder Error (delete state):', err);
         return cb(null, {
-    header_type: "ERROR",
-    message_visibility: true,
-    status: false,
-    code: 2004,
-    message: err.message,
-    error: err.message
-});
+            header_type: "ERROR",
+            message_visibility: true,
+            status: false,
+            code: 2004,
+            message: err.message,
+            error: err.message
+        });
     }
 });
 
@@ -326,13 +326,13 @@ responder.on('status-state', async (req, cb) => {
     } catch (err) {
         logger.error('Responder Error (status state):', err);
         return cb(null, {
-    header_type: "ERROR",
-    message_visibility: true,
-    status: false,
-    code: 2004,
-    message: err.message,
-    error: err.message
-});
+            header_type: "ERROR",
+            message_visibility: true,
+            status: false,
+            code: 2004,
+            message: err.message,
+            error: err.message
+        });
     }
 });
 
@@ -408,7 +408,7 @@ responder.on('advancefilter-state', async (req, cb) => {
             baseWhere: `
                 ST.is_deleted = FALSE ${extraWhere}
             `,
-             baseParams: extraParams
+            baseParams: extraParams
         });
 
         return cb(null, {
@@ -420,13 +420,13 @@ responder.on('advancefilter-state', async (req, cb) => {
     } catch (err) {
         console.error('[advancefilter-state] error:', err);
         return cb(null, {
-    header_type: "ERROR",
-    message_visibility: true,
-    status: false,
-    code: 2004,
-    message: err.message,
-    error: err.message
-});
+            header_type: "ERROR",
+            message_visibility: true,
+            status: false,
+            code: 2004,
+            message: err.message,
+            error: err.message
+        });
     }
 });
 
@@ -467,13 +467,13 @@ responder.on('clone-state', async (req, cb) => {
 
     } catch (err) {
         return cb(null, {
-    header_type: "ERROR",
-    message_visibility: true,
-    status: false,
-    code: 2004,
-    message: err.message,
-    error: err.message
-});
+            header_type: "ERROR",
+            message_visibility: true,
+            status: false,
+            code: 2004,
+            message: err.message,
+            error: err.message
+        });
     }
 });
 
@@ -527,13 +527,13 @@ responder.on('getById-countryid', async (req, cb) => {
     } catch (err) {
         logger.error('Responder Error (getById countryid):', err);
         return cb(null, {
-    header_type: "ERROR",
-    message_visibility: true,
-    status: false,
-    code: 2004,
-    message: err.message,
-    error: err.message
-});
+            header_type: "ERROR",
+            message_visibility: true,
+            status: false,
+            code: 2004,
+            message: err.message,
+            error: err.message
+        });
     }
 });
 

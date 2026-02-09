@@ -158,59 +158,59 @@ responder.on('list-module', async (req, cb) => {
 /* ======================================================
    GET MODULE BY ID
 ====================================================== */
-responder.on('getById-module', async (req, cb) => {
-    try {
-        const { module_uuid } = req;
+// responder.on('getById-module', async (req, cb) => {
+//     try {
+//         const { module_uuid } = req;
 
-        const result = await pool.query(
-            `SELECT * FROM module 
-             WHERE module_uuid = $1 AND is_deleted = FALSE`,
-            [module_uuid]
-        );
+//         const result = await pool.query(
+//             `SELECT * FROM module 
+//              WHERE module_uuid = $1 AND is_deleted = FALSE`,
+//             [module_uuid]
+//         );
 
-        if (result.rowCount === 0) {
-            return cb(null, { status: false, code: 2003, error: "Module not found" });
-        }
+//         if (result.rowCount === 0) {
+//             return cb(null, { status: false, code: 2003, error: "Module not found" });
+//         }
 
-        const moduleData = result.rows[0];
+//         const moduleData = result.rows[0];
 
-        // Default misc array
-        let miscList = [];
+//         // Default misc array
+//         let miscList = [];
 
-        // If ismisc = true → fetch miscellaneous_mapping
-        if (moduleData.ismisc === true) {
+//         // If ismisc = true → fetch miscellaneous_mapping
+//         if (moduleData.ismisc === true) {
 
-            const miscResult = await pool.query(
-                `SELECT misc_id,misc_uuid, misc_name, module_id, is_active
-     FROM miscellaneous_mapping
-     WHERE module_id = $1
-     AND is_deleted = FALSE`,
-                [moduleData.module_id]
-            );
+//             const miscResult = await pool.query(
+//                 `SELECT misc_id,misc_uuid, misc_name, module_id, is_active
+//      FROM miscellaneous_mapping
+//      WHERE module_id = $1
+//      AND is_deleted = FALSE`,
+//                 [moduleData.module_id]
+//             );
 
-            miscList = miscResult.rows; // array of objects
-        }
+//             miscList = miscResult.rows; // array of objects
+//         }
 
-        let moduleDataObj = {
-            module: moduleData,
-            miscellaneous: miscList
-        }
+//         let moduleDataObj = {
+//             module: moduleData,
+//             miscellaneous: miscList
+//         }
 
-        // ---------- Final Response ----------
-        return cb(null, { status: true, code: 1000, data: moduleDataObj });
+//         // ---------- Final Response ----------
+//         return cb(null, { status: true, code: 1000, data: moduleDataObj });
 
-    } catch (err) {
-        logger.error("Responder Error (getById module):", err);
-        return cb(null, {
-            header_type: "ERROR",
-            message_visibility: true,
-            status: false,
-            code: 2004,
-            message: err.message,
-            error: err.message
-        });
-    }
-});
+//     } catch (err) {
+//         logger.error("Responder Error (getById module):", err);
+//         return cb(null, {
+//             header_type: "ERROR",
+//             message_visibility: true,
+//             status: false,
+//             code: 2004,
+//             message: err.message,
+//             error: err.message
+//         });
+//     }
+// });
 
 
 /* ======================================================
@@ -747,6 +747,200 @@ responder.on('side-menu-module', async (req, cb) => {
         return cb(null, {
             status: false,
             code: 2004,
+            error: err.message
+        });
+    }
+});
+
+
+
+// --------------------------------------------------
+// GET BY ID WITH EDIT LOCKING
+// --------------------------------------------------
+responder.on('getById-module', async (req, cb) => {
+    const client = await pool.connect();
+
+    try {
+        const { module_uuid, mode } = req;
+        const user_id = req.body?.user_id;
+
+        const LOCK_MINUTES = 1;
+        const LOCK_MS = LOCK_MINUTES * 60 * 1000;
+
+        await client.query('BEGIN');
+
+        // 1️⃣ Fetch module with DB row lock
+        const { rows, rowCount } = await client.query(
+            `
+            SELECT 
+                R.module_id,
+                R.module_uuid,
+                R.modulename,
+                R.routename,
+                R.parentmodid,
+                R.isparent,
+                R.issystemmenu,
+                R.isreport,
+                R.isfunctional,
+                R.ismisc,
+                R.iconname,
+                R.menuorder,
+                R.privilegekey
+                R.is_active,
+                R.assigned_to,
+                R.assigned_at,
+                R.is_deleted,
+                R.deleted_at,
+                R.deleted_by,
+                R.locked_by,
+                R.locked_at,
+                U.username AS locked_by_name
+            FROM module R
+            LEFT JOIN users U ON U.user_uuid = R.locked_by
+            WHERE R.module_uuid = $1
+              AND R.is_deleted = FALSE
+            FOR UPDATE OF R
+            `,
+            [module_uuid]
+        );
+
+        if (!rowCount) {
+            await client.query('ROLLBACK');
+            return cb(null, {
+                status: false,
+                code: 2003,
+                error: "Module not found"
+            });
+        }
+
+        const row = rows[0];
+
+        // 2️⃣ Check lock expiry
+        const isExpired =
+            row.locked_at &&
+            new Date(row.locked_at).getTime() + LOCK_MS < Date.now();
+
+        // --------------------------------------------------
+        // 3️⃣ EDIT MODE → LOCK HANDLING
+        // --------------------------------------------------
+        if (mode === 'edit') {
+
+            if (!user_id) {
+                await client.query('ROLLBACK');
+                return cb(null, {
+                    status: false,
+                    code: 2001,
+                    error: "User ID required for edit"
+                });
+            }
+
+            // 🔒 Locked by another active user
+            if (row.locked_by && row.locked_by !== user_id && !isExpired) {
+                await client.query('ROLLBACK');
+                return cb(null, {
+                    status: false,
+                    code: 2008,
+                    error: `This record is currently being edited by ${row.locked_by_name || 'another user'}.`
+                });
+            }
+
+            // 🔓 Acquire / refresh lock
+            if (!row.locked_by || isExpired || row.locked_by === user_id) {
+                await client.query(
+                    `
+                    UPDATE module
+                    SET locked_by = $1,
+                        locked_at = NOW()
+                    WHERE module_uuid = $2
+                    `,
+                    [user_id, module_uuid]
+                );
+
+                row.locked_by = user_id;
+                row.locked_at = new Date();
+            }
+        }
+
+        await client.query('COMMIT');
+
+        // 4️⃣ Final lock status
+        row.lock_status =
+            row.locked_at &&
+            new Date(row.locked_at).getTime() + LOCK_MS >= Date.now();
+
+        return cb(null, {
+            status: true,
+            code: 1000,
+            message: "Module fetched successfully",
+            data: row,
+            lock: {
+                status: row.lock_status,
+                by: row.locked_by,
+                by_name: row.locked_by_name,
+                at: row.locked_at
+            }
+        });
+
+    } catch (err) {
+        await client.query('ROLLBACK');
+        logger.error("Responder Error (getById module):", err);
+
+        return cb(null, {
+            status: false,
+            code: 2004,
+            error: err.message
+        });
+    } finally {
+        client.release();
+    }
+});
+
+// --------------------------------------------------
+// UNLOCK RECORD
+// --------------------------------------------------
+
+responder.on(`unlock-module`, async (req, cb) => {
+    try {
+        const { uuid } = req;
+        const { user_id } = req.body;
+
+        const result = await pool.query(
+            `
+            UPDATE module
+            SET locked_by = NULL,
+                locked_at = NULL
+            WHERE module_uuid = $1
+              AND locked_by = $2
+            `,
+            [uuid, user_id]
+        );
+
+        if (!result.rowCount) {
+            return cb(null, {
+                header_type: "ERROR",
+                message_visibility: true,
+                status: false,
+                code: 2003,
+                message: 'Unable to unlock record',
+                error: 'This record is currently being edited by another user'
+            });
+        }
+
+        return cb(null, {
+            header_type: "SUCCESS",
+            message_visibility: false,
+            status: true,
+            code: 1000,
+            message: `Module Record unlocked successfully`,
+        });
+
+    } catch (err) {
+        return cb(null, {
+            header_type: "ERROR",
+            message_visibility: true,
+            status: false,
+            code: 2004,
+            message: err.message,
             error: err.message
         });
     }

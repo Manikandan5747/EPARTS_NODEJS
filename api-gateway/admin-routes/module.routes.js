@@ -83,44 +83,6 @@ router.get('/list', async (req, res) => {
 
 
 // --------------------------------------
-// FIND MODULE BY ID
-// --------------------------------------
-router.get('/findbyid/:id', async (req, res) => {
-    try {
-        const result = await moduleRequester.send({
-            type: 'getById-module',
-            module_uuid: req.params.id
-        });
-
-        if (!result.status) {
-            await saveErrorLog({
-                api_name: 'getById-module',
-                method: 'GET',
-                payload: { module_uuid: req.params.id },
-                message: result.error,
-                stack: result.stack || '',
-                error_code: result.code || 2004
-            });
-            return res.status(500).json(result);
-        }
-
-        res.json(result);
-
-    } catch (err) {
-        logger.error("Error in modules/findbyid:", err.message);
-        res.status(500).json({
-    header_type: "ERROR",
-    message_visibility: true,
-    status: false,
-    code: 2004,
-    message: err.message,
-    error: err.message
-});
-    }
-});
-
-
-// --------------------------------------
 // UPDATE MODULE
 // --------------------------------------
 router.post('/update/:id', async (req, res) => {
@@ -346,6 +308,87 @@ router.get('/side-menu/:id', async (req, res) => {
     message: err.message,
     error: err.message
 });
+    }
+});
+
+
+
+// --------------------------------------
+// FIND MODULE BY ID
+// --------------------------------------
+router.get('/findbyid/:id', async (req, res) => {
+    try {
+
+        const mode = req.query.mode || 'view';
+        const user_id = req.query.user_id;
+
+        const result = await moduleRequester.send({
+            type: 'getById-module',
+            module_uuid: req.params.id,
+            mode,
+            body: { user_id }
+        });
+        // If responder returned  server error → return HTTP 500
+        if (!result.status) {
+            // SAVE ERROR LOG
+            await saveErrorLog({
+                api_name: 'getById-module',
+                method: 'GET',
+                payload: { module_uuid: req.params.id },
+                message: result.error,
+                stack: result.stack || '',
+                error_code: result.code || 2004
+            });
+            return res.status(500).json(result);
+        }
+        res.json(result);
+    } catch (err) {
+        logger.error("Error in module/findbyid:", err.message);
+        res.status(500).json({ error: err.message });
+    }
+});
+
+
+// --------------------------------------
+// UNLOCK RECORD (SAVE / CANCEL)
+// --------------------------------------
+
+router.post('/unlock/:id', async (req, res) => {
+    try {
+        const result = await moduleRequester.send({
+            type: unlock-module,
+            uuid: req.params.id,
+            body: { user_id: req.body.user_id }
+        });
+
+        if (!result.status) {
+            await saveErrorLog({
+                api_name: unlock-module,
+                method: 'POST',
+                payload: {
+                    uuid: req.params.id,
+                    user_id: req.body.user_id
+                },
+                message: result.error,
+                stack: result.stack || '',
+                error_code: result.code || 2004
+            });
+
+            return res.status(500).json(result);
+        }
+
+        return res.json(result);
+
+    } catch (err) {
+        logger.error(err.message);
+        return res.status(500).json({
+            header_type: "ERROR",
+            message_visibility: true,
+            status: false,
+            code: 2004,
+            message: err.message,
+            error: err.message
+        });
     }
 });
 

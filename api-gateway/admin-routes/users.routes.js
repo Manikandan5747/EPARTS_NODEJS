@@ -55,13 +55,13 @@ router.post('/create', multipartMiddleware, async (req, res) => {
             error_code: 2004
         });
         res.status(500).json({
-    header_type: "ERROR",
-    message_visibility: true,
-    status: false,
-    code: 2004,
-    message: err.message,
-    error: err.message
-});
+            header_type: "ERROR",
+            message_visibility: true,
+            status: false,
+            code: 2004,
+            message: err.message,
+            error: err.message
+        });
     }
 });
 
@@ -98,63 +98,17 @@ router.get('/list', async (req, res) => {
             error_code: 2004
         });
         res.status(500).json({
-    header_type: "ERROR",
-    message_visibility: true,
-    status: false,
-    code: 2004,
-    message: err.message,
-    error: err.message
-});
-    }
-});
-
-// --------------------------------------
-// FIND USERS BY ID
-// --------------------------------------
-router.get('/findbyid/:id', async (req, res) => {
-    try {
-        const result = await usersRequester.send({
-            type: 'getById-users',
-            user_uuid: req.params.id
-        });
-
-        if (!result.status) {
-            // SAVE ERROR LOG
-            await saveErrorLog({
-                api_name: 'getById-users',
-                method: 'GET',
-                payload: { user_uuid: req.params.id },
-                message: result.error,
-                stack: result.stack || '',
-                error_code: result.code || 2004
-            });
-            return res.status(500).json(result);
-        }
-
-        res.json(result);
-
-    } catch (err) {
-        logger.error("Error in users/findbyid:", err.message);
-
-        await saveErrorLog({
-            api_name: 'getById-users',
-            method: 'GET',
-            payload: { user_uuid: req.params.id },
+            header_type: "ERROR",
+            message_visibility: true,
+            status: false,
+            code: 2004,
             message: err.message,
-            stack: err.stack,
-            error_code: 2004
+            error: err.message
         });
-
-        res.status(500).json({
-    header_type: "ERROR",
-    message_visibility: true,
-    status: false,
-    code: 2004,
-    message: err.message,
-    error: err.message
-});
     }
 });
+
+
 
 // --------------------------------------
 // UPDATE USERS
@@ -200,13 +154,13 @@ router.post('/update/:id', async (req, res) => {
         });
 
         res.status(500).json({
-    header_type: "ERROR",
-    message_visibility: true,
-    status: false,
-    code: 2004,
-    message: err.message,
-    error: err.message
-});
+            header_type: "ERROR",
+            message_visibility: true,
+            status: false,
+            code: 2004,
+            message: err.message,
+            error: err.message
+        });
     }
 });
 
@@ -249,13 +203,13 @@ router.post('/delete/:id', async (req, res) => {
         });
 
         res.status(500).json({
-    header_type: "ERROR",
-    message_visibility: true,
-    status: false,
-    code: 2004,
-    message: err.message,
-    error: err.message
-});
+            header_type: "ERROR",
+            message_visibility: true,
+            status: false,
+            code: 2004,
+            message: err.message,
+            error: err.message
+        });
     }
 });
 
@@ -298,13 +252,13 @@ router.post('/status/:id', async (req, res) => {
         });
 
         res.status(500).json({
-    header_type: "ERROR",
-    message_visibility: true,
-    status: false,
-    code: 2004,
-    message: err.message,
-    error: err.message
-});
+            header_type: "ERROR",
+            message_visibility: true,
+            status: false,
+            code: 2004,
+            message: err.message,
+            error: err.message
+        });
     }
 });
 
@@ -345,13 +299,13 @@ router.post('/pagination-list', async (req, res) => {
         });
 
         res.status(500).json({
-    header_type: "ERROR",
-    message_visibility: true,
-    status: false,
-    code: 2004,
-    message: err.message,
-    error: err.message
-});
+            header_type: "ERROR",
+            message_visibility: true,
+            status: false,
+            code: 2004,
+            message: err.message,
+            error: err.message
+        });
     }
 });
 
@@ -394,13 +348,13 @@ router.post('/clone/:id', async (req, res) => {
         });
 
         res.status(500).json({
-    header_type: "ERROR",
-    message_visibility: true,
-    status: false,
-    code: 2004,
-    message: err.message,
-    error: err.message
-});
+            header_type: "ERROR",
+            message_visibility: true,
+            status: false,
+            code: 2004,
+            message: err.message,
+            error: err.message
+        });
     }
 });
 
@@ -456,13 +410,13 @@ router.post('/login', async (req, res) => {
         });
 
         res.status(500).json({
-    header_type: "ERROR",
-    message_visibility: true,
-    status: false,
-    code: 2004,
-    message: err.message,
-    error: err.message
-});
+            header_type: "ERROR",
+            message_visibility: true,
+            status: false,
+            code: 2004,
+            message: err.message,
+            error: err.message
+        });
     }
 });
 
@@ -508,13 +462,13 @@ router.post('/logout', async (req, res) => {
         });
 
         res.status(500).json({
-    header_type: "ERROR",
-    message_visibility: true,
-    status: false,
-    code: 2004,
-    message: err.message,
-    error: err.message
-});
+            header_type: "ERROR",
+            message_visibility: true,
+            status: false,
+            code: 2004,
+            message: err.message,
+            error: err.message
+        });
     }
 });
 
@@ -558,18 +512,98 @@ router.get('/getprefixrefno/:name', async (req, res) => {
         });
 
         res.status(500).json({
-    header_type: "ERROR",
-    message_visibility: true,
-    status: false,
-    code: 2004,
-    message: err.message,
-    error: err.message
-});
+            header_type: "ERROR",
+            message_visibility: true,
+            status: false,
+            code: 2004,
+            message: err.message,
+            error: err.message
+        });
     }
 });
 
 
 
+
+
+// --------------------------------------
+// FIND USER BY ID
+// --------------------------------------
+router.get('/findbyid/:id', async (req, res) => {
+    try {
+
+        const mode = req.query.mode || 'view';
+        const user_id = req.query.user_id;
+
+        const result = await usersRequester.send({
+            type: 'getById-user',
+            user_uuid: req.params.id,
+            mode,
+            body: { user_id }
+        });
+        // If responder returned  server error → return HTTP 500
+        if (!result.status) {
+            // SAVE ERROR LOG
+            await saveErrorLog({
+                api_name: 'getById-user',
+                method: 'GET',
+                payload: { user_uuid: req.params.id },
+                message: result.error,
+                stack: result.stack || '',
+                error_code: result.code || 2004
+            });
+            return res.status(500).json(result);
+        }
+        res.json(result);
+    } catch (err) {
+        logger.error("Error in user/findbyid:", err.message);
+        res.status(500).json({ error: err.message });
+    }
+});
+
+
+// --------------------------------------
+// UNLOCK RECORD (SAVE / CANCEL)
+// --------------------------------------
+
+router.post('/unlock/:id', async (req, res) => {
+    try {
+        const result = await usersRequester.send({
+            type: `unlock-user`,
+            uuid: req.params.id,
+            body: { user_id: req.body.user_id }
+        });
+
+        if (!result.status) {
+            await saveErrorLog({
+                api_name: `unlock-user`,
+                method: 'POST',
+                payload: {
+                    uuid: req.params.id,
+                    user_id: req.body.user_id
+                },
+                message: result.error,
+                stack: result.stack || '',
+                error_code: result.code || 2004
+            });
+
+            return res.status(500).json(result);
+        }
+
+        return res.json(result);
+
+    } catch (err) {
+        logger.error(err.message);
+        return res.status(500).json({
+            header_type: "ERROR",
+            message_visibility: true,
+            status: false,
+            code: 2004,
+            message: err.message,
+            error: err.message
+        });
+    }
+});
 
 
 

@@ -214,76 +214,76 @@ responder.on('list-users', async (req, cb) => {
 // --------------------------------------------------
 // GET USER BY ID
 // --------------------------------------------------
-responder.on('getById-users', async (req, cb) => {
-    try {
-        const { user_uuid } = req;
+// responder.on('getById-users', async (req, cb) => {
+//     try {
+//         const { user_uuid } = req;
 
-        if (!user_uuid) {
-            return cb(null, { status: false, code: 2001, error: "User UUID is required" });
-        }
+//         if (!user_uuid) {
+//             return cb(null, { status: false, code: 2001, error: "User UUID is required" });
+//         }
 
-        const result = await pool.query(
-            `
-            SELECT 
-                u.user_id,
-                u.user_uuid,
-                u.username,
-                u.fullname,
-                u.email,
-                u.phone_number,
-                u.reporting_to,
-                u.profile_icon,
-                u.is_online,
-                u.force_logout,
-                u.last_login,
-                u.is_active,
-                u.created_at,
-                u.created_by,
-                u.modified_at,
-                u.modified_by,
-                u.deleted_at,
-                u.deleted_by,
-                u.is_deleted,
+//         const result = await pool.query(
+//             `
+//             SELECT 
+//                 u.user_id,
+//                 u.user_uuid,
+//                 u.username,
+//                 u.fullname,
+//                 u.email,
+//                 u.phone_number,
+//                 u.reporting_to,
+//                 u.profile_icon,
+//                 u.is_online,
+//                 u.force_logout,
+//                 u.last_login,
+//                 u.is_active,
+//                 u.created_at,
+//                 u.created_by,
+//                 u.modified_at,
+//                 u.modified_by,
+//                 u.deleted_at,
+//                 u.deleted_by,
+//                 u.is_deleted,
 
-                r.role_name,
-                r.role_uuid,
+//                 r.role_name,
+//                 r.role_uuid,
 
-                creators.username AS createdByName,
-                updaters.username AS updatedByName
+//                 creators.username AS createdByName,
+//                 updaters.username AS updatedByName
 
-            FROM users u
-            LEFT JOIN user_role r 
-                ON u.role_id = r.role_id
-            LEFT JOIN users creators 
-                ON u.created_by = creators.user_uuid
-            LEFT JOIN users updaters 
-                ON u.modified_by = updaters.user_uuid
+//             FROM users u
+//             LEFT JOIN user_role r 
+//                 ON u.role_id = r.role_id
+//             LEFT JOIN users creators 
+//                 ON u.created_by = creators.user_uuid
+//             LEFT JOIN users updaters 
+//                 ON u.modified_by = updaters.user_uuid
 
-            WHERE 
-                u.user_uuid = $1
-                AND u.is_deleted = FALSE
-            `,
-            [user_uuid]
-        );
+//             WHERE 
+//                 u.user_uuid = $1
+//                 AND u.is_deleted = FALSE
+//             `,
+//             [user_uuid]
+//         );
 
-        if (result.rowCount === 0) {
-            return cb(null, { status: false, code: 2003, error: "User not found" });
-        }
+//         if (result.rowCount === 0) {
+//             return cb(null, { status: false, code: 2003, error: "User not found" });
+//         }
 
-        return cb(null, { status: true, code: 1000, data: result.rows[0] });
+//         return cb(null, { status: true, code: 1000, data: result.rows[0] });
 
-    } catch (err) {
-        logger.error("Responder Error (getById user):", err);
-        return cb(null, {
-            header_type: "ERROR",
-            message_visibility: true,
-            status: false,
-            code: 2004,
-            message: err.message,
-            error: err.message
-        });
-    }
-});
+//     } catch (err) {
+//         logger.error("Responder Error (getById user):", err);
+//         return cb(null, {
+//             header_type: "ERROR",
+//             message_visibility: true,
+//             status: false,
+//             code: 2004,
+//             message: err.message,
+//             error: err.message
+//         });
+//     }
+// });
 
 
 // --------------------------------------------------
@@ -1375,6 +1375,201 @@ responder.on('get-next-prefix-refno', async (req, cb) => {
         return cb(null, {
             status: false,
             code: 2004,
+            error: err.message
+        });
+    }
+});
+
+
+
+// --------------------------------------------------
+// GET BY ID WITH EDIT LOCKING
+// --------------------------------------------------
+responder.on('getById-user', async (req, cb) => {
+    const client = await pool.connect();
+
+    try {
+        const { user_uuid, mode } = req;
+        const user_id = req.body?.user_id;
+
+        const LOCK_MINUTES = 1;
+        const LOCK_MS = LOCK_MINUTES * 60 * 1000;
+
+        await client.query('BEGIN');
+
+        // 1️⃣ Fetch users with DB row lock
+        const { rows, rowCount } = await client.query(
+            `
+            SELECT 
+                R.user_id,
+                R.user_uuid,
+                R.user_type_id,
+                R.username,
+                R.fullname,
+                R.email,
+                R.password_hash,
+                R.phone_number,
+                R.role_id,
+                R.profile_icon,
+                R.is_online,
+                R.force_logout,
+                R.last_login,
+                R.is_active,
+                R.reporting_to,
+                R.assigned_to,
+                R.assigned_at,
+                R.is_deleted,
+                R.deleted_at,
+                R.deleted_by,
+                R.locked_by,
+                R.locked_at,
+                U.username AS locked_by_name
+            FROM users R
+            LEFT JOIN users U ON U.user_uuid = R.locked_by
+            WHERE R.user_uuid = $1
+              AND R.is_deleted = FALSE
+            FOR UPDATE OF R
+            `,
+            [user_uuid]
+        );
+
+        if (!rowCount) {
+            await client.query('ROLLBACK');
+            return cb(null, {
+                status: false,
+                code: 2003,
+                error: "User not found"
+            });
+        }
+
+        const row = rows[0];
+
+        // 2️⃣ Check lock expiry
+        const isExpired =
+            row.locked_at &&
+            new Date(row.locked_at).getTime() + LOCK_MS < Date.now();
+
+        // --------------------------------------------------
+        // 3️⃣ EDIT MODE → LOCK HANDLING
+        // --------------------------------------------------
+        if (mode === 'edit') {
+
+            if (!user_id) {
+                await client.query('ROLLBACK');
+                return cb(null, {
+                    status: false,
+                    code: 2001,
+                    error: "User ID required for edit"
+                });
+            }
+
+            // 🔒 Locked by another active user
+            if (row.locked_by && row.locked_by !== user_id && !isExpired) {
+                await client.query('ROLLBACK');
+                return cb(null, {
+                    status: false,
+                    code: 2008,
+                    error: `This record is currently being edited by ${row.locked_by_name || 'another user'}.`
+                });
+            }
+
+            // 🔓 Acquire / refresh lock
+            if (!row.locked_by || isExpired || row.locked_by === user_id) {
+                await client.query(
+                    `
+                    UPDATE users
+                    SET locked_by = $1,
+                        locked_at = NOW()
+                    WHERE user_uuid = $2
+                    `,
+                    [user_id, user_uuid]
+                );
+
+                row.locked_by = user_id;
+                row.locked_at = new Date();
+            }
+        }
+
+        await client.query('COMMIT');
+
+        // 4️⃣ Final lock status
+        row.lock_status =
+            row.locked_at &&
+            new Date(row.locked_at).getTime() + LOCK_MS >= Date.now();
+
+        return cb(null, {
+            status: true,
+            code: 1000,
+            message: "User fetched successfully",
+            data: row,
+            lock: {
+                status: row.lock_status,
+                by: row.locked_by,
+                by_name: row.locked_by_name,
+                at: row.locked_at
+            }
+        });
+
+    } catch (err) {
+        await client.query('ROLLBACK');
+        logger.error("Responder Error (getById user):", err);
+
+        return cb(null, {
+            status: false,
+            code: 2004,
+            error: err.message
+        });
+    } finally {
+        client.release();
+    }
+});
+
+// --------------------------------------------------
+// UNLOCK RECORD
+// --------------------------------------------------
+
+responder.on(`unlock-user`, async (req, cb) => {
+    try {
+        const { uuid } = req;
+        const { user_id } = req.body;
+
+        const result = await pool.query(
+            `
+            UPDATE users
+            SET locked_by = NULL,
+                locked_at = NULL
+            WHERE user_uuid = $1
+              AND locked_by = $2
+            `,
+            [uuid, user_id]
+        );
+
+        if (!result.rowCount) {
+            return cb(null, {
+                header_type: "ERROR",
+                message_visibility: true,
+                status: false,
+                code: 2003,
+                message: 'Unable to unlock record',
+                error: 'This record is currently being edited by another user'
+            });
+        }
+
+        return cb(null, {
+            header_type: "SUCCESS",
+            message_visibility: false,
+            status: true,
+            code: 1000,
+            message: `User Record unlocked successfully`,
+        });
+
+    } catch (err) {
+        return cb(null, {
+            header_type: "ERROR",
+            message_visibility: true,
+            status: false,
+            code: 2004,
+            message: err.message,
             error: err.message
         });
     }

@@ -34,13 +34,13 @@ router.post('/create', async (req, res) => {
     } catch (err) {
         logger.error("Error in profile/create:", err.message);
         res.status(500).json({
-    header_type: "ERROR",
-    message_visibility: true,
-    status: false,
-    code: 2004,
-    message: err.message,
-    error: err.message
-});
+            header_type: "ERROR",
+            message_visibility: true,
+            status: false,
+            code: 2004,
+            message: err.message,
+            error: err.message
+        });
     }
 });
 
@@ -71,13 +71,13 @@ router.get('/list', async (req, res) => {
     } catch (err) {
         logger.error("Error in profile/list:", err.message);
         res.status(500).json({
-    header_type: "ERROR",
-    message_visibility: true,
-    status: false,
-    code: 2004,
-    message: err.message,
-    error: err.message
-});
+            header_type: "ERROR",
+            message_visibility: true,
+            status: false,
+            code: 2004,
+            message: err.message,
+            error: err.message
+        });
     }
 });
 
@@ -85,39 +85,39 @@ router.get('/list', async (req, res) => {
 // --------------------------------------
 // FIND PROFILE BY ID
 // --------------------------------------
-router.get('/findbyid/:id', async (req, res) => {
-    try {
-        const result = await profileRequester.send({
-            type: 'getById-profile',
-            profile_uuid: req.params.id
-        });
+// router.get('/findbyid/:id', async (req, res) => {
+//     try {
+//         const result = await profileRequester.send({
+//             type: 'getById-profile',
+//             profile_uuid: req.params.id
+//         });
 
-        if (!result.status) {
-            await saveErrorLog({
-                api_name: 'getById-profile',
-                method: 'GET',
-                payload: { profile_uuid: req.params.id },
-                message: result.error,
-                stack: result.stack || '',
-                error_code: result.code || 2004
-            });
-            return res.status(500).json(result);
-        }
+//         if (!result.status) {
+//             await saveErrorLog({
+//                 api_name: 'getById-profile',
+//                 method: 'GET',
+//                 payload: { profile_uuid: req.params.id },
+//                 message: result.error,
+//                 stack: result.stack || '',
+//                 error_code: result.code || 2004
+//             });
+//             return res.status(500).json(result);
+//         }
 
-        res.json(result);
+//         res.json(result);
 
-    } catch (err) {
-        logger.error("Error in profile/findbyid:", err.message);
-        res.status(500).json({
-    header_type: "ERROR",
-    message_visibility: true,
-    status: false,
-    code: 2004,
-    message: err.message,
-    error: err.message
-});
-    }
-});
+//     } catch (err) {
+//         logger.error("Error in profile/findbyid:", err.message);
+//         res.status(500).json({
+//     header_type: "ERROR",
+//     message_visibility: true,
+//     status: false,
+//     code: 2004,
+//     message: err.message,
+//     error: err.message
+// });
+//     }
+// });
 
 
 // --------------------------------------
@@ -148,13 +148,13 @@ router.post('/update/:id', async (req, res) => {
     } catch (err) {
         logger.error("Error in profile/update:", err.message);
         res.status(500).json({
-    header_type: "ERROR",
-    message_visibility: true,
-    status: false,
-    code: 2004,
-    message: err.message,
-    error: err.message
-});
+            header_type: "ERROR",
+            message_visibility: true,
+            status: false,
+            code: 2004,
+            message: err.message,
+            error: err.message
+        });
     }
 });
 
@@ -187,13 +187,13 @@ router.post('/delete/:id', async (req, res) => {
     } catch (err) {
         logger.error("Error in profile/delete:", err.message);
         res.status(500).json({
-    header_type: "ERROR",
-    message_visibility: true,
-    status: false,
-    code: 2004,
-    message: err.message,
-    error: err.message
-});
+            header_type: "ERROR",
+            message_visibility: true,
+            status: false,
+            code: 2004,
+            message: err.message,
+            error: err.message
+        });
     }
 });
 
@@ -226,13 +226,13 @@ router.post('/status/:id', async (req, res) => {
     } catch (err) {
         logger.error("Error in profile/status:", err.message);
         res.status(500).json({
-    header_type: "ERROR",
-    message_visibility: true,
-    status: false,
-    code: 2004,
-    message: err.message,
-    error: err.message
-});
+            header_type: "ERROR",
+            message_visibility: true,
+            status: false,
+            code: 2004,
+            message: err.message,
+            error: err.message
+        });
     }
 });
 
@@ -264,13 +264,13 @@ router.post('/pagination-list', async (req, res) => {
     } catch (err) {
         logger.error("Error in profile/pagination:", err.message);
         res.status(500).json({
-    header_type: "ERROR",
-    message_visibility: true,
-    status: false,
-    code: 2004,
-    message: err.message,
-    error: err.message
-});
+            header_type: "ERROR",
+            message_visibility: true,
+            status: false,
+            code: 2004,
+            message: err.message,
+            error: err.message
+        });
     }
 });
 
@@ -280,7 +280,7 @@ router.post('/pagination-list', async (req, res) => {
 ====================================================== */
 router.get('/moduletypelist', async (req, res) => {
     try {
-         const {module_type} = req.query;
+        const { module_type } = req.query;
         const result = await profileRequester.send({
             type: 'moduletypelist',
             module_type: module_type
@@ -290,7 +290,7 @@ router.get('/moduletypelist', async (req, res) => {
             await saveErrorLog({
                 api_name: 'moduletypelist',
                 method: 'GET',
-                payload: { module_type: module_type},
+                payload: { module_type: module_type },
                 message: result.error,
                 stack: result.stack || '',
                 error_code: result.code || 2004
@@ -303,13 +303,96 @@ router.get('/moduletypelist', async (req, res) => {
     } catch (err) {
         logger.error("Error in moduletypelist/list:", err.message);
         res.status(500).json({
-    header_type: "ERROR",
-    message_visibility: true,
-    status: false,
-    code: 2004,
-    message: err.message,
-    error: err.message
+            header_type: "ERROR",
+            message_visibility: true,
+            status: false,
+            code: 2004,
+            message: err.message,
+            error: err.message
+        });
+    }
 });
+
+
+
+
+
+// --------------------------------------
+// FIND PROFILE BY ID
+// --------------------------------------
+router.get('/findbyid/:id', async (req, res) => {
+    try {
+
+        const mode = req.query.mode || 'view';
+        const user_id = req.query.user_id;
+
+        const result = await profileRequester.send({
+            type: 'getById-profile',
+            profile_uuid: req.params.id,
+            mode,
+            body: { user_id }
+        });
+        // If responder returned  server error → return HTTP 500
+        if (!result.status) {
+            // SAVE ERROR LOG
+            await saveErrorLog({
+                api_name: 'getById-profile',
+                method: 'GET',
+                payload: { profile_uuid: req.params.id },
+                message: result.error,
+                stack: result.stack || '',
+                error_code: result.code || 2004
+            });
+            return res.status(500).json(result);
+        }
+        res.json(result);
+    } catch (err) {
+        logger.error("Error in profile/findbyid:", err.message);
+        res.status(500).json({ error: err.message });
+    }
+});
+
+
+// --------------------------------------
+// UNLOCK RECORD (SAVE / CANCEL)
+// --------------------------------------
+
+router.post('/unlock/:id', async (req, res) => {
+    try {
+        const result = await profileRequester.send({
+            type: `unlock-profile`,
+            uuid: req.params.id,
+            body: { user_id: req.body.user_id }
+        });
+
+        if (!result.status) {
+            await saveErrorLog({
+                api_name: `unlock-profile`,
+                method: 'POST',
+                payload: {
+                    uuid: req.params.id,
+                    user_id: req.body.user_id
+                },
+                message: result.error,
+                stack: result.stack || '',
+                error_code: result.code || 2004
+            });
+
+            return res.status(500).json(result);
+        }
+
+        return res.json(result);
+
+    } catch (err) {
+        logger.error(err.message);
+        return res.status(500).json({
+            header_type: "ERROR",
+            message_visibility: true,
+            status: false,
+            code: 2004,
+            message: err.message,
+            error: err.message
+        });
     }
 });
 

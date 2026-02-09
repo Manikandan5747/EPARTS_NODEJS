@@ -70,13 +70,13 @@ responder.on('create-profile', async (req, cb) => {
     } catch (err) {
         logger.error("Responder Error (create-profile):", err);
         return cb(null, {
-    header_type: "ERROR",
-    message_visibility: true,
-    status: false,
-    code: 2004,
-    message: err.message,
-    error: err.message
-});
+            header_type: "ERROR",
+            message_visibility: true,
+            status: false,
+            code: 2004,
+            message: err.message,
+            error: err.message
+        });
     }
 });
 
@@ -110,13 +110,13 @@ responder.on('list-profile', async (req, cb) => {
     } catch (err) {
         logger.error("Responder Error (list profile):", err);
         return cb(null, {
-    header_type: "ERROR",
-    message_visibility: true,
-    status: false,
-    code: 2004,
-    message: err.message,
-    error: err.message
-});
+            header_type: "ERROR",
+            message_visibility: true,
+            status: false,
+            code: 2004,
+            message: err.message,
+            error: err.message
+        });
     }
 });
 
@@ -200,13 +200,13 @@ responder.on('getById-profile', async (req, cb) => {
     } catch (err) {
         logger.error("Responder Error (getById-profile):", err);
         return cb(null, {
-    header_type: "ERROR",
-    message_visibility: true,
-    status: false,
-    code: 2004,
-    message: err.message,
-    error: err.message
-});
+            header_type: "ERROR",
+            message_visibility: true,
+            status: false,
+            code: 2004,
+            message: err.message,
+            error: err.message
+        });
     }
 });
 
@@ -285,13 +285,13 @@ responder.on('update-profile', async (req, cb) => {
     } catch (err) {
         logger.error("Responder Error (update-profile):", err);
         return cb(null, {
-    header_type: "ERROR",
-    message_visibility: true,
-    status: false,
-    code: 2004,
-    message: err.message,
-    error: err.message
-});
+            header_type: "ERROR",
+            message_visibility: true,
+            status: false,
+            code: 2004,
+            message: err.message,
+            error: err.message
+        });
     }
 });
 
@@ -497,13 +497,13 @@ responder.on('advancefilter-profile', async (req, cb) => {
     } catch (err) {
         logger.error("Advance Filter Profile Error:", err);
         return cb(null, {
-    header_type: "ERROR",
-    message_visibility: true,
-    status: false,
-    code: 2004,
-    message: err.message,
-    error: err.message
-});
+            header_type: "ERROR",
+            message_visibility: true,
+            status: false,
+            code: 2004,
+            message: err.message,
+            error: err.message
+        });
     }
 });
 
@@ -665,6 +665,189 @@ responder.on('moduletypelist', async (req, cb) => {
         return cb(null, {
             status: false,
             code: 2004,
+            error: err.message
+        });
+    }
+});
+
+
+// --------------------------------------------------
+// GET BY ID WITH EDIT LOCKING
+// --------------------------------------------------
+responder.on('getById-profile', async (req, cb) => {
+    const client = await pool.connect();
+
+    try {
+        const { profile_uuid, mode } = req;
+        const user_id = req.body?.user_id;
+
+        const LOCK_MINUTES = 1;
+        const LOCK_MS = LOCK_MINUTES * 60 * 1000;
+
+        await client.query('BEGIN');
+
+        // 1️⃣ Fetch profile with DB row lock
+        const { rows, rowCount } = await client.query(
+            `
+            SELECT 
+                R.profile_id,
+                R.profile_uuid,
+                R.profile_name,
+                R.is_active,
+                R.assigned_to,
+                R.assigned_at,
+                R.is_deleted,
+                R.deleted_at,
+                R.deleted_by,
+                R.locked_by,
+                R.locked_at,
+                U.username AS locked_by_name
+            FROM profile R
+            LEFT JOIN users U ON U.user_uuid = R.locked_by
+            WHERE R.profile_uuid = $1
+              AND R.is_deleted = FALSE
+            FOR UPDATE OF R
+            `,
+            [profile_uuid]
+        );
+
+        if (!rowCount) {
+            await client.query('ROLLBACK');
+            return cb(null, {
+                status: false,
+                code: 2003,
+                error: "Profile not found"
+            });
+        }
+
+        const row = rows[0];
+
+        // 2️⃣ Check lock expiry
+        const isExpired =
+            row.locked_at &&
+            new Date(row.locked_at).getTime() + LOCK_MS < Date.now();
+
+        // --------------------------------------------------
+        // 3️⃣ EDIT MODE → LOCK HANDLING
+        // --------------------------------------------------
+        if (mode === 'edit') {
+
+            if (!user_id) {
+                await client.query('ROLLBACK');
+                return cb(null, {
+                    status: false,
+                    code: 2001,
+                    error: "User ID required for edit"
+                });
+            }
+
+            // 🔒 Locked by another active user
+            if (row.locked_by && row.locked_by !== user_id && !isExpired) {
+                await client.query('ROLLBACK');
+                return cb(null, {
+                    status: false,
+                    code: 2008,
+                    error: `This record is currently being edited by ${row.locked_by_name || 'another user'}.`
+                });
+            }
+
+            // 🔓 Acquire / refresh lock
+            if (!row.locked_by || isExpired || row.locked_by === user_id) {
+                await client.query(
+                    `
+                    UPDATE profile
+                    SET locked_by = $1,
+                        locked_at = NOW()
+                    WHERE profile_uuid = $2
+                    `,
+                    [user_id, profile_uuid]
+                );
+
+                row.locked_by = user_id;
+                row.locked_at = new Date();
+            }
+        }
+
+        await client.query('COMMIT');
+
+        // 4️⃣ Final lock status
+        row.lock_status =
+            row.locked_at &&
+            new Date(row.locked_at).getTime() + LOCK_MS >= Date.now();
+
+        return cb(null, {
+            status: true,
+            code: 1000,
+            message: "Profile fetched successfully",
+            data: row,
+            lock: {
+                status: row.lock_status,
+                by: row.locked_by,
+                by_name: row.locked_by_name,
+                at: row.locked_at
+            }
+        });
+
+    } catch (err) {
+        await client.query('ROLLBACK');
+        logger.error("Responder Error (getById profile):", err);
+
+        return cb(null, {
+            status: false,
+            code: 2004,
+            error: err.message
+        });
+    } finally {
+        client.release();
+    }
+});
+
+// --------------------------------------------------
+// UNLOCK RECORD
+// --------------------------------------------------
+
+responder.on(`unlock-profile`, async (req, cb) => {
+    try {
+        const { uuid } = req;
+        const { user_id } = req.body;
+
+        const result = await pool.query(
+            `
+            UPDATE profile
+            SET locked_by = NULL,
+                locked_at = NULL
+            WHERE profile_uuid = $1
+              AND locked_by = $2
+            `,
+            [uuid, user_id]
+        );
+
+        if (!result.rowCount) {
+            return cb(null, {
+                header_type: "ERROR",
+                message_visibility: true,
+                status: false,
+                code: 2003,
+                message: 'Unable to unlock record',
+                error: 'This record is currently being edited by another user'
+            });
+        }
+
+        return cb(null, {
+            header_type: "SUCCESS",
+            message_visibility: false,
+            status: true,
+            code: 1000,
+            message: `Profile Record unlocked successfully`,
+        });
+
+    } catch (err) {
+        return cb(null, {
+            header_type: "ERROR",
+            message_visibility: true,
+            status: false,
+            code: 2004,
+            message: err.message,
             error: err.message
         });
     }

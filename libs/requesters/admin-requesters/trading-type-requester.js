@@ -1,1 +1,1 @@
-module.exports = require('./base-requester')('trading-types');
+module.exports = require('./base-requester')('trading_types');

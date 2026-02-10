@@ -82,17 +82,55 @@ pipeline {
 }
 
 
-        stage('Docker Build & Run') {
-            steps {
-                bat '''
-                cd "%DOCKER_BUILD_DIR%"
-                docker-compose down
-                docker-compose build
-                docker-compose up -d
-                docker ps
-                '''
-            }
-        }
+stage('Docker Compose Build & Deploy') {
+steps {
+bat '''
+echo ================================================
+echo Stopping old containers...
+echo ================================================
+
+
+cd "%DOCKER_BUILD_DIR%"
+docker-compose -f %COMPOSE_FILE% down
+
+
+echo ================================================
+echo Building fresh Docker images...
+echo ================================================
+
+
+docker-compose -f %COMPOSE_FILE% build --no-cache
+
+
+echo ================================================
+echo Starting containers in detached mode...
+echo ================================================
+
+
+docker-compose -f %COMPOSE_FILE% up -d
+
+
+echo ================================================
+echo Running containers:
+echo ================================================
+
+
+docker ps
+'''
+}
+}
+
+        // stage('Docker Build & Run') {
+        //     steps {
+        //         bat '''
+        //         cd "%DOCKER_BUILD_DIR%"
+        //         docker-compose down
+        //         docker-compose build
+        //         docker-compose up -d
+        //         docker ps
+        //         '''
+        //     }
+        // }
     }
 
     post {

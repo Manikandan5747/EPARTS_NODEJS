@@ -3,7 +3,7 @@ const { saveErrorLog } = require('./common-util');
 module.exports = async (err, req, res, next) => {
 
     await saveErrorLog(pool, {
-        api_name: req.originalUrl,
+        api_name: req.originalUrl, 
         method: req.method,
         payload: req.body,
         message: err.message,

@@ -246,19 +246,27 @@ module.exports = function registerMasterResponder({
             // 1️⃣ Fetch with FOR UPDATE (important for locking)
             const { rows, rowCount } = await client.query(
                 `
-            SELECT 
-                T.*,
-                U.username AS locked_by_name,
-                T.locked_by,
-                T.locked_at
-            FROM ${table} T
-            LEFT JOIN users U ON U.user_uuid = T.locked_by
-            WHERE T.${uuidColumn} = $1
-              AND T.is_deleted = FALSE
-            FOR UPDATE OF T
-            `,
+    SELECT 
+        T.*,
+        creators.username AS createdByName,
+        updaters.username AS updatedByName,
+        U.username AS locked_by_name,
+        T.locked_by,
+        T.locked_at
+    FROM ${table} T
+    LEFT JOIN users U 
+        ON U.user_uuid = T.locked_by
+    LEFT JOIN users creators 
+        ON T.created_by = creators.user_uuid
+    LEFT JOIN users updaters 
+        ON T.modified_by = updaters.user_uuid
+    WHERE T.${uuidColumn} = $1
+      AND T.is_deleted = FALSE
+    FOR UPDATE OF T
+    `,
                 [uuid]
             );
+
 
             if (!rowCount) {
                 await client.query('ROLLBACK');

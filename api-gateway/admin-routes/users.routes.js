@@ -21,7 +21,7 @@ router.post('/create', multipartMiddleware, async (req, res) => {
         // FILE
         const profileIconPath = req.files?.profile_icon_path?.path || null;
 
-        const result = await countryRequester.send({
+        const result = await usersRequester.send({
             type: 'create-users',
             body: {
                 ...req.body,

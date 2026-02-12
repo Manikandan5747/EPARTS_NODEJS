@@ -1576,6 +1576,44 @@ responder.on(`unlock-user`, async (req, cb) => {
 });
 
 
+responder.on('frond-end-error-log', async (req, cb) => {
+    try {
+        const result = await saveFrondEndErrorLog(req);
+        if (!result.success) {
+            return cb(null, {
+                header_type: "ERROR",
+                message_visibility: false,
+                status: false,
+                code: 2004,
+                message: "Failed to save error log",
+                error: result.message
+            });
+        }
+        return cb(null, {
+            header_type: "SUCCESS",
+            message_visibility: false,
+            code: 1000,
+            status: true,
+            message: "Send successfully!",
+            data: result
+        });
+
+    } catch (err) {
+        console.error("Responder error:", err);
+
+        return cb(null, {
+            header_type: "ERROR",
+            message_visibility: false,
+            status: false,
+            code: 2004,
+            message: "Failed to save error log",
+            error: err.message
+        });
+    }
+});
+
+
+
 
 
 

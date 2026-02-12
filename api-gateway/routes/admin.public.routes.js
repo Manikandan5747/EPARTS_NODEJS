@@ -178,6 +178,53 @@ router.post('/changepassword', async (req, res) => {
 
 
 
+// --------------------------------------
+// error-log
+// --------------------------------------
+router.post('/error-log', async (req, res) => {
+    try {
+        const result = await usersRequester.send({
+            type: 'frond-end-error-log',
+            body: req.body
+        });
+
+        if (!result.status) {
+            // SAVE ERROR LOG
+            await saveErrorLog({
+                api_name: 'frond-end-error-log',
+                method: 'POST',
+                payload: req.body,
+                message: result.error,
+                stack: result.stack || '',
+                error_code: result.code || 2004
+            });
+            return res.status(500).json(result);
+        }
+
+        res.send(result);
+
+    } catch (err) {
+        logger.error("Error in users/frond-end-error-log:", err.message);
+
+        await saveErrorLog({
+            api_name: 'frond-end-error-log',
+            method: 'POST',
+            payload: req.body,
+            message: err.message,
+            stack: err.stack,
+            error_code: 2004
+        });
+
+        res.status(500).json({
+            header_type: "ERROR",
+            message_visibility: true,
+            status: false,
+            code: 2004,
+            message: err.message,
+            error: err.message
+        });
+    }
+});
 
 
 

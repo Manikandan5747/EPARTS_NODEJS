@@ -283,7 +283,7 @@ module.exports = {
             }
 
             const user_id = userResult.rows[0]?.user_id || null;
-            const session_id = userResult.rows[0]?.session_id || null;
+            const session_id = userResult.rows[0]?.user_session_id || null;
 
             /* -----------------------------
                2️⃣ Device info from headers

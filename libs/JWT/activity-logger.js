@@ -19,7 +19,7 @@ exports.logActivity = async ({
       SELECT
         u.user_id,
         u.role_id,
-        us.user_session_id
+        us.session_id
       FROM users u
       LEFT JOIN users_login ul
         ON ul.user_id = u.user_id
@@ -39,7 +39,7 @@ exports.logActivity = async ({
 
         const user_id = userResult.rows[0].user_id;
         const role_id = userResult.rows[0].role_id;
-        const session_id = userResult.rows[0].user_session_id || null;
+        const session_id = userResult.rows[0].session_id || null;
 
         /* ---------------- 2. ROLE NAME ---------------- */
         const roleResult = await client.query(

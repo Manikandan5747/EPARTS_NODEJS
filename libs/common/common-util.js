@@ -295,7 +295,7 @@ module.exports = {
             ----------------------------- */
             const result = await client.query(
                 `
-            INSERT INTO error_logs (
+            INSERT INTO error_log (
                 app_type, endpoint, user_id, session_id,
                 message, err_header, err_response, stack_trace,
                 log_level, error_code, http_status_code,

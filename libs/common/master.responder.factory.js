@@ -1,6 +1,6 @@
 const { buildAdvancedSearchQuery } = require('@libs/advanced-search/advance-filter');
 const logger = require('@libs/logger/logger');
-// const { logActivity } = require('@libs/JWT/activity-logger');
+const { logActivity } = require('@libs/JWT/activity-logger');
 
 
 
@@ -46,18 +46,18 @@ module.exports = function registerMasterResponder({
             `;
 
             const result = await pool.query(insertSQL, values);
-            // const newData = result.rows[0];
+            const newRow = result.rows[0];
             /* ---------------- ACTIVITY LOG ---------------- */
-            // await logActivity({
-            //     req,
-            //     app_type: "ADMIN",
-            //     action: "CREATE",
-            //     description: `${formatTableName(table)} created`,
-            //     entity_id: newRow[uuidColumn],   
-            //     old_data: null,
-            //     new_data: newRow,               
-            //     created_by: req.user?.user_uuid
-            // });
+            await logActivity({
+                req,
+                app_type: "ADMIN",
+                action: "CREATE",
+                description: `${formatTableName(table)} created`,
+                entity_id: newRow[uuidColumn],   
+                old_data: null,
+                new_data: newRow,               
+                created_by: req.user?.user_uuid
+            });
 
             return cb(null, {
                 header_type: "SUCCESS", //'SUCCESS' | 'VALIDATION' | 'ERROR' | 'WARNING' | 'INFO'

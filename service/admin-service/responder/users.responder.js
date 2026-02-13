@@ -1073,7 +1073,7 @@ responder.on("logout", async (req, cb) => {
             WHERE login_id = $1
               AND access_token = $2
               AND is_active = true
-            RETURNING user_session_id;
+            RETURNING session_id;
         `;
 
         const session = await pool.query(sessionQuery, [user.login_id, access_token, updated_by]);

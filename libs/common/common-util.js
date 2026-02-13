@@ -260,7 +260,7 @@ module.exports = {
                 `
             SELECT
                 u.user_id,
-                us.user_session_id
+                us.session_id
             FROM users u
             LEFT JOIN users_login ul
                 ON ul.user_id = u.user_id
@@ -283,7 +283,7 @@ module.exports = {
             }
 
             const user_id = userResult.rows[0]?.user_id || null;
-            const session_id = userResult.rows[0]?.user_session_id || null;
+            const session_id = userResult.rows[0]?.session_id || null;
 
             /* -----------------------------
                2️⃣ Device info from headers

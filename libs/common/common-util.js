@@ -229,6 +229,120 @@ module.exports = {
             client.release();
         }
     },
+
+    /* ======================================================
+    CREATE ERROR LOG (AUTO USER + SESSION FETCH)
+ ====================================================== */
+    saveFrondEndErrorLog: async function (req) {
+        const client = await pool.connect();
+
+        try {
+            const {
+                user_uuid,
+                app_type,
+                endpoint,
+                message,
+                err_header,
+                err_response,
+                stack_trace,
+                log_level,
+                error_code,
+                http_status_code,
+                source,
+                app_version,
+                created_by
+            } = req.body;
+
+            /* -----------------------------
+               1️⃣ Get user_id & session_id
+            ----------------------------- */
+            const userResult = await client.query(
+                `
+            SELECT
+                u.user_id,
+                us.user_session_id
+            FROM users u
+            LEFT JOIN users_login ul
+                ON ul.user_id = u.user_id
+               AND u.is_active = TRUE
+            LEFT JOIN user_session us
+                ON us.login_id = ul.login_id
+            WHERE u.user_uuid = $1
+            LIMIT 1
+            `,
+                [user_uuid]
+            );
+
+            /*  If user not valid */
+            if (!userResult.rows.length) {
+                return {
+                    success: false,
+                    code: 2003,
+                    message: "Invalid or inactive user"
+                };
+            }
+
+            const user_id = userResult.rows[0]?.user_id || null;
+            const session_id = userResult.rows[0]?.session_id || null;
+
+            /* -----------------------------
+               2️⃣ Device info from headers
+            ----------------------------- */
+            const device_info = req.headers?.["user-agent"] || null;
+
+            /* -----------------------------
+               3️⃣ Insert error log
+            ----------------------------- */
+            const result = await client.query(
+                `
+            INSERT INTO error_logs (
+                app_type, endpoint, user_id, session_id,
+                message, err_header, err_response, stack_trace,
+                log_level, error_code, http_status_code,
+                source, device_info, app_version,
+                created_at, created_by
+            )
+            VALUES (
+                $1,$2,$3,$4,
+                $5,$6,$7,$8,
+                $9,$10,$11,
+                $12,$13,$14,
+                NOW(),$15
+            )
+            RETURNING err_uuid
+            `,
+                [
+                    app_type,
+                    endpoint,
+                    user_id,
+                    session_id,
+                    message,
+                    err_header,
+                    err_response,
+                    stack_trace,
+                    log_level,
+                    error_code,
+                    http_status_code,
+                    source,
+                    device_info,
+                    app_version,
+                    created_by
+                ]
+            );
+
+            return {
+                success: true,
+                err_uuid: result.rows[0].err_uuid
+            };
+
+        } catch (err) {
+            console.error("Error Log Insert Failed:", err);
+            throw err;
+
+        } finally {
+            client.release();
+        }
+    }
 }
 
 

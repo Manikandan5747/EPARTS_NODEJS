@@ -99,7 +99,7 @@ echo Building fresh Docker images...
 echo ================================================
 
 
-docker-compose  build --no-cache
+docker-compose build --no-cache
 
 
 echo ================================================
@@ -120,7 +120,7 @@ docker ps
 }
 }
 
-        // stage('Docker Build & Run') {
+        // stage('Docker Build & Run') {--no-cache
         //     steps {
         //         bat '''
         //         cd "%DOCKER_BUILD_DIR%"

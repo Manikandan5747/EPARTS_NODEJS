@@ -5,7 +5,7 @@ const logger = require('@libs/logger/logger');
 const { buildAdvancedSearchQuery } = require('@libs/advanced-search/advance-filter');
 const bcrypt = require("bcryptjs");
 const jwt = require("jsonwebtoken");
-const { saveLoginLog, sendmail } = require('@libs/common/common-util');
+const { saveLoginLog, sendmail,saveFrondEndErrorLog } = require('@libs/common/common-util');
 const APP_CONFIG = require('@libs/config/config.prod');
 const { getAllSettingsCategory } = require('@libs/common/common-util');
 

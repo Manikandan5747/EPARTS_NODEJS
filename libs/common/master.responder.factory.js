@@ -46,7 +46,7 @@ module.exports = function registerMasterResponder({
             `;
 
             const result = await pool.query(insertSQL, values);
-
+            // const newData = result.rows[0];
             /* ---------------- ACTIVITY LOG ---------------- */
             // await logActivity({
             //     req,
@@ -401,6 +401,7 @@ module.exports = function registerMasterResponder({
                 });
             }
 
+            const oldData = check.rows[0];   // OLD DATA for activity log
             const columns = Object.keys(body);
             const values = Object.values(body);
 
@@ -414,6 +415,18 @@ module.exports = function registerMasterResponder({
             `;
 
             const result = await pool.query(updateSQL, [...values, uuid]);
+            const newData = result.rows[0];  //  NEW DATA for activity log
+            // /* ---------------- ACTIVITY LOG ---------------- */
+            // await logActivity({
+            //     req,
+            //     app_type: "ADMIN",
+            //     action: "UPDATE",
+            //     description: `${formatTableName(table)} updated`,
+            //     entity_id: uuid,
+            //     old_data: oldData,   // ✅ before change
+            //     new_data: newData,   // ✅ after change
+            //     created_by: req.user?.user_uuid
+            // });
 
             return cb(null, {
                 header_type: "SUCCESS", //'SUCCESS' | 'VALIDATION' | 'ERROR' | 'WARNING' | 'INFO'

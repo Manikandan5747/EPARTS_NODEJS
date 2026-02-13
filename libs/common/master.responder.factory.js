@@ -426,7 +426,7 @@ module.exports = function registerMasterResponder({
                 entity_id: uuid,
                 old_data: oldData,   // ✅ before change
                 new_data: newData,   // ✅ after change
-                created_by: req.user?.user_uuid,
+                created_by: newData?.modified_by,
                 baseRoute: req.meta.baseRoute
             });
 

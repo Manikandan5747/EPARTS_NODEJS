@@ -8,8 +8,11 @@ exports.logActivity = async ({
     entity_id,
     old_data,
     new_data,
-    created_by
+    created_by,
+    baseRoute
 }) => {
+    console.log("req", req);
+
     const client = await pool.connect();
 
     try {
@@ -50,7 +53,7 @@ exports.logActivity = async ({
         const user_role = roleResult.rows[0]?.role_name || null;
 
         /* ---------------- 3. MODULE FROM ROUTE ---------------- */
-        const baseRoute = '/' + req.originalUrl.split('/')[2];
+
 
         const moduleRes = await client.query(
             `
@@ -98,7 +101,7 @@ exports.logActivity = async ({
                 req.method,
                 req.originalUrl,
                 req.ip,
-                req.headers['user-agent'],
+                req['user_agent'],
                 old_data,
                 new_data,
                 created_by

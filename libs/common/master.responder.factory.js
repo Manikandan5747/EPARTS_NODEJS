@@ -49,14 +49,15 @@ module.exports = function registerMasterResponder({
             const newRow = result.rows[0];
             /* ---------------- ACTIVITY LOG ---------------- */
             await logActivity({
-                req,
+                req: req.meta,
                 app_type: "ADMIN",
                 action: "CREATE",
                 description: `${formatTableName(table)} created`,
-                entity_id: newRow[uuidColumn],   
+                entity_id: newRow[uuidColumn],
                 old_data: null,
-                new_data: newRow,               
-                created_by: req.user?.user_uuid
+                new_data: newRow,
+                created_by: newRow?.created_by,
+                baseRoute: req.meta.baseRoute
             });
 
             return cb(null, {
@@ -418,14 +419,15 @@ module.exports = function registerMasterResponder({
             const newData = result.rows[0];  //  NEW DATA for activity log
             /* ---------------- ACTIVITY LOG ---------------- */
             await logActivity({
-                req,
+                req: req.meta,
                 app_type: "ADMIN",
                 action: "UPDATE",
                 description: `${formatTableName(table)} updated`,
                 entity_id: uuid,
                 old_data: oldData,   // ✅ before change
                 new_data: newData,   // ✅ after change
-                created_by: req.user?.user_uuid
+                created_by: req.user?.user_uuid,
+                baseRoute: req.meta.baseRoute
             });
 
             return cb(null, {

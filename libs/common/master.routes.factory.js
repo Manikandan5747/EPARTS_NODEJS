@@ -61,10 +61,18 @@ module.exports = function createMasterRoutes({
             // 🔹 Resolve FK generically
             req.body = await resolveForeignKeys(req.body, pool, foreignKeyMap);
             console.log("body1 req.body", req.body);
+            const baseRoute = '/' + req.originalUrl.split('/')[2];
             /* ---------------- CALL RESPONDER ---------------- */
             const result = await requester.send({
                 type: api('create'),
-                body: req.body
+                body: req.body,
+                meta: {
+                    method: req.method,
+                    endpoint: req.originalUrl,
+                    ip: req.ip,
+                    user_agent: req.headers['user-agent'],
+                    baseRoute
+                }
             });
 
             if (!result.status) {
@@ -184,11 +192,18 @@ module.exports = function createMasterRoutes({
 
             // 🔹 Resolve FK generically
             req.body = await resolveForeignKeys(req.body, pool, foreignKeyMap);
-
+            const baseRoute = '/' + req.originalUrl.split('/')[2];
             const result = await requester.send({
                 type: api('update'),
                 uuid: req.params.id,
-                body: req.body
+                body: req.body,
+                meta: {
+                    method: req.method,
+                    endpoint: req.originalUrl,
+                    ip: req.ip,
+                    user_agent: req.headers['user-agent'],
+                    baseRoute
+                }
             });
 
             if (!result.status) {

@@ -416,17 +416,17 @@ module.exports = function registerMasterResponder({
 
             const result = await pool.query(updateSQL, [...values, uuid]);
             const newData = result.rows[0];  //  NEW DATA for activity log
-            // /* ---------------- ACTIVITY LOG ---------------- */
-            // await logActivity({
-            //     req,
-            //     app_type: "ADMIN",
-            //     action: "UPDATE",
-            //     description: `${formatTableName(table)} updated`,
-            //     entity_id: uuid,
-            //     old_data: oldData,   // ✅ before change
-            //     new_data: newData,   // ✅ after change
-            //     created_by: req.user?.user_uuid
-            // });
+            /* ---------------- ACTIVITY LOG ---------------- */
+            await logActivity({
+                req,
+                app_type: "ADMIN",
+                action: "UPDATE",
+                description: `${formatTableName(table)} updated`,
+                entity_id: uuid,
+                old_data: oldData,   // ✅ before change
+                new_data: newData,   // ✅ after change
+                created_by: req.user?.user_uuid
+            });
 
             return cb(null, {
                 header_type: "SUCCESS", //'SUCCESS' | 'VALIDATION' | 'ERROR' | 'WARNING' | 'INFO'

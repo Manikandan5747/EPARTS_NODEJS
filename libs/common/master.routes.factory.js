@@ -234,10 +234,18 @@ module.exports = function createMasterRoutes({
     /* ---------------- DELETE ---------------- */
     router.post('/delete/:id', async (req, res) => {
         try {
+            const baseRoute = '/' + req.originalUrl.split('/')[2];
             const result = await requester.send({
                 type: api('delete'),
                 uuid: req.params.id,
-                body: req.body
+                body: req.body,
+                meta: {
+                    method: req.method,
+                    endpoint: req.originalUrl,
+                    ip: req.ip,
+                    user_agent: req.headers['user-agent'],
+                    baseRoute
+                }
             });
 
             if (!result.status) {
@@ -268,10 +276,18 @@ module.exports = function createMasterRoutes({
     /* ---------------- STATUS ---------------- */
     router.post('/status/:id', async (req, res) => {
         try {
+            const baseRoute = '/' + req.originalUrl.split('/')[2];
             const result = await requester.send({
                 type: api('status'),
                 uuid: req.params.id,
-                body: req.body
+                body: req.body,
+                meta: {
+                    method: req.method,
+                    endpoint: req.originalUrl,
+                    ip: req.ip,
+                    user_agent: req.headers['user-agent'],
+                    baseRoute
+                }
             });
 
             res.json(result);

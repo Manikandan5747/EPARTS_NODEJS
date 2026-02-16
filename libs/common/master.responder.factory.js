@@ -410,7 +410,7 @@ module.exports = function registerMasterResponder({
 
             const updateSQL = `
                 UPDATE ${table}
-                SET ${setQuery}, modified_at = NOW()
+                SET ${setQuery}, locked_by = NULL, locked_at = NULL,modified_at = NOW()
                 WHERE ${uuidColumn} = $${columns.length + 1}
                 RETURNING *
             `;
@@ -430,6 +430,7 @@ module.exports = function registerMasterResponder({
                 baseRoute: req.meta.baseRoute
             });
 
+             
             return cb(null, {
                 header_type: "SUCCESS", //'SUCCESS' | 'VALIDATION' | 'ERROR' | 'WARNING' | 'INFO'
                 message_visibility: true,
@@ -472,11 +473,24 @@ module.exports = function registerMasterResponder({
                     message: `${formatTableName(table)} not found`,
                 });
             }
-
-            await pool.query(
+            const oldData = check.rows[0];
+            const result = await pool.query(
                 `UPDATE ${table} SET is_deleted = TRUE, is_active = FALSE, deleted_at = NOW(), deleted_by = $1 WHERE ${uuidColumn} = $2`,
                 [deleted_by, uuid]
             );
+            const newData = result.rows[0];
+            /* ---------------- ACTIVITY LOG ---------------- */
+            await logActivity({
+                req: req.meta,
+                app_type: "ADMIN",
+                action: "UPDATE",
+                description: `${formatTableName(table)} updated`,
+                entity_id: uuid,
+                old_data: oldData,   // ✅ before change
+                new_data: newData,   // ✅ after change
+                created_by: newData?.modified_by,
+                baseRoute: req.meta.baseRoute
+            });
 
             return cb(null, {
                 header_type: "SUCCESS", //'SUCCESS' | 'VALIDATION' | 'ERROR' | 'WARNING' | 'INFO'
@@ -521,11 +535,25 @@ module.exports = function registerMasterResponder({
                     error: `${table} not found`
                 });
             }
-
+            const oldData = check.rows[0];
             const result = await pool.query(
                 `UPDATE ${table} SET is_active = $1, modified_at = NOW(), modified_by = $2 WHERE ${uuidColumn} = $3 RETURNING *`,
                 [isActive, modified_by, uuid]
             );
+
+            const newData = result.rows[0];
+            /* ---------------- ACTIVITY LOG ---------------- */
+            await logActivity({
+                req: req.meta,
+                app_type: "ADMIN",
+                action: "UPDATE",
+                description: `${formatTableName(table)} updated`,
+                entity_id: uuid,
+                old_data: oldData,   // ✅ before change
+                new_data: newData,   // ✅ after change
+                created_by: newData?.modified_by,
+                baseRoute: req.meta.baseRoute
+            });
 
             return cb(null, {
                 header_type: "SUCCESS",

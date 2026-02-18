@@ -156,9 +156,11 @@ responder.on('list-module', async (req, cb) => {
 
 
 /* ======================================================
-   UPDATE MODULE
+   UPDATE MODULE  (record_locks protected)
 ====================================================== */
 responder.on('update-module', async (req, cb) => {
+    const client = await pool.connect();
+
     try {
         const { module_uuid, body } = req;
 
@@ -179,51 +181,78 @@ responder.on('update-module', async (req, cb) => {
             menuorder,
             privilegekey,
             modified_by,
-            is_active, assigned_to
+            is_active,
+            assigned_to
         } = body;
 
         if (!modulename || !modulename.trim()) {
             return cb(null, { status: false, code: 2001, error: "Module name is required" });
         }
 
-        const moduleUpper = modulename.toUpperCase();
-        const moduleLower = modulename.toLowerCase();
+        await client.query("BEGIN");
 
-        // Duplicate Check excluding current
-        const duplicate = await pool.query(
-            `SELECT module_uuid FROM module
-             WHERE (
-                UPPER(modulename)= $1 
-                OR LOWER(modulename)= $2 
-                OR modulename = $3
-             )
-             AND is_deleted = FALSE
-             AND module_uuid != $4`,
-            [moduleUpper, moduleLower, modulename, module_uuid]
+        /* ---------- 1️⃣ CHECK ACTIVE LOCK ---------- */
+        const lockCheck = await client.query(
+            `
+            SELECT *
+            FROM record_locks
+            WHERE table_name = 'module'
+              AND record_id = $1
+              AND locked_by = $2
+              AND is_deleted = FALSE
+              AND expires_at > NOW()
+            `,
+            [module_uuid, modified_by]
+        );
+
+        if (lockCheck.rowCount === 0) {
+            await client.query("ROLLBACK");
+            return cb(null, {
+                status: false,
+                code: 2005,
+                error: "You must lock the record before updating"
+            });
+        }
+
+        /* ---------- 2️⃣ DUPLICATE NAME CHECK ---------- */
+        const duplicate = await client.query(
+            `
+            SELECT module_uuid
+            FROM module
+            WHERE LOWER(modulename) = LOWER($1)
+              AND is_deleted = FALSE
+              AND module_uuid != $2
+            `,
+            [modulename.trim(), module_uuid]
         );
 
         if (duplicate.rowCount > 0) {
+            await client.query("ROLLBACK");
             return cb(null, { status: false, code: 2002, error: "Module already exists" });
         }
 
-        const update = await pool.query(
-            `UPDATE module SET
-                modulename=$1,
-                routename=$2,
-                parentmodid=$3,
-                isparent=$4,
-                issystemmenu=$5,
-                isreport=$6,
-                isfunctional=$7,
-                ismisc=$8,
-                iconname=$9,
-                menuorder=$10,
-                privilegekey=$11,
-                is_active=$12,
-                modified_by=$13,
-                modified_at=NOW()
-             WHERE module_uuid=$14
-             RETURNING *`,
+        /* ---------- 3️⃣ UPDATE MODULE ---------- */
+        const update = await client.query(
+            `
+            UPDATE module SET
+                modulename = $1,
+                routename = $2,
+                parentmodid = $3,
+                isparent = $4,
+                issystemmenu = $5,
+                isreport = $6,
+                isfunctional = $7,
+                ismisc = $8,
+                iconname = $9,
+                menuorder = $10,
+                privilegekey = $11,
+                is_active = $12,
+                assigned_to = $13,
+                modified_by = $14,
+                modified_at = NOW()
+            WHERE module_uuid = $15
+            RETURNING *
+            `,
             [
                 modulename,
                 routename,
@@ -237,27 +266,55 @@ responder.on('update-module', async (req, cb) => {
                 menuorder,
                 privilegekey,
                 is_active,
+                assigned_to,
                 modified_by,
                 module_uuid
             ]
         );
 
-        if (ismisc) {
-            let module_id = update.rows[0].module_id;
-            var miscItems = req.body.miscItems;
-            let obj = { miscItems, module_id, modified_by }
-            createOrUpdateMisc(obj);
+        if (!update.rowCount) {
+            await client.query("ROLLBACK");
+            return cb(null, { status: false, code: 2003, error: "Module not found" });
         }
+
+        const updatedRow = update.rows[0];
+
+        /* ---------- 4️⃣ HANDLE MISC ITEMS ---------- */
+        if (ismisc) {
+            const miscItems = body.miscItems || [];
+            await createOrUpdateMisc({
+                miscItems,
+                module_id: updatedRow.module_id,
+                modified_by
+            });
+        }
+
+        /* ---------- 5️⃣ AUTO-UNLOCK AFTER UPDATE ---------- */
+        await client.query(
+            `
+            UPDATE record_locks
+            SET is_deleted = TRUE
+            WHERE table_name = 'module'
+              AND record_id = $1
+              AND locked_by = $2
+              AND is_deleted = FALSE
+            `,
+            [module_uuid, modified_by]
+        );
+
+        await client.query("COMMIT");
 
         return cb(null, {
             status: true,
             code: 1000,
             message: "Module updated successfully",
-            data: update.rows[0]
+            data: updatedRow
         });
 
     } catch (err) {
+        await client.query("ROLLBACK");
         logger.error("Responder Error (update module):", err);
+
         return cb(null, {
             header_type: "ERROR",
             message_visibility: true,
@@ -266,8 +323,11 @@ responder.on('update-module', async (req, cb) => {
             message: err.message,
             error: err.message
         });
+    } finally {
+        client.release();
     }
 });
+
 
 
 

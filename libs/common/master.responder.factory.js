@@ -3,7 +3,6 @@ const logger = require('@libs/logger/logger');
 const { logActivity } = require('@libs/JWT/activity-logger');
 
 
-
 module.exports = function registerMasterResponder({
     responder,
     pool,
@@ -27,8 +26,7 @@ module.exports = function registerMasterResponder({
     console.log("api res", api('create'));
 
     const formatTableName = (name) =>
-        name
-            .replace(/_/g, ' ')
+        name.replace(/_/g, ' ')
             .replace(/\b\w/g, char => char.toUpperCase());
 
     // ---------------- CREATE ----------------
@@ -47,6 +45,8 @@ module.exports = function registerMasterResponder({
 
             const result = await pool.query(insertSQL, values);
             const newRow = result.rows[0];
+            console.log("newRow", newRow);
+
             /* ---------------- ACTIVITY LOG ---------------- */
             await logActivity({
                 req: req.meta,
@@ -143,112 +143,10 @@ module.exports = function registerMasterResponder({
         }
     });
 
-    // ---------------- GET BY ID ----------------
-    // responder.on(api('getById'), async (req, cb) => {
-    //     try {
-    //         const uuid = req[uuidColumn] || req.uuid;
-    //         const result = await pool.query(
-    //             `SELECT * FROM ${table} WHERE ${uuidColumn} = $1 AND is_deleted = FALSE`,
-    //             [uuid]
-    //         );
-
-    //         if (result.rowCount === 0) {
-    //             return cb(null, { status: false, code: 2003, error: `${table} not found` });
-    //         }
-
-    //         return cb(null, {
-    //             status: true,
-    //             message: `${formatTableName(table)} fetched successfully`, code: 1000, data: result.rows[0]
-    //         });
-    //     } catch (err) {
-    //         logger.error(`Error (getById ${table}):`, err);
-    //         return cb(null, {
-    // header_type: "ERROR",
-    // message_visibility: true,
-    // status: false,
-    // code: 2004,
-    // message: err.message,
-    // error: err.message
-    // });
-    //     }
-    // });
-
-    // ---------------- GET BY ID (WITH LOCK STATUS + USER NAME) ----------------
-    // responder.on(api('getById'), async (req, cb) => {
-    //     try {
-    //         const uuid = req[uuidColumn] || req.uuid;
-
-    //         // 1️⃣ Auto-unlock expired lock (1 minute)
-    //         await pool.query(
-    //             `
-    //         UPDATE ${table}
-    //         SET locked_by = NULL,
-    //             locked_at = NULL
-    //         WHERE ${uuidColumn} = $1
-    //           AND locked_at + INTERVAL '1 minutes' < NOW()
-    //         `,
-    //             [uuid]
-    //         );
-
-    //         // 2️⃣ Fetch record with lock status + locked user name
-    //         const result = await pool.query(
-    //             `
-    //         SELECT 
-    //             T.*,
-    //             U.username AS locked_by_name,
-    //             CASE
-    //                 WHEN T.locked_at IS NULL THEN false
-    //                 WHEN T.locked_at + INTERVAL '1 minutes' < NOW() THEN false
-    //                 ELSE true
-    //             END AS lock_status
-    //         FROM ${table} T
-    //         LEFT JOIN users U
-    //             ON U.user_uuid = T.locked_by
-    //         WHERE T.${uuidColumn} = $1
-    //           AND T.is_deleted = FALSE
-    //         `,
-    //             [uuid]
-    //         );
-
-    //         if (result.rowCount === 0) {
-    //             return cb(null, {
-    //                 header_type: "ERROR", //'SUCCESS' | 'VALIDATION' | 'ERROR' | 'WARNING' | 'INFO'
-    //                 message_visibility: false,
-    //                 status: false,
-    //                 code: 2003,
-    //                 message: `${formatTableName(table)} not found`,
-    //                 error: `${formatTableName(table)} not found`
-    //             });
-    //         }
-
-    //         const row = result.rows[0];
-    //         return cb(null, {
-    //             header_type: "SUCCESS", //'SUCCESS' | 'VALIDATION' | 'ERROR' | 'WARNING' | 'INFO'
-    //             message_visibility: false,
-    //             status: true,
-    //             code: 1000,
-    //             message: `${formatTableName(table)} fetched successfully`,
-    //             data: row,
-    //         });
-
-    //     } catch (err) {
-    //         logger.error(`Error (getById ${table}):`, err);
-    //         return cb(null, {
-    //             header_type: "ERROR", //'SUCCESS' | 'VALIDATION' | 'ERROR' | 'WARNING' | 'INFO'
-    //             message_visibility: false,
-    //             status: false,
-    //             code: 2004,
-    //             message: err.message,
-    //             error: err.message,
-    //         });
-    //     }
-    // });
-
-    // ---------------- GET BY ID (WITH AUTO LOCK FOR EDIT) ----------------
-
 
     responder.on(api('getById'), async (req, cb) => {
         const client = await pool.connect();
+        const LOCK_DURATION_MIN = 1; // minutes
 
         try {
             const uuid = req[uuidColumn] || req.uuid;
@@ -257,52 +155,55 @@ module.exports = function registerMasterResponder({
 
             await client.query('BEGIN');
 
-            // 1️⃣ Fetch with FOR UPDATE (important for locking)
+            // 1️⃣ Fetch main record
             const { rows, rowCount } = await client.query(
                 `
-    SELECT 
-        T.*,
-        creators.username AS createdByName,
-        updaters.username AS updatedByName,
-        U.username AS locked_by_name,
-        T.locked_by,
-        T.locked_at
-    FROM ${table} T
-    LEFT JOIN users U 
-        ON U.user_uuid = T.locked_by
-    LEFT JOIN users creators 
-        ON T.created_by = creators.user_uuid
-    LEFT JOIN users updaters 
-        ON T.modified_by = updaters.user_uuid
-    WHERE T.${uuidColumn} = $1
-      AND T.is_deleted = FALSE
-    FOR UPDATE OF T
-    `,
+            SELECT 
+                T.*,
+                creators.username AS createdByName,
+                updaters.username AS updatedByName
+            FROM ${table} T
+            LEFT JOIN users creators ON T.created_by = creators.user_uuid
+            LEFT JOIN users updaters ON T.modified_by = updaters.user_uuid
+            WHERE T.${uuidColumn} = $1
+              AND T.is_deleted = FALSE
+            `,
                 [uuid]
             );
-
 
             if (!rowCount) {
                 await client.query('ROLLBACK');
                 return cb(null, {
                     header_type: "ERROR",
-                    message_visibility: false,
                     status: false,
                     code: 2003,
-                    message: `${formatTableName(table)} not found`,
-                    error: `${formatTableName(table)} not found`
+                    message: `${formatTableName(table)} not found`
                 });
             }
 
             const row = rows[0];
 
-            // 2️⃣ Check lock expiry (1 minute)
-            const isExpired =
-                row.locked_at &&
-                new Date(row.locked_at).getTime() + 60 * 1000 < Date.now();
+            // 2️⃣ Get existing active lock
+            const lockResult = await client.query(
+                `
+            SELECT RL.*, U.username AS locked_by_name
+            FROM record_locks RL
+            LEFT JOIN users U ON U.user_uuid = RL.locked_by
+            WHERE RL.table_name = $1
+              AND RL.record_id = $2
+              AND RL.is_deleted = FALSE
+            `,
+                [table, uuid]
+            );
 
-            // 3️⃣ EDIT MODE → handle locking
-            if (mode == 'edit') {
+            let lockRow = lockResult.rows[0];
+
+            const isExpired =
+                lockRow &&
+                new Date(lockRow.expires_at).getTime() < Date.now();
+
+            // 3️⃣ EDIT MODE → locking logic
+            if (mode === 'edit') {
 
                 if (!user_id) {
                     await client.query('ROLLBACK');
@@ -310,38 +211,59 @@ module.exports = function registerMasterResponder({
                         header_type: "ERROR",
                         status: false,
                         code: 2001,
-                        message: "User ID required for edit",
-                        error: "User ID required"
+                        message: "User ID required for edit"
                     });
                 }
 
-                // Locked by another user and NOT expired
-                if (row.locked_by && row.locked_by !== user_id && !isExpired) {
+                // ❌ Locked by another user and NOT expired
+                if (lockRow && lockRow.locked_by !== user_id && !isExpired) {
                     await client.query('ROLLBACK');
                     return cb(null, {
                         header_type: "ERROR",
                         status: false,
                         code: 2008,
-                        message: `Record locked by ${row.locked_by_name || 'another user'}`,
+                        message: `Record locked by ${lockRow.locked_by_name || 'another user'}`,
                         error: "LOCKED"
                     });
                 }
 
-                // Auto-lock if expired OR not locked
-                if (!row.locked_by || isExpired) {
+                // 🔄 Soft-delete expired lock
+                if (lockRow && isExpired) {
                     await client.query(
                         `
-                    UPDATE ${table}
-                    SET locked_by = $1,
-                        locked_at = NOW()
-                    WHERE ${uuidColumn} = $2
+                    UPDATE record_locks
+                    SET is_deleted = TRUE
+                    WHERE lock_id = $1
                     `,
-                        [user_id, uuid]
+                        [lockRow.lock_id]
+                    );
+                    lockRow = null;
+                }
+
+                // 🔒 Create new lock if none exists
+                if (!lockRow) {
+                    const insertLock = await client.query(
+                        `
+                    INSERT INTO record_locks (
+                        table_name,
+                        record_id,
+                        locked_by,
+                        expires_at,
+                        created_by
+                    )
+                    VALUES (
+                        $1,
+                        $2,
+                        $3,
+                        NOW() + INTERVAL '${LOCK_DURATION_MIN} minute',
+                        $3
+                    )
+                    RETURNING *
+                    `,
+                        [table, uuid, user_id]
                     );
 
-                    row.locked_by = user_id;
-                    row.locked_at = new Date();
-                    row.lock_status = true;
+                    lockRow = insertLock.rows[0];
                 }
             }
 
@@ -349,12 +271,13 @@ module.exports = function registerMasterResponder({
 
             // 4️⃣ Final lock status for response
             row.lock_status =
-                row.locked_at &&
-                new Date(row.locked_at).getTime() + 60 * 1000 >= Date.now();
+                lockRow &&
+                new Date(lockRow.expires_at).getTime() >= Date.now();
+
+            row.locked_by = lockRow?.locked_by || null;
 
             return cb(null, {
                 header_type: "SUCCESS",
-                message_visibility: false,
                 status: true,
                 code: 1000,
                 message: `${formatTableName(table)} fetched successfully`,
@@ -363,11 +286,149 @@ module.exports = function registerMasterResponder({
 
         } catch (err) {
             await client.query('ROLLBACK');
-            logger.error(`Error (getById ${table}):`, err);
 
             return cb(null, {
                 header_type: "ERROR",
-                message_visibility: false,
+                status: false,
+                code: 2004,
+                message: err.message
+            });
+        } finally {
+            client.release();
+        }
+    });
+
+    // ---------------- UPDATE ----------------
+    responder.on(api('update'), async (req, cb) => {
+        const client = await pool.connect();
+
+        try {
+            const uuid = req[uuidColumn] || req.uuid;
+            const body = req.body;
+            const user_id = req.body.modified_by;
+
+            await client.query('BEGIN');
+
+            /* ---------- 1. CHECK RECORD EXISTS ---------- */
+            const check = await client.query(
+                `SELECT * FROM ${table}
+             WHERE ${uuidColumn} = $1
+               AND is_deleted = FALSE`,
+                [uuid]
+            );
+
+            if (check.rowCount === 0) {
+                await client.query('ROLLBACK');
+                return cb(null, {
+                    header_type: "ERROR",
+                    message_visibility: true,
+                    status: false,
+                    code: 2003,
+                    message: `${formatTableName(table)} not found`,
+                    error: `${formatTableName(table)} not found`
+                });
+            }
+
+            const oldData = check.rows[0];
+
+            /* ---------- 2. CHECK LOCK OWNERSHIP ---------- */
+            const lockCheck = await client.query(
+                `SELECT * FROM record_locks
+             WHERE table_name = $1
+               AND record_id = $2
+               AND is_deleted = FALSE
+               AND expires_at > NOW()`,   //12>15
+                [table, uuid]
+            );
+
+
+            if (lockCheck.rowCount === 0) {
+                await client.query('ROLLBACK');
+                return cb(null, {
+                    header_type: "ERROR",
+                    message_visibility: true,
+                    status: false,
+                    code: 2005,
+                    message: "Record is not locked",
+                    error: "You must lock the record before updating"
+                });
+            }
+
+            if (lockCheck.rows[0].locked_by !== user_id) {
+                await client.query('ROLLBACK');
+                return cb(null, {
+                    header_type: "ERROR",
+                    message_visibility: true,
+                    status: false,
+                    code: 2006,
+                    message: "Locked by another user",
+                    error: "This record is currently being edited by another user"
+                });
+            }
+
+            /* ---------- 3. PREPARE UPDATE ---------- */
+            const columns = Object.keys(body);
+            const values = Object.values(body);
+
+            const setQuery = columns.map((col, i) => `${col} = $${i + 1}`).join(', ');
+
+            const updateSQL = `
+                UPDATE ${table}
+                SET ${setQuery},modified_at = NOW()
+                WHERE ${uuidColumn} = $${columns.length + 1}
+                RETURNING *
+            `;
+
+            const result = await client.query(updateSQL, [
+                ...values,
+                uuid
+            ]);
+
+            const newData = result.rows[0];
+
+            /* ---------- 4. RELEASE LOCK (SOFT DELETE) ---------- */
+            await client.query(
+                `UPDATE record_locks
+             SET is_deleted = TRUE,deleted_at = now(),deleted_by = $3
+             WHERE table_name = $1
+               AND record_id = $2
+               AND locked_by = $3`,
+                [table, uuid, user_id]
+            );
+
+            /* ---------- 5. ACTIVITY LOG ---------- */
+            await logActivity({
+                req: req.meta,
+                app_type: "ADMIN",
+                action: "UPDATE",
+                description: `${formatTableName(table)} updated`,
+                entity_id: uuid,
+                old_data: oldData,
+                new_data: newData,
+                created_by: user_id,
+                baseRoute: req.meta.baseRoute
+            });
+
+            await client.query('COMMIT');
+
+            /* ---------- SUCCESS RESPONSE ---------- */
+            return cb(null, {
+                header_type: "SUCCESS",
+                message_visibility: true,
+                status: true,
+                code: 1000,
+                message: `${formatTableName(table)} updated successfully`,
+                data: newData
+            });
+
+        } catch (err) {
+            await client.query('ROLLBACK');
+
+            logger.error(`Error (update ${table}):`, err);
+
+            return cb(null, {
+                header_type: "ERROR",
+                message_visibility: true,
                 status: false,
                 code: 2004,
                 message: err.message,
@@ -379,91 +440,26 @@ module.exports = function registerMasterResponder({
     });
 
 
-    // ---------------- UPDATE ----------------
-    responder.on(api('update'), async (req, cb) => {
-        try {
-            const uuid = req[uuidColumn] || req.uuid;
-            const body = req.body;
-
-
-            const check = await pool.query(
-                `SELECT * FROM ${table} WHERE ${uuidColumn} = $1 AND is_deleted = FALSE`,
-                [uuid]
-            );
-
-            if (check.rowCount === 0) {
-                return cb(null, {
-                    header_type: "ERROR",
-                    message_visibility: true,
-                    status: false,
-                    code: 2003,
-                    message: `${formatTableName(table)} not found`,
-                    error: `${formatTableName(table)} not found`
-                });
-            }
-
-            const oldData = check.rows[0];   // OLD DATA for activity log
-            const columns = Object.keys(body);
-            const values = Object.values(body);
-
-            const setQuery = columns.map((col, i) => `${col} = $${i + 1}`).join(', ');
-
-            const updateSQL = `
-                UPDATE ${table}
-                SET ${setQuery}, locked_by = NULL, locked_at = NULL,modified_at = NOW()
-                WHERE ${uuidColumn} = $${columns.length + 1}
-                RETURNING *
-            `;
-
-            const result = await pool.query(updateSQL, [...values, uuid]);
-            const newData = result.rows[0];  //  NEW DATA for activity log
-            /* ---------------- ACTIVITY LOG ---------------- */
-            await logActivity({
-                req: req.meta,
-                app_type: "ADMIN",
-                action: "UPDATE",
-                description: `${formatTableName(table)} updated`,
-                entity_id: uuid,
-                old_data: oldData,   // ✅ before change
-                new_data: newData,   // ✅ after change
-                created_by: newData?.modified_by,
-                baseRoute: req.meta.baseRoute
-            });
-
-             
-            return cb(null, {
-                header_type: "SUCCESS", //'SUCCESS' | 'VALIDATION' | 'ERROR' | 'WARNING' | 'INFO'
-                message_visibility: true,
-                status: true,
-                code: 1000,
-                message: `${formatTableName(table)} updated successfully`,
-                data: result.rows[0]
-            });
-        } catch (err) {
-            logger.error(`Error (update ${table}):`, err);
-            return cb(null, {
-                header_type: "ERROR",
-                message_visibility: true,
-                status: false,
-                code: 2004,
-                message: err.message,
-                error: err.message
-            });
-        }
-    });
-
     // ---------------- DELETE ----------------
     responder.on(api('delete'), async (req, cb) => {
+        const client = await pool.connect();
+
         try {
             const uuid = req[uuidColumn] || req.uuid;
-            const deleted_by = req.body?.deleted_by || null;
+            const deleted_by = req.body.deleted_by;
 
-            const check = await pool.query(
-                `SELECT * FROM ${table} WHERE ${uuidColumn} = $1 AND is_deleted = FALSE`,
+            await client.query('BEGIN');
+
+            /* ---------- 1. CHECK RECORD EXISTS ---------- */
+            const check = await client.query(
+                `SELECT * FROM ${table}
+             WHERE ${uuidColumn} = $1
+               AND is_deleted = FALSE`,
                 [uuid]
             );
 
             if (check.rowCount === 0) {
+                await client.query('ROLLBACK');
                 return cb(null, {
                     header_type: "ERROR",
                     message_visibility: true,
@@ -473,34 +469,96 @@ module.exports = function registerMasterResponder({
                     message: `${formatTableName(table)} not found`,
                 });
             }
+
             const oldData = check.rows[0];
-            const result = await pool.query(
-                `UPDATE ${table} SET is_deleted = TRUE, is_active = FALSE, deleted_at = NOW(), deleted_by = $1 WHERE ${uuidColumn} = $2`,
+
+            /* ---------- 2. CHECK LOCK OWNERSHIP ---------- */
+            const lockCheck = await client.query(
+                `SELECT * FROM record_locks
+             WHERE table_name = $1
+               AND record_id = $2
+               AND is_deleted = FALSE
+               AND expires_at > NOW()`,
+                [table, uuid]
+            );
+
+            // if (lockCheck.rowCount === 0) {
+            //     await client.query('ROLLBACK');
+            //     return cb(null, {
+            //         header_type: "ERROR",
+            //         message_visibility: true,
+            //         status: false,
+            //         code: 2005,
+            //         message: "Record is not locked",
+            //         error: "You must lock the record before deleting"
+            //     });
+            // }
+
+            if (lockCheck.rows[0] && lockCheck.rows[0].locked_by !== deleted_by) {
+                await client.query('ROLLBACK');
+                return cb(null, {
+                    header_type: "ERROR",
+                    message_visibility: true,
+                    status: false,
+                    code: 2006,
+                    message: "Locked by another user",
+                    error: "This record is currently being edited by another user"
+                });
+            }
+
+            /* ---------- 3. SOFT DELETE ---------- */
+            const result = await client.query(
+                `UPDATE ${table}
+             SET is_deleted = TRUE,
+                 is_active = FALSE,
+                 deleted_at = NOW(),
+                 deleted_by = $1
+             WHERE ${uuidColumn} = $2
+             RETURNING *`,
                 [deleted_by, uuid]
             );
+
             const newData = result.rows[0];
-            /* ---------------- ACTIVITY LOG ---------------- */
+
+            /* ---------- 4. RELEASE LOCK ---------- */
+            await client.query(
+                `UPDATE record_locks
+             SET is_deleted = TRUE,deleted_at = now(),deleted_by = $3
+             WHERE table_name = $1
+               AND record_id = $2
+               `,
+                [table, uuid, deleted_by]
+            );
+
+            /* ---------- 5. ACTIVITY LOG ---------- */
             await logActivity({
                 req: req.meta,
                 app_type: "ADMIN",
-                action: "UPDATE",
-                description: `${formatTableName(table)} updated`,
+                action: "DELETE",
+                description: `${formatTableName(table)} deleted`,
                 entity_id: uuid,
-                old_data: oldData,   // ✅ before change
-                new_data: newData,   // ✅ after change
-                created_by: newData?.modified_by,
+                old_data: oldData,
+                new_data: newData,
+                created_by: deleted_by,
                 baseRoute: req.meta.baseRoute
             });
 
+            await client.query('COMMIT');
+
+            /* ---------- SUCCESS RESPONSE ---------- */
             return cb(null, {
-                header_type: "SUCCESS", //'SUCCESS' | 'VALIDATION' | 'ERROR' | 'WARNING' | 'INFO'
+                header_type: "SUCCESS",
                 message_visibility: true,
                 status: true,
                 code: 1000,
                 message: `${formatTableName(table)} deleted successfully`
             });
+
         } catch (err) {
+            await client.query('ROLLBACK');
+
             logger.error(`Error (delete ${table}):`, err);
+
             return cb(null, {
                 header_type: "ERROR",
                 message_visibility: true,
@@ -509,23 +567,33 @@ module.exports = function registerMasterResponder({
                 message: err.message,
                 error: err.message
             });
+        } finally {
+            client.release();
         }
     });
 
+
     // ---------------- STATUS ----------------
     responder.on(api('status'), async (req, cb) => {
+        const client = await pool.connect();
+
         try {
             const uuid = req[uuidColumn] || req.uuid;
             const isActive = req.body?.is_active;
-            const modified_by = req.body?.modified_by;
 
+            const modified_by = req.body.modified_by;
+            await client.query('BEGIN');
 
-            const check = await pool.query(
-                `SELECT * FROM ${table} WHERE ${uuidColumn} = $1 AND is_deleted = FALSE`,
+            /* ---------- 1. CHECK RECORD EXISTS ---------- */
+            const check = await client.query(
+                `SELECT * FROM ${table}
+             WHERE ${uuidColumn} = $1
+               AND is_deleted = FALSE`,
                 [uuid]
             );
 
             if (check.rowCount === 0) {
+                await client.query('ROLLBACK');
                 return cb(null, {
                     header_type: "ERROR",
                     message_visibility: true,
@@ -535,36 +603,86 @@ module.exports = function registerMasterResponder({
                     error: `${table} not found`
                 });
             }
+
             const oldData = check.rows[0];
-            const result = await pool.query(
-                `UPDATE ${table} SET is_active = $1, modified_at = NOW(), modified_by = $2 WHERE ${uuidColumn} = $3 RETURNING *`,
+
+            /* ---------- 2. CHECK LOCK OWNERSHIP ---------- */
+            const lockCheck = await client.query(
+                `SELECT * FROM record_locks
+             WHERE table_name = $1
+               AND record_id = $2
+               AND is_deleted = FALSE
+               AND expires_at > NOW()`,
+                [table, uuid]
+            );
+
+            // if (lockCheck.rowCount === 0) {
+            //     await client.query('ROLLBACK');
+            //     return cb(null, {
+            //         header_type: "ERROR",
+            //         message_visibility: true,
+            //         status: false,
+            //         code: 2005,
+            //         message: "Record is not locked",
+            //         error: "You must lock the record before changing status"
+            //     });
+            // }
+
+            if (lockCheck.rows[0].locked_by !== modified_by) {
+                await client.query('ROLLBACK');
+                return cb(null, {
+                    header_type: "ERROR",
+                    message_visibility: true,
+                    status: false,
+                    code: 2006,
+                    message: "Locked by another user",
+                    error: "This record is currently being edited by another user"
+                });
+            }
+
+            /* ---------- 3. UPDATE STATUS ---------- */
+            const result = await client.query(
+                `UPDATE ${table}
+             SET is_active = $1,
+                 modified_at = NOW(),
+                 modified_by = $2
+             WHERE ${uuidColumn} = $3
+             RETURNING *`,
                 [isActive, modified_by, uuid]
             );
 
             const newData = result.rows[0];
-            /* ---------------- ACTIVITY LOG ---------------- */
+
+            /* ---------- 4. ACTIVITY LOG ---------- */
             await logActivity({
                 req: req.meta,
                 app_type: "ADMIN",
-                action: "UPDATE",
-                description: `${formatTableName(table)} updated`,
+                action: "STATUS",
+                description: `${formatTableName(table)} status updated`,
                 entity_id: uuid,
-                old_data: oldData,   // ✅ before change
-                new_data: newData,   // ✅ after change
-                created_by: newData?.modified_by,
+                old_data: oldData,
+                new_data: newData,
+                created_by: modified_by,
                 baseRoute: req.meta.baseRoute
             });
 
+            await client.query('COMMIT');
+
+            /* ---------- SUCCESS RESPONSE ---------- */
             return cb(null, {
                 header_type: "SUCCESS",
                 message_visibility: true,
                 status: true,
                 code: 1000,
                 message: `${formatTableName(table)} status updated successfully`,
-                data: result.rows[0]
+                data: newData
             });
+
         } catch (err) {
+            await client.query('ROLLBACK');
+
             logger.error(`Error (status ${table}):`, err);
+
             return cb(null, {
                 header_type: "ERROR",
                 message_visibility: true,
@@ -573,10 +691,68 @@ module.exports = function registerMasterResponder({
                 message: err.message,
                 error: err.message
             });
+        } finally {
+            client.release();
         }
     });
 
 
+    // ---------------- ADVANCE FILTER ----------------
+    // responder.on(api('advancefilter'), async (req, cb) => {
+    //     try {
+
+    //         const accessScope = req.dataAccessScope;
+    //         let extraWhere = '';
+    //         let extraParams = [];
+
+    //         // If PRIVATE → only show own created data
+    //         if (accessScope.type === 'PRIVATE') {
+    //             extraWhere = ` AND ${alias}.created_by = $extraUser`;
+    //             extraParams.push(accessScope.user_id);
+    //         }
+
+    //         // Define joins dynamically if needed
+    //         const joinSQL = `
+    //         LEFT JOIN users creators ON ${alias}.created_by = creators.user_uuid
+    //         LEFT JOIN users updaters ON ${alias}.modified_by = updaters.user_uuid
+    //     `;
+
+    //         const result = await buildAdvancedSearchQuery({
+    //             pool,
+    //             reqBody: req.body,
+    //             table,
+    //             alias,
+    //             defaultSort: 'created_at',
+    //             allowedFields,
+    //             joinSql: joinSQL,      // pass joins here
+    //             baseWhere: `${alias}.is_deleted = FALSE ${extraWhere}`,
+    //             customFields: {        // optional virtual fields
+    //                 createdByName: {
+    //                     select: 'creators.username',
+    //                     search: 'creators.username',
+    //                     sort: 'creators.username'
+    //                 },
+    //                 updatedByName: {
+    //                     select: 'updaters.username',
+    //                     search: 'updaters.username',
+    //                     sort: 'updaters.username'
+    //                 }
+    //             }
+    //         });
+
+    //         return cb(null, {
+    //             status: true, code: 1000,
+    //             message: `${formatTableName(table)} list fetched successfully`,
+    //             result
+    //         });
+
+    //     } catch (err) {
+    //         logger.error(`Error (advancefilter ${table}):`, err);
+    //         return cb(null, { status: false, code: 2004, error: err.message });
+    //     }
+    // });
+
+    // ---------------- ADVANCE FILTER ----------------
     responder.on(api('advancefilter'), async (req, cb) => {
         try {
 
@@ -630,7 +806,7 @@ module.exports = function registerMasterResponder({
 
             return cb(null, {
                 header_type: "SUCCESS",
-                message_visibility: true,
+                message_visibility: false,
                 status: true,
                 code: 1000,
                 message: `${formatTableName(table)} list fetched successfully`,
@@ -664,6 +840,7 @@ module.exports = function registerMasterResponder({
                 limit = 10
             } = req;
 
+
             const pageNo = parseInt(page, 10);
             const limitNo = parseInt(limit, 10);
             const offset = (pageNo - 1) * limitNo;
@@ -671,6 +848,7 @@ module.exports = function registerMasterResponder({
             let whereSql = `WHERE ${alias}.is_deleted = FALSE`;
             let params = [];
             let idx = 1;
+
 
             if (key == 'cities') {
                 const stateResult = await pool.query(
@@ -688,6 +866,7 @@ module.exports = function registerMasterResponder({
                 const state_id = stateResult.rows[0].state_id;
                 whereSql += ` AND ${alias}.state_id = ${state_id}`;
             }
+
             /* -------- SEARCH (SAFE) -------- */
             if (search && searchableFields.length) {
                 const conditions = searchableFields.map(
@@ -754,83 +933,55 @@ module.exports = function registerMasterResponder({
 
 
 
-    responder.on(`lock-${key}`, async (req, cb) => {
+    responder.on(`unlock-${key}`, async (req, cb) => {
         const client = await pool.connect();
+
         try {
             const { uuid } = req;
-            const { user_id } = req.body;
-
-            if (!user_id) {
-                return cb(null, {
-                    status: false,
-                    code: 2001,
-                    error: 'User ID required'
-                });
-            }
+            const user_id = req.body?.user_id;
 
             await client.query('BEGIN');
 
-            // Check existing lock
-            const { rows } = await client.query(
+            // 🔓 Soft unlock only if same user & active lock
+            const result = await client.query(
                 `
-            SELECT locked_by, locked_at
-            FROM ${table}
-            WHERE ${uuidColumn} = $1
-            FOR UPDATE
+            UPDATE record_locks
+            SET is_deleted = TRUE,deleted_at = now(),deleted_by = $3
+            WHERE table_name = $1
+              AND record_id = $2
+              AND locked_by = $3
+              AND is_deleted = FALSE
             `,
-                [uuid]
+                [table, uuid, user_id]
             );
 
-            if (!rows.length) {
+            // ❌ No row updated → locked by another user OR already unlocked
+            if (!result.rowCount) {
                 await client.query('ROLLBACK');
                 return cb(null, {
                     header_type: "ERROR",
-                    message_visibility: false,
+                    message_visibility: true,
                     status: false,
-                    code: 2004,
-                    message: 'Record not found',
-                    error: 'Record not found'
+                    code: 2003,
+                    message: "Unable to unlock record",
+                    error: "This record is currently being edited by another user"
                 });
             }
-
-            const { locked_by, locked_at } = rows[0];
-
-            // Auto-unlock logic (1 min)
-            const isExpired =
-                locked_at &&
-                new Date(locked_at).getTime() + 1 * 60 * 1000 < Date.now();
-
-            if (locked_by && locked_by !== user_id && !isExpired) {
-                await client.query('ROLLBACK');
-                return cb(null, {
-                    status: false,
-                    code: 2008,
-                    error: 'Record is locked by another user'
-                });
-            }
-
-            // Lock record
-            await client.query(
-                `
-            UPDATE ${table}
-            SET locked_by = $1,
-                locked_at = NOW()
-            WHERE ${uuidColumn} = $2
-            `,
-                [user_id, uuid]
-            );
 
             await client.query('COMMIT');
 
+            // ✅ Success
             return cb(null, {
                 header_type: "SUCCESS",
                 message_visibility: false,
-                status: true, code: 1000,
-                message: `${formatTableName(table)} Record locked successfully`,
+                status: true,
+                code: 1000,
+                message: `${formatTableName(table)} record unlocked successfully`
             });
 
         } catch (err) {
             await client.query('ROLLBACK');
+
             return cb(null, {
                 header_type: "ERROR",
                 message_visibility: true,
@@ -845,51 +996,7 @@ module.exports = function registerMasterResponder({
     });
 
 
-    responder.on(`unlock-${key}`, async (req, cb) => {
-        try {
-            const { uuid } = req;
-            const { user_id } = req.body;
+    
 
-            const result = await pool.query(
-                `
-            UPDATE ${table}
-            SET locked_by = NULL,
-                locked_at = NULL
-            WHERE ${uuidColumn} = $1
-              AND locked_by = $2
-            `,
-                [uuid, user_id]
-            );
-
-            if (!result.rowCount) {
-                return cb(null, {
-                    header_type: "ERROR",
-                    message_visibility: true,
-                    status: false,
-                    code: 2003,
-                    message: 'Unable to unlock record',
-                    error: 'This record is currently being edited by another user'
-                });
-            }
-
-            return cb(null, {
-                header_type: "SUCCESS",
-                message_visibility: false,
-                status: true,
-                code: 1000,
-                message: `${formatTableName(table)} Record unlocked successfully`,
-            });
-
-        } catch (err) {
-            return cb(null, {
-                header_type: "ERROR",
-                message_visibility: true,
-                status: false,
-                code: 2004,
-                message: err.message,
-                error: err.message
-            });
-        }
-    });
 
 };

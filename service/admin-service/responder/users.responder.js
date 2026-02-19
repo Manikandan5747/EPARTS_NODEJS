@@ -994,45 +994,49 @@ async function createUserSession(login_id, user_uuid, accessToken, device_detail
 // --------------------------------------------------
 // Generate JWT tokens
 // --------------------------------------------------
-function generateTokens(user) {
-    let jwtKeyValue = null;
-    let accessTokenExpiry = null;
-    let refreshTokenExpiry = null;
+async function generateTokens(user) {
+    try {
+        const arr = await getAllSettingsCategory('JWT');
 
-    (async () => {
-        try {
-            const arr = await getAllSettingsCategory('JWT');
-            console.log("arr", arr);
+        const jwtKeyValue =
+            arr?.find(e => e.setparameter === "JWT_KEY")?.setparametervalue;
 
-            const jwtKey = arr?.find(e => e.setparameter === "JWT_KEY");
-            jwtKeyValue = jwtKey?.setparametervalue || null;
+        const accessTokenExpiry =
+            arr?.find(e => e.setparameter === "ACCESS_TOKEN_EXPIRES_IN")?.setparametervalue;
 
-            const accessExp = arr?.find(e => e.setparameter === "ACCESS_TOKEN_EXPIRES_IN");
-            accessTokenExpiry = accessExp?.setparametervalue || null;
+        const refreshTokenExpiry =
+            arr?.find(e => e.setparameter === "REFRESH_TOKEN_EXPIRES_IN")?.setparametervalue;
 
-            const refreshExp = arr?.find(e => e.setparameter === "REFRESH_TOKEN_EXPIRES_IN");
-            refreshTokenExpiry = refreshExp?.setparametervalue || null;
-
-        } catch (err) {
-            console.error("JWT Settings Load Failed:", err);
+        /* ❌ If JWT key missing → throw error */
+        if (!jwtKeyValue) {
+            throw new Error("JWT secret key not configured");
         }
-    })();
 
+        /* ---------------- Access Token ---------------- */
+        const accessToken = jwt.sign(
+            {
+                user_id: user.user_id,
+                user_uuid: user.user_uuid,
+                username: user.username,
+                login_id: user.login_id
+            },
+            jwtKeyValue,
+            { expiresIn: accessTokenExpiry || "15m" }
+        );
 
-    const accessToken = jwt.sign(
-        { user_id: user.user_id, user_uuid: user.user_uuid, username: user.username, login_id: user.login_id },
-        jwtKeyValue,
-        { expiresIn: accessTokenExpiry }
-    );
+        /* ---------------- Refresh Token ---------------- */
+        const refreshToken = jwt.sign(
+            { user_id: user.user_id },
+            jwtKeyValue,
+            { expiresIn: refreshTokenExpiry || "7d" }
+        );
 
-    const refreshToken = jwt.sign(
-        { user_id: user.user_id },
-        jwtKeyValue,
-        { expiresIn: refreshTokenExpiry }
-    );
+        return { accessToken, refreshToken };
 
-    console.log("refreshToken", refreshToken);
-    return { accessToken, refreshToken };
+    } catch (err) {
+        console.error("Generate Tokens Failed:", err.message);
+        throw err;
+    }
 }
 
 // --------------------------------------------------

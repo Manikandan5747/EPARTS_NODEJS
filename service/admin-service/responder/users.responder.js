@@ -973,7 +973,7 @@ async function createUserSession(login_id, user_uuid, accessToken, device_detail
         // Close previous active sessions
         await pool.query(
             `UPDATE user_session
-             SET is_active = false, end_date = NOW()
+             SET is_active = false, end_time = NOW()
              WHERE login_id = $1 AND is_active = true`,
             [login_id]
         );
@@ -1070,7 +1070,7 @@ responder.on("logout", async (req, cb) => {
         const sessionQuery = `
             UPDATE user_session
             SET
-                end_date = NOW(),
+                end_time = NOW(),
                 is_active = false,
                 modified_by = $3,
                 modified_at = NOW()
@@ -1266,7 +1266,7 @@ responder.on('changepassword-users', async (req, cb) => {
         // Close previous active sessions
         await pool.query(
             `UPDATE user_session
-             SET is_active = false, end_date = NOW()
+             SET is_active = false, end_time = NOW()
              WHERE login_id = $1 AND is_active = true`,
             [sessionuser.login_id]
         );

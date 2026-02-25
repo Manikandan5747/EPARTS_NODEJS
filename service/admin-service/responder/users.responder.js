@@ -5,7 +5,7 @@ const logger = require('@libs/logger/logger');
 const { buildAdvancedSearchQuery } = require('@libs/advanced-search/advance-filter');
 const bcrypt = require("bcryptjs");
 const jwt = require("jsonwebtoken");
-const { saveLoginLog, sendmail,saveFrondEndErrorLog } = require('@libs/common/common-util');
+const { saveLoginLog, sendmail, saveFrondEndErrorLog } = require('@libs/common/common-util');
 const APP_CONFIG = require('@libs/config/config.prod');
 const { getAllSettingsCategory } = require('@libs/common/common-util');
 
@@ -858,6 +858,8 @@ responder.on("admin-login", async (req, cb) => {
         delete user.password_hash;
 
         return cb(null, {
+            header_type: "SUCCESS",
+            message_visibility: true,
             status: true,
             code: 1000,
             message: "Login successful",

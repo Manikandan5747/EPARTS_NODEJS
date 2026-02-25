@@ -155,18 +155,35 @@ module.exports = function registerMasterResponder({
 
             await client.query('BEGIN');
 
-            // 1️⃣ Fetch main record
+            // -----------------------------
+            // 1️⃣ Build Dynamic SELECT
+            // -----------------------------
+            const selectCustomFields = Object.entries(customFields || {})
+                .map(([key, value]) => `${value.select} AS "${key}"`)
+                .join(', ');
+
+            const fullJoinSql = `
+            ${joinSql || ''}
+            LEFT JOIN users creators 
+                ON ${alias}.created_by = creators.user_uuid
+            LEFT JOIN users updaters 
+                ON ${alias}.modified_by = updaters.user_uuid
+        `;
+
+            // -----------------------------
+            // 2️⃣ Fetch Main Record
+            // -----------------------------
             const { rows, rowCount } = await client.query(
                 `
             SELECT 
-                T.*,
-                creators.username AS createdByName,
-                updaters.username AS updatedByName
-            FROM ${table} T
-            LEFT JOIN users creators ON T.created_by = creators.user_uuid
-            LEFT JOIN users updaters ON T.modified_by = updaters.user_uuid
-            WHERE T.${uuidColumn} = $1
-              AND T.is_deleted = FALSE
+                ${alias}.*,
+                ${selectCustomFields ? selectCustomFields + ',' : ''}
+                creators.username AS "createdByName",
+                updaters.username AS "updatedByName"
+            FROM ${table} ${alias}
+            ${fullJoinSql}
+            WHERE ${alias}.${uuidColumn} = $1
+              AND ${alias}.is_deleted = FALSE
             `,
                 [uuid]
             );
@@ -183,7 +200,9 @@ module.exports = function registerMasterResponder({
 
             const row = rows[0];
 
-            // 2️⃣ Get existing active lock
+            // -----------------------------
+            // 3️⃣ Check Existing Lock
+            // -----------------------------
             const lockResult = await client.query(
                 `
             SELECT RL.*, U.username AS locked_by_name
@@ -202,7 +221,9 @@ module.exports = function registerMasterResponder({
                 lockRow &&
                 new Date(lockRow.expires_at).getTime() < Date.now();
 
-            // 3️⃣ EDIT MODE → locking logic
+            // -----------------------------
+            // 4️⃣ EDIT MODE Locking Logic
+            // -----------------------------
             if (mode === 'edit') {
 
                 if (!user_id) {
@@ -227,7 +248,7 @@ module.exports = function registerMasterResponder({
                     });
                 }
 
-                // 🔄 Soft-delete expired lock
+                // 🔄 Soft delete expired lock
                 if (lockRow && isExpired) {
                     await client.query(
                         `
@@ -269,7 +290,9 @@ module.exports = function registerMasterResponder({
 
             await client.query('COMMIT');
 
-            // 4️⃣ Final lock status for response
+            // -----------------------------
+            // 5️⃣ Attach Lock Info to Response
+            // -----------------------------
             row.lock_status =
                 lockRow &&
                 new Date(lockRow.expires_at).getTime() >= Date.now();
@@ -293,12 +316,170 @@ module.exports = function registerMasterResponder({
                 code: 2004,
                 message: err.message
             });
+
         } finally {
             client.release();
         }
     });
 
+
+    // responder.on(api('getById'), async (req, cb) => {
+    //     const client = await pool.connect();
+    //     const LOCK_DURATION_MIN = 1; // minutes
+
+    //     try {
+    //         const uuid = req[uuidColumn] || req.uuid;
+    //         const mode = req.mode;
+    //         const user_id = req.body?.user_id;
+
+    //         await client.query('BEGIN');
+
+    //         // 1️⃣ Fetch main record
+    //         const { rows, rowCount } = await client.query(
+    //             `
+    //         SELECT 
+    //             T.*,
+    //             creators.username AS createdByName,
+    //             updaters.username AS updatedByName
+    //         FROM ${table} T
+    //         LEFT JOIN users creators ON T.created_by = creators.user_uuid
+    //         LEFT JOIN users updaters ON T.modified_by = updaters.user_uuid
+    //         WHERE T.${uuidColumn} = $1
+    //           AND T.is_deleted = FALSE
+    //         `,
+    //             [uuid]
+    //         );
+
+    //         if (!rowCount) {
+    //             await client.query('ROLLBACK');
+    //             return cb(null, {
+    //                 header_type: "ERROR",
+    //                 status: false,
+    //                 code: 2003,
+    //                 message: `${formatTableName(table)} not found`
+    //             });
+    //         }
+
+    //         const row = rows[0];
+
+    //         // 2️⃣ Get existing active lock
+    //         const lockResult = await client.query(
+    //             `
+    //         SELECT RL.*, U.username AS locked_by_name
+    //         FROM record_locks RL
+    //         LEFT JOIN users U ON U.user_uuid = RL.locked_by
+    //         WHERE RL.table_name = $1
+    //           AND RL.record_id = $2
+    //           AND RL.is_deleted = FALSE
+    //         `,
+    //             [table, uuid]
+    //         );
+
+    //         let lockRow = lockResult.rows[0];
+
+    //         const isExpired =
+    //             lockRow &&
+    //             new Date(lockRow.expires_at).getTime() < Date.now();
+
+    //         // 3️⃣ EDIT MODE → locking logic
+    //         if (mode === 'edit') {
+
+    //             if (!user_id) {
+    //                 await client.query('ROLLBACK');
+    //                 return cb(null, {
+    //                     header_type: "ERROR",
+    //                     status: false,
+    //                     code: 2001,
+    //                     message: "User ID required for edit"
+    //                 });
+    //             }
+
+    //             // ❌ Locked by another user and NOT expired
+    //             if (lockRow && lockRow.locked_by !== user_id && !isExpired) {
+    //                 await client.query('ROLLBACK');
+    //                 return cb(null, {
+    //                     header_type: "ERROR",
+    //                     status: false,
+    //                     code: 2008,
+    //                     message: `Record locked by ${lockRow.locked_by_name || 'another user'}`,
+    //                     error: "LOCKED"
+    //                 });
+    //             }
+
+    //             // 🔄 Soft-delete expired lock
+    //             if (lockRow && isExpired) {
+    //                 await client.query(
+    //                     `
+    //                 UPDATE record_locks
+    //                 SET is_deleted = TRUE
+    //                 WHERE lock_id = $1
+    //                 `,
+    //                     [lockRow.lock_id]
+    //                 );
+    //                 lockRow = null;
+    //             }
+
+    //             // 🔒 Create new lock if none exists
+    //             if (!lockRow) {
+    //                 const insertLock = await client.query(
+    //                     `
+    //                 INSERT INTO record_locks (
+    //                     table_name,
+    //                     record_id,
+    //                     locked_by,
+    //                     expires_at,
+    //                     created_by
+    //                 )
+    //                 VALUES (
+    //                     $1,
+    //                     $2,
+    //                     $3,
+    //                     NOW() + INTERVAL '${LOCK_DURATION_MIN} minute',
+    //                     $3
+    //                 )
+    //                 RETURNING *
+    //                 `,
+    //                     [table, uuid, user_id]
+    //                 );
+
+    //                 lockRow = insertLock.rows[0];
+    //             }
+    //         }
+
+    //         await client.query('COMMIT');
+
+    //         // 4️⃣ Final lock status for response
+    //         row.lock_status =
+    //             lockRow &&
+    //             new Date(lockRow.expires_at).getTime() >= Date.now();
+
+    //         row.locked_by = lockRow?.locked_by || null;
+
+    //         return cb(null, {
+    //             header_type: "SUCCESS",
+    //             status: true,
+    //             code: 1000,
+    //             message: `${formatTableName(table)} fetched successfully`,
+    //             data: row
+    //         });
+
+    //     } catch (err) {
+    //         await client.query('ROLLBACK');
+
+    //         return cb(null, {
+    //             header_type: "ERROR",
+    //             status: false,
+    //             code: 2004,
+    //             message: err.message
+    //         });
+    //     } finally {
+    //         client.release();
+    //     }
+    // });
+
     // ---------------- UPDATE ----------------
+
+
     responder.on(api('update'), async (req, cb) => {
         const client = await pool.connect();
 
@@ -867,6 +1048,23 @@ module.exports = function registerMasterResponder({
                 whereSql += ` AND ${alias}.state_id = ${state_id}`;
             }
 
+            if (key == 'states') {
+                const countryResult = await pool.query(
+                    `SELECT country_id FROM countries
+             WHERE country_uuid = $1 AND is_deleted = FALSE`, [req.country_uuid]);
+
+                if (countryResult.rowCount === 0) {
+                    return cb(null, {
+                        status: false,
+                        code: 2003,
+                        error: "Country not found"
+                    });
+                }
+
+                const country_id = countryResult.rows[0].country_id;
+                whereSql += ` AND ${alias}.country_id = ${country_id}`;
+            }
+
             /* -------- SEARCH (SAFE) -------- */
             if (search && searchableFields.length) {
                 const conditions = searchableFields.map(
@@ -996,7 +1194,7 @@ module.exports = function registerMasterResponder({
     });
 
 
-    
+
 
 
 };

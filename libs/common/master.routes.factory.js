@@ -351,6 +351,18 @@ module.exports = function createMasterRoutes({
                 }
                 payload.state_uuid = req.query.state_uuid
             }
+
+              if (filterKey == 'country_uuid') {
+                let country_uuid = req.query && req.query.country_uuid;
+                if (!country_uuid) {
+                    return cb(null, {
+                        status: false,
+                        code: 2001,
+                        error: "Country UUID is required"
+                    });
+                }
+                payload.country_uuid = req.query.country_uuid
+            }
             const result = await requester.send(payload);
 
 

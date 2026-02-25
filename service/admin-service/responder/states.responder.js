@@ -24,6 +24,9 @@ registerMasterResponder({
             select: 'CO.name',
             search: 'CO.name',
             sort: 'CO.name'
+        },
+        country_uuid: {
+            select: 'CO.country_uuid'
         }
     },
 

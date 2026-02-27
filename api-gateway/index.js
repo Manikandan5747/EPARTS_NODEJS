@@ -1,20 +1,14 @@
 const express = require('express')
 const bodyParser = require('body-parser');
-const AdminRoutes = require('./routes/admin.routes');
-const BuyerRoutes = require('./routes/buyer.routes');
-const SellerRoutes = require('./routes/seller.routes');
+const registerRoutes = require('./imports-routes/index');
 const app = express()
 const errorHandler = require('@libs/error-handler/error-handler');
-const checkApiKey = require('@libs/JWT/apikey-auth-api');
 const logger = require('@libs/logger/logger');
 const path = require('path');
 app.use(bodyParser.json())
 const cors = require('cors');
 const setupStaticFiles = require('@libs/folders-paths/setup-static-files');
-// API AUTHENTICATION – ACCESS TOKEN CHECKING FOR EACH REQUEST
-const AdminStartAuthApi = require("@libs/JWT/admin-auth-api");
-const BuyerStartAuthApi = require("@libs/JWT/buyer-auth-api");
-const SellerStartAuthApi = require("@libs/JWT/seller-auth-api");
+
 
 app.use(cors()); // Enables CORS for all origins and all routes
 // --------------------------------------
@@ -42,24 +36,19 @@ app.use(cors()); // Enables CORS for all origins and all routes
 setupStaticFiles(app);
 
 
-// PUBLIC ROUTES
-const AdminPublicRoutes = require('./routes/admin.public.routes');
-const BuyerPublicRoutes = require('./routes/buyer.public.routes');
-const SellerPublicRoutes = require('./routes/seller.public.routes');
+// // PUBLIC ROUTES
+// const AdminPublicRoutes = require('./routes/admin.public.routes');
+// const BuyerPublicRoutes = require('./routes/buyer.public.routes');
+// const SellerPublicRoutes = require('./routes/seller.public.routes');
 
-/* --------------------------------
-   PUBLIC ROUTES (NO AUTH)
---------------------------------- */
-app.use('/api', checkApiKey, AdminPublicRoutes);
-app.use('/buyer', checkApiKey, BuyerPublicRoutes);
-app.use('/seller', checkApiKey, SellerPublicRoutes);
+// /* --------------------------------
+//    PUBLIC ROUTES (NO AUTH)
+// --------------------------------- */
+// app.use('/api', checkApiKey, AdminPublicRoutes);
+// app.use('/buyer', checkApiKey, BuyerPublicRoutes);
+// app.use('/seller', checkApiKey, SellerPublicRoutes);
 
-// // /* -------------------------------
-// //    PROTECTED ROUTES wITH ACCESSTOKEN 
-// // -------------------------------- */
-// app.use('/api', checkApiKey, AdminStartAuthApi, AdminRoutes);
-// app.use('/buyer', checkApiKey, BuyerStartAuthApi, BuyerRoutes);
-// app.use('/seller', checkApiKey, SellerStartAuthApi, SellerRoutes);
+
 
 // Assign assigned_to middleware
 const assignAssignedTo = (req, res, next) => {
@@ -73,23 +62,7 @@ const assignAssignedTo = (req, res, next) => {
 // /* -------------------------------
 //    PROTECTED ROUTES wITH ACCESSTOKEN 
 // -------------------------------- */
-app.use('/api', checkApiKey, assignAssignedTo, AdminRoutes);
-app.use('/buyer', checkApiKey, BuyerRoutes);
-app.use('/seller', checkApiKey, SellerRoutes);
-
-
-/* -------------------------------
-   GLOBAL ERROR HANDLER
--------------------------------- */
-// app.use((err, req, res, next) => {
-//     logger.error("GLOBAL ERROR:", err);
-
-//     res.status(err.status || 500).json({
-//         success: false,
-//         message: err.message || "Server is down. Please try again later.",
-//         error_code: err.error_code || "SERVER_ERROR"
-//     });
-// });
+registerRoutes(app, { assignAssignedTo });
 
 // GLOBAL ERROR HANDLER
 app.use(errorHandler);

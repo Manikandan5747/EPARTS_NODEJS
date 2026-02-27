@@ -1,1 +1,0 @@
-module.exports = require('./base-requester')('web_version');

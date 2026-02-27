@@ -1,0 +1,164 @@
+version: '3.8'
+
+services:
+
+  buyer-iam-service:
+    build:
+      context: .
+      dockerfile: development.Dockerfile
+    image: microservices-workshop/buyer-iam-service:dev
+    restart: on-failure
+    environment: &buyer-env
+      DB_HOST: host.docker.internal
+      DB_PORT: 5432
+      DB_USER: postgres
+      DB_PASSWORD: admin
+      DB_NAME: eparts_development
+    volumes:
+      - ./microservices/buyer/iam-service:/app/src
+      - ./libs:/app/libs
+      - C:/Mani/logfile:/app/logs
+
+  buyer-users-service:
+    build:
+      context: .
+      dockerfile: development.Dockerfile
+    image: microservices-workshop/buyer-users-service:dev
+    restart: on-failure
+    environment: *buyer-env
+    volumes:
+      - ./microservices/buyer/users-service:/app/src
+      - ./libs:/app/libs
+      - C:/Mani/logfile:/app/logs
+
+  buyer-product-catalog-service:
+    build:
+      context: .
+      dockerfile: development.Dockerfile
+    image: microservices-workshop/buyer-product-catalog-service:dev
+    restart: on-failure
+    environment: *buyer-env
+    volumes:
+      - ./microservices/buyer/product-catalog-service:/app/src
+      - ./libs:/app/libs
+      - C:/Mani/logfile:/app/logs
+
+  buyer-cart-service:
+    build:
+      context: .
+      dockerfile: development.Dockerfile
+    image: microservices-workshop/buyer-cart-service:dev
+    restart: on-failure
+    environment: *buyer-env
+    volumes:
+      - ./microservices/buyer/cart-service:/app/src
+      - ./libs:/app/libs
+      - C:/Mani/logfile:/app/logs
+
+  buyer-order-service:
+    build:
+      context: .
+      dockerfile: development.Dockerfile
+    image: microservices-workshop/buyer-order-service:dev
+    restart: on-failure
+    environment: *buyer-env
+    volumes:
+      - ./microservices/buyer/order-service:/app/src
+      - ./libs:/app/libs
+      - C:/Mani/logfile:/app/logs
+
+  buyer-quote-service:
+    build:
+      context: .
+      dockerfile: development.Dockerfile
+    image: microservices-workshop/buyer-quote-service:dev
+    restart: on-failure
+    environment: *buyer-env
+    volumes:
+      - ./microservices/buyer/quote-service:/app/src
+      - ./libs:/app/libs
+      - C:/Mani/logfile:/app/logs
+
+  buyer-payment-finance-service:
+    build:
+      context: .
+      dockerfile: development.Dockerfile
+    image: microservices-workshop/buyer-payment-finance-service:dev
+    restart: on-failure
+    environment: *buyer-env
+    volumes:
+      - ./microservices/buyer/payment-finance-service:/app/src
+      - ./libs:/app/libs
+      - C:/Mani/logfile:/app/logs
+
+  buyer-inventory-service:
+    build:
+      context: .
+      dockerfile: development.Dockerfile
+    image: microservices-workshop/buyer-inventory-service:dev
+    restart: on-failure
+    environment: *buyer-env
+    volumes:
+      - ./microservices/buyer/inventory-service:/app/src
+      - ./libs:/app/libs
+      - C:/Mani/logfile:/app/logs
+
+  buyer-notification-service:
+    build:
+      context: .
+      dockerfile: development.Dockerfile
+    image: microservices-workshop/buyer-notification-service:dev
+    restart: on-failure
+    environment: *buyer-env
+    volumes:
+      - ./microservices/buyer/notification-service:/app/src
+      - ./libs:/app/libs
+      - C:/Mani/logfile:/app/logs
+
+  buyer-subscription-service:
+    build:
+      context: .
+      dockerfile: development.Dockerfile
+    image: microservices-workshop/buyer-subscription-service:dev
+    restart: on-failure
+    environment: *buyer-env
+    volumes:
+      - ./microservices/buyer/subscription-service:/app/src
+      - ./libs:/app/libs
+      - C:/Mani/logfile:/app/logs
+
+  buyer-reporting-service:
+    build:
+      context: .
+      dockerfile: development.Dockerfile
+    image: microservices-workshop/buyer-reporting-service:dev
+    restart: on-failure
+    environment: *buyer-env
+    volumes:
+      - ./microservices/buyer/reporting-service:/app/src
+      - ./libs:/app/libs
+      - C:/Mani/logfile:/app/logs
+
+  buyer-request-offer-service:
+    build:
+      context: .
+      dockerfile: development.Dockerfile
+    image: microservices-workshop/buyer-request-offer-service:dev
+    restart: on-failure
+    environment: *buyer-env
+    volumes:
+      - ./microservices/buyer/request-offer-service:/app/src
+      - ./libs:/app/libs
+      - C:/Mani/logfile:/app/logs
+
+  buyer-integration-service:
+    build:
+      context: .
+      dockerfile: development.Dockerfile
+    image: microservices-workshop/buyer-integration-service:dev
+    restart: on-failure
+    environment: *buyer-env
+    volumes:
+      - ./microservices/buyer/integration-service:/app/src
+      - ./libs:/app/libs
+      - C:/Mani/logfile:/app/logs

@@ -1,5 +1,4 @@
 version: '3'
-
 services:
   api-gateway:
     build:
@@ -9,74 +8,16 @@ services:
     restart: on-failure
     environment:
       - VIRTUAL_HOST=api-gateway.app.com
-      - COTE_DISCOVERY_REDIS_HOST=10.33.30.5     
-      - COTE_DISCOVERY_REDIS_PORT=6379            
     ports:
       - "3000:3000"
     volumes:
-      - ./api-gateway:C:/app/src
-      - ./libs:C:/app/libs
-      - ./assets:C:/app/assets
-      - ./logs:C:/app/logs
+      - ./api-gateway:/app/src
+      - ./libs:/app/libs
+      - C:/Mani/logfile:/app/logs
+      - C:/Mani/NodeJs-App-Microservices-master/assets:/app/assets  
     depends_on:
-      - admin-service
+      - admin-iam-service
+      - admin-users-service
+      - buyer-iam-service
+      - seller-iam-service
 
-  admin-service:
-    build:
-      context: .
-      dockerfile: development.Dockerfile
-    image: microservices-workshop/admin-service:dev
-    restart: on-failure
-    environment:
-      DB_HOST: 10.33.30.5          
-      DB_PORT: 5432
-      DB_USER: postgres
-      DB_PASSWORD: ExZ3naPw@32!perts
-      DB_NAME: eparts_core
-      COTE_DISCOVERY_REDIS_HOST: 10.33.30.5
-      COTE_DISCOVERY_REDIS_PORT: 6379
-    volumes:
-      - ./service/admin-service:C:/app/src
-      - ./libs:C:/app/libs 
-      - ./assets:C:/app/assets
-      - ./logs:C:/app/logs
-
-  buyer-service:
-    build:
-      context: .
-      dockerfile: development.Dockerfile
-    image: microservices-workshop/buyer-service:dev
-    restart: on-failure
-    environment:
-      DB_HOST: 10.33.30.5         
-      DB_PORT: 5432
-      DB_USER: postgres
-      DB_PASSWORD: ExZ3naPw@32!perts
-      DB_NAME: eparts_core
-      COTE_DISCOVERY_REDIS_HOST: 10.33.30.5
-      COTE_DISCOVERY_REDIS_PORT: 6379
-    volumes:
-      - ./service/buyer-service:C:/app/src
-      - ./libs:C:/app/libs
-    
-  seller-service:
-    build:
-      context: .
-      dockerfile: development.Dockerfile
-    image: microservices-workshop/seller-service:dev
-    restart: on-failure
-    environment:
-      DB_HOST: 10.33.30.5         
-      DB_PORT: 5432
-      DB_USER: postgres
-      DB_PASSWORD: ExZ3naPw@32!perts
-      DB_NAME: eparts_core
-      COTE_DISCOVERY_REDIS_HOST: 10.33.30.5
-      COTE_DISCOVERY_REDIS_PORT: 6379
-    volumes:
-      - ./service/seller-service:C:/app/src
-      - ./libs:C:/app/libs
-      
-
-
- 

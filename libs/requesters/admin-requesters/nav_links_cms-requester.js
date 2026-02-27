@@ -1,1 +1,0 @@
-module.exports = require('./base-requester')('nav_links_cms');

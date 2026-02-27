@@ -1,0 +1,140 @@
+version: '3.8'
+
+services:
+
+  seller-iam-service:
+    build:
+      context: .
+      dockerfile: development.Dockerfile
+    image: microservices-workshop/seller-iam-service:dev
+    restart: on-failure
+    environment: &seller-env
+      DB_HOST: host.docker.internal
+      DB_PORT: 5432
+      DB_USER: postgres
+      DB_PASSWORD: admin
+      DB_NAME: eparts_development
+    volumes:
+      - ./microservices/seller/iam-service:/app/src
+      - ./libs:/app/libs
+      - C:/Mani/logfile:/app/logs
+
+  seller-users-service:
+    build:
+      context: .
+      dockerfile: development.Dockerfile
+    image: microservices-workshop/seller-users-service:dev
+    restart: on-failure
+    environment: *seller-env
+    volumes:
+      - ./microservices/seller/users-service:/app/src
+      - ./libs:/app/libs
+      - C:/Mani/logfile:/app/logs
+
+  seller-product-catalog-service:
+    build:
+      context: .
+      dockerfile: development.Dockerfile
+    image: microservices-workshop/seller-product-catalog-service:dev
+    restart: on-failure
+    environment: *seller-env
+    volumes:
+      - ./microservices/seller/product-catalog-service:/app/src
+      - ./libs:/app/libs
+      - C:/Mani/logfile:/app/logs
+
+  seller-order-quote-service:
+    build:
+      context: .
+      dockerfile: development.Dockerfile
+    image: microservices-workshop/seller-order-quote-service:dev
+    restart: on-failure
+    environment: *seller-env
+    volumes:
+      - ./microservices/seller/order-quote-service:/app/src
+      - ./libs:/app/libs
+      - C:/Mani/logfile:/app/logs
+
+  seller-payment-finance-service:
+    build:
+      context: .
+      dockerfile: development.Dockerfile
+    image: microservices-workshop/seller-payment-finance-service:dev
+    restart: on-failure
+    environment: *seller-env
+    volumes:
+      - ./microservices/seller/payment-finance-service:/app/src
+      - ./libs:/app/libs
+      - C:/Mani/logfile:/app/logs
+
+  seller-inventory-service:
+    build:
+      context: .
+      dockerfile: development.Dockerfile
+    image: microservices-workshop/seller-inventory-service:dev
+    restart: on-failure
+    environment: *seller-env
+    volumes:
+      - ./microservices/seller/inventory-service:/app/src
+      - ./libs:/app/libs
+      - C:/Mani/logfile:/app/logs
+
+  seller-notification-service:
+    build:
+      context: .
+      dockerfile: development.Dockerfile
+    image: microservices-workshop/seller-notification-service:dev
+    restart: on-failure
+    environment: *seller-env
+    volumes:
+      - ./microservices/seller/notification-service:/app/src
+      - ./libs:/app/libs
+      - C:/Mani/logfile:/app/logs
+
+  seller-subscription-service:
+    build:
+      context: .
+      dockerfile: development.Dockerfile
+    image: microservices-workshop/seller-subscription-service:dev
+    restart: on-failure
+    environment: *seller-env
+    volumes:
+      - ./microservices/seller/subscription-service:/app/src
+      - ./libs:/app/libs
+      - C:/Mani/logfile:/app/logs
+
+  seller-reporting-service:
+    build:
+      context: .
+      dockerfile: development.Dockerfile
+    image: microservices-workshop/seller-reporting-service:dev
+    restart: on-failure
+    environment: *seller-env
+    volumes:
+      - ./microservices/seller/reporting-service:/app/src
+      - ./libs:/app/libs
+      - C:/Mani/logfile:/app/logs
+
+  seller-request-offer-service:
+    build:
+      context: .
+      dockerfile: development.Dockerfile
+    image: microservices-workshop/seller-request-offer-service:dev
+    restart: on-failure
+    environment: *seller-env
+    volumes:
+      - ./microservices/seller/request-offer-service:/app/src
+      - ./libs:/app/libs
+      - C:/Mani/logfile:/app/logs
+
+  seller-integration-service:
+    build:
+      context: .
+      dockerfile: development.Dockerfile
+    image: microservices-workshop/seller-integration-service:dev
+    restart: on-failure
+    environment: *seller-env
+    volumes:
+      - ./microservices/seller/integration-service:/app/src
+      - ./libs:/app/libs
+      - C:/Mani/logfile:/app/logs

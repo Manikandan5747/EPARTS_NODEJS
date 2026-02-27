@@ -1,1 +1,0 @@
-module.exports = require('./base-requester')('shipment_statuses');

@@ -10,7 +10,6 @@ const { saveErrorLog } = require('@libs/common/common-util');
 // CSRF Protection
 // const csrfProtection = csrf({ cookie: true });
 
-
 // --------------------------------------
 // ADMIN LOGIN USER
 // --------------------------------------
@@ -127,7 +126,6 @@ router.post('/forgotpassword', async (req, res) => {
     }
 });
 
-
 // --------------------------------------
 // CHANGE PASSWORD USER
 // --------------------------------------
@@ -175,8 +173,6 @@ router.post('/changepassword', async (req, res) => {
 });
     }
 });
-
-
 
 // --------------------------------------
 // error-log

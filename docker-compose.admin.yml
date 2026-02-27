@@ -1,0 +1,164 @@
+version: '3.8'
+
+services:
+
+  admin-iam-service:
+    build:
+      context: .
+      dockerfile: development.Dockerfile
+    image: microservices-workshop/admin-iam-service:dev
+    restart: on-failure
+    environment: &admin-env
+      DB_HOST: host.docker.internal
+      DB_PORT: 5432
+      DB_USER: postgres
+      DB_PASSWORD: admin
+      DB_NAME: eparts_development
+    volumes:
+      - ./microservices/admin/iam-service:/app/src
+      - ./libs:/app/libs
+      - C:/Mani/logfile:/app/logs
+
+  admin-users-service:
+    build:
+      context: .
+      dockerfile: development.Dockerfile
+    image: microservices-workshop/admin-users-service:dev
+    restart: on-failure
+    environment: *admin-env
+    volumes:
+      - ./microservices/admin/users-service:/app/src
+      - ./libs:/app/libs
+      - C:/Mani/logfile:/app/logs
+
+  admin-product-catalog-service:
+    build:
+      context: .
+      dockerfile: development.Dockerfile
+    image: microservices-workshop/admin-product-catalog-service:dev
+    restart: on-failure
+    environment: *admin-env
+    volumes:
+      - ./microservices/admin/product-catalog-service:/app/src
+      - ./libs:/app/libs
+      - C:/Mani/logfile:/app/logs
+
+  admin-order-quote-service:
+    build:
+      context: .
+      dockerfile: development.Dockerfile
+    image: microservices-workshop/admin-order-quote-service:dev
+    restart: on-failure
+    environment: *admin-env
+    volumes:
+      - ./microservices/admin/order-quote-service:/app/src
+      - ./libs:/app/libs
+      - C:/Mani/logfile:/app/logs
+
+  admin-payment-finance-service:
+    build:
+      context: .
+      dockerfile: development.Dockerfile
+    image: microservices-workshop/admin-payment-finance-service:dev
+    restart: on-failure
+    environment: *admin-env
+    volumes:
+      - ./microservices/admin/payment-finance-service:/app/src
+      - ./libs:/app/libs
+      - C:/Mani/logfile:/app/logs
+
+  admin-inventory-service:
+    build:
+      context: .
+      dockerfile: development.Dockerfile
+    image: microservices-workshop/admin-inventory-service:dev
+    restart: on-failure
+    environment: *admin-env
+    volumes:
+      - ./microservices/admin/inventory-service:/app/src
+      - ./libs:/app/libs
+      - C:/Mani/logfile:/app/logs
+
+  admin-notification-service:
+    build:
+      context: .
+      dockerfile: development.Dockerfile
+    image: microservices-workshop/admin-notification-service:dev
+    restart: on-failure
+    environment: *admin-env
+    volumes:
+      - ./microservices/admin/notification-service:/app/src
+      - ./libs:/app/libs
+      - C:/Mani/logfile:/app/logs
+
+  admin-subscription-service:
+    build:
+      context: .
+      dockerfile: development.Dockerfile
+    image: microservices-workshop/admin-subscription-service:dev
+    restart: on-failure
+    environment: *admin-env
+    volumes:
+      - ./microservices/admin/subscription-service:/app/src
+      - ./libs:/app/libs
+      - C:/Mani/logfile:/app/logs
+
+  admin-reporting-service:
+    build:
+      context: .
+      dockerfile: development.Dockerfile
+    image: microservices-workshop/admin-reporting-service:dev
+    restart: on-failure
+    environment: *admin-env
+    volumes:
+      - ./microservices/admin/reporting-service:/app/src
+      - ./libs:/app/libs
+      - C:/Mani/logfile:/app/logs
+
+  admin-request-offer-service:
+    build:
+      context: .
+      dockerfile: development.Dockerfile
+    image: microservices-workshop/admin-request-offer-service:dev
+    restart: on-failure
+    environment: *admin-env
+    volumes:
+      - ./microservices/admin/request-offer-service:/app/src
+      - ./libs:/app/libs
+      - C:/Mani/logfile:/app/logs
+
+  admin-master-data-service:
+    build:
+      context: .
+      dockerfile: development.Dockerfile
+    image: microservices-workshop/admin-master-data-service:dev
+    restart: on-failure
+    environment: *admin-env
+    volumes:
+      - ./microservices/admin/master-data-service:/app/src
+      - ./libs:/app/libs
+      - C:/Mani/logfile:/app/logs
+
+  admin-integration-service:
+    build:
+      context: .
+      dockerfile: development.Dockerfile
+    image: microservices-workshop/admin-integration-service:dev
+    restart: on-failure
+    environment: *admin-env
+    volumes:
+      - ./microservices/admin/integration-service:/app/src
+      - ./libs:/app/libs
+      - C:/Mani/logfile:/app/logs
+
+  admin-cms-service:
+    build:
+      context: .
+      dockerfile: development.Dockerfile
+    image: microservices-workshop/admin-cms-service:dev
+    restart: on-failure
+    environment: *admin-env
+    volumes:
+      - ./microservices/admin/cms-service:/app/src
+      - ./libs:/app/libs
+      - C:/Mani/logfile:/app/logs

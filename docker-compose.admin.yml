@@ -1,17 +1,5 @@
 version: "3.3"
 
-x-admin-env: &admin-env
-  DB_HOST: host.docker.internal
-  DB_PORT: 5432
-  DB_USER: postgres
-  DB_PASSWORD: admin
-  DB_NAME: eparts_development
-
-x-admin-volumes: &admin-volumes
-  - ./libs:/app/libs
-  - ./assets:/app/assets
-  - ./logs:/app/logs
-
 services:
 
   admin-iam-service:
@@ -20,8 +8,18 @@ services:
       dockerfile: development.Dockerfile
     image: microservices-workshop/admin-iam-service:dev
     restart: on-failure
-    environment: *admin-env
-    volumes: *admin-volumes
+
+    environment: &admin-env
+      DB_HOST: host.docker.internal
+      DB_PORT: 5432
+      DB_USER: postgres
+      DB_PASSWORD: admin
+      DB_NAME: eparts_development
+
+    volumes: &admin-volumes
+      - ./libs:/app/libs
+      - ./assets:/app/assets
+      - ./logs:/app/logs
 
   admin-users-service:
     build:

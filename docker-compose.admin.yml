@@ -17,9 +17,9 @@ services:
       DB_NAME: eparts_development
 
     volumes: &admin-volumes
-      - ./libs:/app/libs
-      - ./assets:/app/assets
-      - ./logs:/app/logs
+      - ./libs:C:/app/libs
+      - ./assets:C:/app/assets
+      - ./logs:C:/app/logs 
 
   admin-users-service:
     build:

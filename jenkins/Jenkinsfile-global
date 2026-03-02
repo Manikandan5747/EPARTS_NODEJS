@@ -37,6 +37,10 @@ pipeline {
 
         REM Remove old root files
         if exist "%DOCKER_BUILD_DIR%\\docker-compose.yml" del "%DOCKER_BUILD_DIR%\\docker-compose.yml"
+        if exist "%DOCKER_BUILD_DIR%\\docker-compose.admin.yml" del "%DOCKER_BUILD_DIR%\\docker-compose.admin.yml"
+        if exist "%DOCKER_BUILD_DIR%\\docker-compose.buyer.yml" del "%DOCKER_BUILD_DIR%\\docker-compose.buyer.yml"
+        if exist "%DOCKER_BUILD_DIR%\\docker-compose.seller.yml" del "%DOCKER_BUILD_DIR%\\docker-compose.seller.yml"
+        
         if exist "%DOCKER_BUILD_DIR%\\package.json" del "%DOCKER_BUILD_DIR%\\package.json"
         if exist "%DOCKER_BUILD_DIR%\\package-lock.json" del "%DOCKER_BUILD_DIR%\\package-lock.json"
         if exist "%DOCKER_BUILD_DIR%\\development.Dockerfile" del "%DOCKER_BUILD_DIR%\\development.Dockerfile"
@@ -51,6 +55,9 @@ pipeline {
 
         REM Copy specific files
         copy "%WORKSPACE%\\docker-compose.yml" "%DOCKER_BUILD_DIR%\\docker-compose.yml"
+        copy "%WORKSPACE%\\docker-compose.admin.yml" "%DOCKER_BUILD_DIR%\\docker-compose.admin.yml"
+        copy "%WORKSPACE%\\docker-compose.buyer.yml" "%DOCKER_BUILD_DIR%\\docker-compose.buyer.yml"
+        copy "%WORKSPACE%\\docker-compose.seller.yml" "%DOCKER_BUILD_DIR%\\docker-compose.seller.yml"
         copy "%WORKSPACE%\\package.json" "%DOCKER_BUILD_DIR%\\package.json"
         copy "%WORKSPACE%\\package-lock.json" "%DOCKER_BUILD_DIR%\\package-lock.json"
         copy "%WORKSPACE%\\development.Dockerfile" "%DOCKER_BUILD_DIR%\\development.Dockerfile"

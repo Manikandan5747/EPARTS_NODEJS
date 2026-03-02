@@ -11,10 +11,10 @@ services:
     ports:
       - "3000:3000"
     volumes:
-      - ./api-gateway:/app/src
-      - ./libs:/app/libs
-      - C:/Mani/logfile:/app/logs
-      - C:/Mani/NodeJs-App-Microservices-master/assets:/app/assets  
+      - ./api-gateway:C:/app/src
+      - ./libs:C:/app/libs
+      - ./assets:C:/app/assets
+      - ./logs:C:/app/logs 
     depends_on:
       - admin-iam-service
       - admin-users-service

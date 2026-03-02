@@ -84,14 +84,14 @@ echo ================================================
 
 
 cd "%DOCKER_BUILD_DIR%"
-docker-compose -f docker-compose.yml -f docker-compose.admin.yml -f docker-compose.buyer.yml -f docker-compose.seller.yml down
+docker-compose -f docker-compose.yml -f docker-compose.admin.yml down
 
 echo ================================================
 echo Building fresh Docker images...
 echo ================================================
 
 
-docker-compose -f docker-compose.yml -f docker-compose.admin.yml -f docker-compose.buyer.yml -f docker-compose.seller.yml up --build 
+docker-compose -f docker-compose.yml -f docker-compose.admin.yml up --build 
 
 
 echo ================================================

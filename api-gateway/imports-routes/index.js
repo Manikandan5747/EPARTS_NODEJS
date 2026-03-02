@@ -66,31 +66,31 @@ module.exports = function registerRoutes(app, middlewares) {
     app.use('/api', checkApiKey, assignAssignedTo, AdminIntegrationRoutes);
     app.use('/api', checkApiKey, assignAssignedTo, AdminCMSRoutes);
 
-    /* ---------------- BUYER FLOW ---------------- */
-    app.use('/api/buyer', checkApiKey, assignAssignedTo, BuyerIAMRoutes);
-    app.use('/api/buyer', checkApiKey, assignAssignedTo, BuyerUserRoutes);
-    app.use('/api/buyer', checkApiKey, assignAssignedTo, BuyerProductRoutes);
-    app.use('/api/buyer', checkApiKey, assignAssignedTo, BuyerCartRoutes);
-    app.use('/api/buyer', checkApiKey, assignAssignedTo, BuyerOrderRoutes);
-    app.use('/api/buyer', checkApiKey, assignAssignedTo, BuyerQuoteRoutes);
-    app.use('/api/buyer', checkApiKey, assignAssignedTo, BuyerPaymentRoutes);
-    app.use('/api/buyer', checkApiKey, assignAssignedTo, BuyerInventoryRoutes);
-    app.use('/api/buyer', checkApiKey, assignAssignedTo, BuyerNotificationRoutes);
-    app.use('/api/buyer', checkApiKey, assignAssignedTo, BuyerSubscriptionRoutes);
-    app.use('/api/buyer', checkApiKey, assignAssignedTo, BuyerReportingRoutes);
-    app.use('/api/buyer', checkApiKey, assignAssignedTo, BuyerRequestOfferRoutes);
-    app.use('/api/buyer', checkApiKey, assignAssignedTo, BuyerIntegrationRoutes);
+    // /* ---------------- BUYER FLOW ---------------- */
+    // app.use('/api/buyer', checkApiKey, assignAssignedTo, BuyerIAMRoutes);
+    // app.use('/api/buyer', checkApiKey, assignAssignedTo, BuyerUserRoutes);
+    // app.use('/api/buyer', checkApiKey, assignAssignedTo, BuyerProductRoutes);
+    // app.use('/api/buyer', checkApiKey, assignAssignedTo, BuyerCartRoutes);
+    // app.use('/api/buyer', checkApiKey, assignAssignedTo, BuyerOrderRoutes);
+    // app.use('/api/buyer', checkApiKey, assignAssignedTo, BuyerQuoteRoutes);
+    // app.use('/api/buyer', checkApiKey, assignAssignedTo, BuyerPaymentRoutes);
+    // app.use('/api/buyer', checkApiKey, assignAssignedTo, BuyerInventoryRoutes);
+    // app.use('/api/buyer', checkApiKey, assignAssignedTo, BuyerNotificationRoutes);
+    // app.use('/api/buyer', checkApiKey, assignAssignedTo, BuyerSubscriptionRoutes);
+    // app.use('/api/buyer', checkApiKey, assignAssignedTo, BuyerReportingRoutes);
+    // app.use('/api/buyer', checkApiKey, assignAssignedTo, BuyerRequestOfferRoutes);
+    // app.use('/api/buyer', checkApiKey, assignAssignedTo, BuyerIntegrationRoutes);
 
-    /* ---------------- SELLER FLOW ---------------- */
-    app.use('/api/seller', checkApiKey, assignAssignedTo, SellerIAMRoutes);
-    app.use('/api/seller', checkApiKey, assignAssignedTo, SellerUserRoutes);
-    app.use('/api/seller', checkApiKey, assignAssignedTo, SellerProductRoutes);
-    app.use('/api/seller', checkApiKey, assignAssignedTo, SellerOrderRoutes);
-    app.use('/api/seller', checkApiKey, assignAssignedTo, SellerPaymentRoutes);
-    app.use('/api/seller', checkApiKey, assignAssignedTo, SellerInventoryRoutes);
-    app.use('/api/seller', checkApiKey, assignAssignedTo, SellerNotificationRoutes);
-    app.use('/api/seller', checkApiKey, assignAssignedTo, SellerSubscriptionRoutes);
-    app.use('/api/seller', checkApiKey, assignAssignedTo, SellerReportingRoutes);
-    app.use('/api/seller', checkApiKey, assignAssignedTo, SellerRequestOfferRoutes);
-    app.use('/api/seller', checkApiKey, assignAssignedTo, SellerIntegrationRoutes);
+    // /* ---------------- SELLER FLOW ---------------- */
+    // app.use('/api/seller', checkApiKey, assignAssignedTo, SellerIAMRoutes);
+    // app.use('/api/seller', checkApiKey, assignAssignedTo, SellerUserRoutes);
+    // app.use('/api/seller', checkApiKey, assignAssignedTo, SellerProductRoutes);
+    // app.use('/api/seller', checkApiKey, assignAssignedTo, SellerOrderRoutes);
+    // app.use('/api/seller', checkApiKey, assignAssignedTo, SellerPaymentRoutes);
+    // app.use('/api/seller', checkApiKey, assignAssignedTo, SellerInventoryRoutes);
+    // app.use('/api/seller', checkApiKey, assignAssignedTo, SellerNotificationRoutes);
+    // app.use('/api/seller', checkApiKey, assignAssignedTo, SellerSubscriptionRoutes);
+    // app.use('/api/seller', checkApiKey, assignAssignedTo, SellerReportingRoutes);
+    // app.use('/api/seller', checkApiKey, assignAssignedTo, SellerRequestOfferRoutes);
+    // app.use('/api/seller', checkApiKey, assignAssignedTo, SellerIntegrationRoutes);
 };

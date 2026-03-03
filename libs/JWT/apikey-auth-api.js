@@ -1,32 +1,35 @@
+require('module-alias/register');
 const AppError = require('@libs/error-handler/app-error');
-require('dotenv').config();
 const { getAllSettingsCategory } = require('@libs/common/common-util');
 
 let apiKeyValue = null;
 
-// Load API KEY once
-(async () => {
+async function loadApiKey() {
+  if (apiKeyValue) return apiKeyValue;
+
+  const arr = await getAllSettingsCategory('APIS');
+  const apiKey = arr?.find(ele => ele.setparameter === "API_KEY");
+  apiKeyValue = apiKey?.setparametervalue || null;
+
+  return apiKeyValue;
+}
+
+module.exports = async function checkApiKey(req, res, next) {
   try {
-    const arr = await getAllSettingsCategory('APIS');
-    console.log("arr",arr);
-    
-    const apiKey = arr?.find(ele => ele.setparameter === "API_KEY");
-    apiKeyValue = apiKey?.setparametervalue || null;
-  } catch (err) {
-    console.error("API KEY Load Failed:", err);
+    const storedKey = await loadApiKey();
+
+    const clientToken =
+      req.headers['apikey'] ||
+      req.headers['x-apikey'];
+
+    if (!storedKey || !clientToken || clientToken !== storedKey) {
+      const err = new AppError('API Key authentication failed', 401, ['apikey']);
+      err.name = 'ApiKeyError';
+      return next(err);
+    }
+
+    next();
+  } catch (error) {
+   console.error("API KEY Load Failed:", err);
   }
-})();
-
-module.exports = function checkApiKey(req, res, next) {
-  const clientToken =
-    req.headers['apikey'] ||
-    req.headers['x-apikey'];
-
-  if (!apiKeyValue || !clientToken || clientToken !== apiKeyValue) {
-    const err = new AppError('API Key authentication failed', 401, ['apikey']);
-    err.name = 'ApiKeyError';
-    return next(err);
-  }
-
-  next();
 };

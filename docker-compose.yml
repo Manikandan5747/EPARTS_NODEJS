@@ -21,12 +21,12 @@ services:
       - admin-product-catalog-service
       - admin-order-quote-service
       - admin-payment-finance-service
-      - admin-inventory-service
-      - admin-notification-service
-      - admin-subscription-service
-      - admin-reporting-service
+      # - admin-inventory-service
+      # - admin-notification-service
+      # - admin-subscription-service
+      # - admin-reporting-service
       - admin-request-offer-service
       - admin-master-data-service
-      - admin-integration-service
-      - admin-cms-service
+      # - admin-integration-service
+      # - admin-cms-service
 

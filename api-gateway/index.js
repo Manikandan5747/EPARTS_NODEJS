@@ -1,4 +1,6 @@
-const express = require('express')
+require('module-alias/register');
+
+const express = require('express');
 const bodyParser = require('body-parser');
 const registerRoutes = require('./imports-routes/index');
 const app = express()
@@ -8,7 +10,7 @@ const path = require('path');
 app.use(bodyParser.json())
 const cors = require('cors');
 const setupStaticFiles = require('@libs/folders-paths/setup-static-files');
-
+const checkApiKey = require('@libs/JWT/apikey-auth-api');
 
 app.use(cors()); // Enables CORS for all origins and all routes
 // --------------------------------------
@@ -62,7 +64,8 @@ const assignAssignedTo = (req, res, next) => {
 // /* -------------------------------
 //    PROTECTED ROUTES wITH ACCESSTOKEN 
 // -------------------------------- */
-registerRoutes(app, { assignAssignedTo });
+
+registerRoutes(app, { checkApiKey,assignAssignedTo });
 
 // GLOBAL ERROR HANDLER
 app.use(errorHandler);

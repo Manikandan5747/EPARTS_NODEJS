@@ -4,7 +4,7 @@ require('module-alias/register');
 // const AdminStartAuthApi = require("@libs/JWT/admin-auth-api");
 // const BuyerStartAuthApi = require("@libs/JWT/buyer-auth-api");
 // const SellerStartAuthApi = require("@libs/JWT/seller-auth-api");
-const checkApiKey = require('@libs/JWT/apikey-auth-api');
+
 // ---------------- ADMIN ROUTES ----------------
 const AdminIAMRoutes = require('./admin/iam.routes');
 const AdminUserRoutes = require('./admin/users.routes');
@@ -49,7 +49,7 @@ const SellerRequestOfferRoutes = require('./seller/request-offer.routes');
 const SellerIntegrationRoutes = require('./seller/integration.routes');
 
 module.exports = function registerRoutes(app, middlewares) {
-    const {  assignAssignedTo } = middlewares;
+    const {  checkApiKey,assignAssignedTo } = middlewares;
 
     /* ---------------- ADMIN FLOW ---------------- */
     app.use('/api', checkApiKey, assignAssignedTo, AdminIAMRoutes);

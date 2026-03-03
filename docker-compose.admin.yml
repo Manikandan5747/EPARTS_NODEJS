@@ -57,41 +57,41 @@ services:
     environment: *admin-env
     volumes: *admin-volumes
 
-  admin-inventory-service:
-    build:
-      context: .
-      dockerfile: development.Dockerfile
-    image: microservices-workshop/admin-inventory-service:dev
-    restart: on-failure
-    environment: *admin-env
-    volumes: *admin-volumes
+  # admin-inventory-service:
+  #   build:
+  #     context: .
+  #     dockerfile: development.Dockerfile
+  #   image: microservices-workshop/admin-inventory-service:dev
+  #   restart: on-failure
+  #   environment: *admin-env
+  #   volumes: *admin-volumes
 
-  admin-notification-service:
-    build:
-      context: .
-      dockerfile: development.Dockerfile
-    image: microservices-workshop/admin-notification-service:dev
-    restart: on-failure
-    environment: *admin-env
-    volumes: *admin-volumes
+  # admin-notification-service:
+  #   build:
+  #     context: .
+  #     dockerfile: development.Dockerfile
+  #   image: microservices-workshop/admin-notification-service:dev
+  #   restart: on-failure
+  #   environment: *admin-env
+  #   volumes: *admin-volumes
 
-  admin-subscription-service:
-    build:
-      context: .
-      dockerfile: development.Dockerfile
-    image: microservices-workshop/admin-subscription-service:dev
-    restart: on-failure
-    environment: *admin-env
-    volumes: *admin-volumes
+  # admin-subscription-service:
+  #   build:
+  #     context: .
+  #     dockerfile: development.Dockerfile
+  #   image: microservices-workshop/admin-subscription-service:dev
+  #   restart: on-failure
+  #   environment: *admin-env
+  #   volumes: *admin-volumes
 
-  admin-reporting-service:
-    build:
-      context: .
-      dockerfile: development.Dockerfile
-    image: microservices-workshop/admin-reporting-service:dev
-    restart: on-failure
-    environment: *admin-env
-    volumes: *admin-volumes
+  # admin-reporting-service:
+  #   build:
+  #     context: .
+  #     dockerfile: development.Dockerfile
+  #   image: microservices-workshop/admin-reporting-service:dev
+  #   restart: on-failure
+  #   environment: *admin-env
+  #   volumes: *admin-volumes
 
   admin-request-offer-service:
     build:
@@ -120,11 +120,11 @@ services:
     environment: *admin-env
     volumes: *admin-volumes
 
-  admin-cms-service:
-    build:
-      context: .
-      dockerfile: development.Dockerfile
-    image: microservices-workshop/admin-cms-service:dev
-    restart: on-failure
-    environment: *admin-env
-    volumes: *admin-volumes
+  # admin-cms-service:
+  #   build:
+  #     context: .
+  #     dockerfile: development.Dockerfile
+  #   image: microservices-workshop/admin-cms-service:dev
+  #   restart: on-failure
+  #   environment: *admin-env
+  #   volumes: *admin-volumes

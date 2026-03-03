@@ -57,14 +57,14 @@ module.exports = function registerRoutes(app, middlewares) {
     app.use('/api', checkApiKey, assignAssignedTo, AdminProductRoutes);
     app.use('/api', checkApiKey, assignAssignedTo, AdminOrderRoutes);
     app.use('/api', checkApiKey, assignAssignedTo, AdminPaymentRoutes);
-    app.use('/api', checkApiKey, assignAssignedTo, AdminInventoryRoutes);
-    app.use('/api', checkApiKey, assignAssignedTo, AdminNotificationRoutes);
-    app.use('/api', checkApiKey, assignAssignedTo, AdminSubscriptionRoutes);
-    app.use('/api', checkApiKey, assignAssignedTo, AdminReportingRoutes);
+    // app.use('/api', checkApiKey, assignAssignedTo, AdminInventoryRoutes);
+    // app.use('/api', checkApiKey, assignAssignedTo, AdminNotificationRoutes);
+    // app.use('/api', checkApiKey, assignAssignedTo, AdminSubscriptionRoutes);
+    // app.use('/api', checkApiKey, assignAssignedTo, AdminReportingRoutes);
     app.use('/api', checkApiKey, assignAssignedTo, AdminRequestOfferRoutes);
     app.use('/api', checkApiKey, assignAssignedTo, AdminMasterRoutes);
-    app.use('/api', checkApiKey, assignAssignedTo, AdminIntegrationRoutes);
-    app.use('/api', checkApiKey, assignAssignedTo, AdminCMSRoutes);
+    // app.use('/api', checkApiKey, assignAssignedTo, AdminIntegrationRoutes);
+    // app.use('/api', checkApiKey, assignAssignedTo, AdminCMSRoutes);
 
     // /* ---------------- BUYER FLOW ---------------- */
     // app.use('/api/buyer', checkApiKey, assignAssignedTo, BuyerIAMRoutes);

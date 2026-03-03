@@ -76,36 +76,34 @@ pipeline {
 
 
 stage('Docker Compose Build & Deploy') {
-steps {
-bat '''
-echo ================================================
-echo Stopping old containers...
-echo ================================================
+    steps {
+        bat '''
+        echo ================================================
+        echo Moving to Docker directory
+        echo ================================================
+        cd "%DOCKER_BUILD_DIR%"
 
+        echo ================================================
+        echo Stopping old containers...
+        echo ================================================
+        docker-compose -f docker-compose.yml -f docker-compose.admin.yml down
 
-cd "%DOCKER_BUILD_DIR%"
-docker-compose -f docker-compose.yml -f docker-compose.admin.yml down
+        echo ================================================
+        echo Building fresh Docker images...
+        echo ================================================
+        docker-compose -f docker-compose.yml -f docker-compose.admin.yml build
 
-echo ================================================
-echo Building fresh Docker images...
-echo ================================================
+        echo ================================================
+        echo Starting containers in detached mode...
+        echo ================================================
+        docker-compose -f docker-compose.yml -f docker-compose.admin.yml up -d
 
-
-docker-compose -f docker-compose.yml -f docker-compose.admin.yml up --build 
-
-
-echo ================================================
-echo Starting containers in detached mode...
-echo ================================================
-
-echo ================================================
-echo Running containers:
-echo ================================================
-
-
-docker ps
-'''
-}
+        echo ================================================
+        echo Running containers:
+        echo ================================================
+        docker ps
+        '''
+    }
 }
 
     }

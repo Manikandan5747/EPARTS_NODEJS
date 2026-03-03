@@ -10,6 +10,6 @@ const userRoutes = require('../../routes/admin/iam-routes/users.routes');
 router.use('/role', roleRoutes);
 router.use('/role-data-access', roleDataAccessRoutes);
 router.use('/profile', profileRoutes);
-router.use('/user', userRoutes);
+router.use('/ima-user', userRoutes);
 
 module.exports = router;

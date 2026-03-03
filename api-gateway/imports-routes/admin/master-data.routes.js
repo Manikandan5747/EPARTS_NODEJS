@@ -22,7 +22,7 @@ router.use('/country', countryRoutes);
 router.use('/state', stateRoutes);
 router.use('/city', cityRoutes);
 router.use('/currency', currencyRoutes);
-router.use('/trading-type', apiAccess(), tradingTypeRoutes);
+router.use('/trading-type', tradingTypeRoutes);
 router.use('/package-type', packageTypeRoutes);
 router.use('/jurisdiction', jurisdictionRoutes);
 router.use('/account-type', accountTypeRoutes);

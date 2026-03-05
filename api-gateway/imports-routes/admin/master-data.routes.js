@@ -4,7 +4,7 @@ const router = express.Router();
 const apiAccess = require('@libs/JWT/data-access-control-api.js');
 
 const countryRoutes = require('../../routes/admin/master-data-routes/countries.routes');
-const stateRoutes = require('../../routes/admin/master-data-routes/states.routes');
+// const stateRoutes = require('../../routes/admin/master-data-routes/states.routes');
 const cityRoutes = require('../../routes/admin/master-data-routes/cities.routes');
 const currencyRoutes = require('../../routes/admin/master-data-routes/currency.routes');
 const tradingTypeRoutes = require('../../routes/admin/master-data-routes/trading-types.routes');
@@ -19,7 +19,7 @@ const webVersionRoutes = require('../../routes/admin/master-data-routes/web_vers
 const addressTypeRoutes = require('../../routes/admin/master-data-routes/address_type_master.routes.js');
 
 router.use('/country', countryRoutes);
-router.use('/state', stateRoutes);
+// router.use('/state', stateRoutes);
 router.use('/city', cityRoutes);
 router.use('/currency', currencyRoutes);
 router.use('/trading-type', tradingTypeRoutes);

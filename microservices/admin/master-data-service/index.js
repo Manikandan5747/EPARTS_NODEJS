@@ -1,6 +1,6 @@
 module.exports = {
     countriesResponder: require('./responder/countries.responder'),
-    statesResponder: require('./responder/states.responder'),
+    // statesResponder: require('./responder/states.responder'),
     citiesResponder: require('./responder/cities.responder'),
     currencyResponder: require('./responder/currency.responder'),
     settingsResponder: require('./responder/settings.responder'),

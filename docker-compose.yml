@@ -11,10 +11,10 @@ services:
     ports:
       - "3000:3000"
     volumes:
-      - ./api-gateway:C:/app/src
-      - ./libs:C:/app/libs
-      - ./assets:C:/app/assets
-      - ./logs:C:/app/logs 
+      - ./api-gateway:/app/src
+      - ./libs:/app/libs
+      - ./assets:/app/assets
+      - ./logs:/app/logs 
     depends_on:
       - admin-iam-service
       - admin-users-service

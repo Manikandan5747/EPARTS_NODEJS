@@ -70,7 +70,15 @@ registerRoutes(app, { checkApiKey,assignAssignedTo });
 // GLOBAL ERROR HANDLER
 app.use(errorHandler);
 
-app.listen(3000, (err) => {
+// app.listen(3000, (err) => {
+//     if (err) {
+//         logger.error('Failed to start server:', err);
+//         process.exit(1);
+//     }
+//     logger.info('Server listening on port 3000');
+// });
+
+app.listen(3000, '0.0.0.0', (err) => {
     if (err) {
         logger.error('Failed to start server:', err);
         process.exit(1);

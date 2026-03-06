@@ -15,10 +15,11 @@ services:
       DB_PASSWORD: admin
       DB_NAME: eparts_development
     volumes:
-      - ./libs:/app/libs
-      - ./assets:/app/assets
-      - ./logs:/app/logs
-      - ./microservices/admin/iam-service:/app/src
+      - ./microservices/admin/iam-service:C:/app/src
+      - ./libs:C:/app/libs
+      - ./assets:C:/app/assets
+      - ./logs:C:/app/logs
+     
 
   admin-users-service:
     build:
@@ -28,10 +29,11 @@ services:
     restart: on-failure
     environment: *admin-env
     volumes:
-      - ./libs:/app/libs
-      - ./assets:/app/assets
-      - ./logs:/app/logs
-      - ./microservices/admin/users-service:/app/src
+      - ./microservices/admin/users-service:C:/app/src
+      - ./libs:C:/app/libs
+      - ./assets:C:/app/assets
+      - ./logs:C:/app/logs
+   
 
 
   admin-product-catalog-service:
@@ -42,10 +44,11 @@ services:
     restart: on-failure
     environment: *admin-env
     volumes:
-      - ./libs:/app/libs
-      - ./assets:/app/assets
-      - ./logs:/app/logs
-      - ./microservices/admin/product-catalog-service:/app/src
+      - ./microservices/admin/product-catalog-service:C:/app/src
+      - ./libs:C:/app/libs
+      - ./assets:C:/app/assets
+      - ./logs:C:/app/logs
+
 
 
   admin-order-quote-service:
@@ -56,10 +59,11 @@ services:
     restart: on-failure
     environment: *admin-env
     volumes:
-      - ./libs:/app/libs
-      - ./assets:/app/assets
-      - ./logs:/app/logs
-      - ./microservices/admin/order-quote-service:/app/src
+      - ./microservices/admin/order-quote-service:C:/app/src
+      - ./libs:C:/app/libs
+      - ./assets:C:/app/assets
+      - ./logs:C:/app/logs
+
 
 
   admin-payment-finance-service:
@@ -70,10 +74,11 @@ services:
     restart: on-failure
     environment: *admin-env
     volumes:
-      - ./libs:/app/libs
-      - ./assets:/app/assets
-      - ./logs:/app/logs
-      - ./microservices/admin/payment-finance-service:/app/src
+      - ./microservices/admin/payment-finance-service:C:/app/src
+      - ./libs:C:/app/libs
+      - ./assets:C:/app/assets
+      - ./logs:C:/app/logs
+
 
 
   # admin-inventory-service:
@@ -84,10 +89,10 @@ services:
   #   restart: on-failure
   #   environment: *admin-env
   #   volumes:
-  #     - ./libs:/app/libs
-  #     - ./assets:/app/assets
-  #     - ./logs:/app/logs
-  #     - ./microservices/admin/inventory-service:/app/src
+  #     - ./libs:C:/app/libs
+  #     - ./assets:C:/app/assets
+  #     - ./logs:C:/app/logs
+  #     - ./microservices/admin/inventory-service:C:/app/src
 
 
   # admin-notification-service:
@@ -98,10 +103,10 @@ services:
   #   restart: on-failure
   #   environment: *admin-env
   #   volumes:
-  #     - ./libs:/app/libs
-  #     - ./assets:/app/assets
-  #     - ./logs:/app/logs
-  #     - ./microservices/admin/notification-service:/app/src
+  #     - ./libs:C:/app/libs
+  #     - ./assets:C:/app/assets
+  #     - ./logs:C:/app/logs
+  #     - ./microservices/admin/notification-service:C:/app/src
 
 
   # admin-subscription-service:
@@ -112,10 +117,10 @@ services:
   #   restart: on-failure
   #   environment: *admin-env
   #   volumes:
-  #     - ./libs:/app/libs
-  #     - ./assets:/app/assets
-  #     - ./logs:/app/logs
-  #     - ./microservices/admin/subscription-service:/app/src
+  #     - ./libs:C:/app/libs
+  #     - ./assets:C:/app/assets
+  #     - ./logs:C:/app/logs
+  #     - ./microservices/admin/subscription-service:C:/app/src
 
 
   # admin-reporting-service:
@@ -126,10 +131,10 @@ services:
   #   restart: on-failure
   #   environment: *admin-env
   #   volumes:
-  #     - ./libs:/app/libs
-  #     - ./assets:/app/assets
-  #     - ./logs:/app/logs
-  #     - ./microservices/admin/reporting-service:/app/src
+  #     - ./libs:C:/app/libs
+  #     - ./assets:C:/app/assets
+  #     - ./logs:C:/app/logs
+  #     - ./microservices/admin/reporting-service:C:/app/src
 
 
   admin-request-offer-service:
@@ -140,10 +145,11 @@ services:
     restart: on-failure
     environment: *admin-env
     volumes:
-      - ./libs:/app/libs
-      - ./assets:/app/assets
-      - ./logs:/app/logs
-      - ./microservices/admin/request-offer-service:/app/src
+      - ./microservices/admin/request-offer-service:C:/app/src
+      - ./libs:C:/app/libs
+      - ./assets:C:/app/assets
+      - ./logs:C:/app/logs
+
 
 
   admin-master-data-service:
@@ -154,10 +160,11 @@ services:
     restart: on-failure
     environment: *admin-env
     volumes:
-      - ./libs:/app/libs
-      - ./assets:/app/assets
-      - ./logs:/app/logs
-      - ./microservices/admin/master-data-service:/app/src
+      - ./microservices/admin/master-data-service:C:/app/src
+      - ./libs:C:/app/libs
+      - ./assets:C:/app/assets
+      - ./logs:C:/app/logs
+
 
 
   admin-integration-service:
@@ -168,10 +175,11 @@ services:
     restart: on-failure
     environment: *admin-env
     volumes:
-      - ./libs:/app/libs
-      - ./assets:/app/assets
-      - ./logs:/app/logs
-      - ./microservices/admin/integration-service:/app/src
+      - ./microservices/admin/integration-service:C:/app/src
+      - ./libs:C:/app/libs
+      - ./assets:C:/app/assets
+      - ./logs:C:/app/logs
+      
 
 
   # admin-cms-service:
@@ -182,7 +190,7 @@ services:
   #   restart: on-failure
   #   environment: *admin-env
   #   volumes:
-  #     - ./libs:/app/libs
-  #     - ./assets:/app/assets
-  #     - ./logs:/app/logs
-  #     - ./microservices/admin/cms-service:/app/src
+  #     - ./libs:C:/app/libs
+  #     - ./assets:C:/app/assets
+  #     - ./logs:C:/app/logs
+  #     - ./microservices/admin/cms-service:C:/app/src

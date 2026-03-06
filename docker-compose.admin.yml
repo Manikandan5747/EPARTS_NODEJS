@@ -158,12 +158,15 @@ services:
       dockerfile: development.Dockerfile
     image: microservices-workshop/admin-master-data-service:dev
     restart: on-failure
-    environment: &admin-env
-      DB_HOST: host.docker.internal
+    environment:
+      DB_HOST: 10.33.30.5          
       DB_PORT: 5432
       DB_USER: postgres
-      DB_PASSWORD: admin
-      DB_NAME: eparts_development
+      DB_PASSWORD: ExZ3naPw@32!perts
+      DB_NAME: eparts_core
+      COTE_DISCOVERY_REDIS_HOST: 10.33.30.5
+      COTE_DISCOVERY_REDIS_PORT: 6379
+
     volumes:
       - ./microservices/admin/master-data-service:C:/app/src
       - ./libs:C:/app/libs

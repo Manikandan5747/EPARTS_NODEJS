@@ -8,6 +8,8 @@ services:
     restart: on-failure
     environment:
       - VIRTUAL_HOST=api-gateway.app.com
+      - COTE_DISCOVERY_REDIS_HOST=10.33.30.5     
+      - COTE_DISCOVERY_REDIS_PORT=6379      
     ports:
       - "3000:3000"
     volumes:

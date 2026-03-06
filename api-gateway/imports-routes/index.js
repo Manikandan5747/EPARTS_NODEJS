@@ -52,16 +52,16 @@ module.exports = function registerRoutes(app, middlewares) {
     const {  checkApiKey,assignAssignedTo } = middlewares;
 
     /* ---------------- ADMIN FLOW ---------------- */
-    app.use('/api', assignAssignedTo, AdminIAMRoutes);
-    app.use('/api', assignAssignedTo, AdminUserRoutes);
-    app.use('/api', assignAssignedTo, AdminProductRoutes);
-    app.use('/api', assignAssignedTo, AdminOrderRoutes);
-    app.use('/api', assignAssignedTo, AdminPaymentRoutes);
+    // app.use('/api', assignAssignedTo, AdminIAMRoutes);
+    // app.use('/api', assignAssignedTo, AdminUserRoutes);
+    // app.use('/api', assignAssignedTo, AdminProductRoutes);
+    // app.use('/api', assignAssignedTo, AdminOrderRoutes);
+    // app.use('/api', assignAssignedTo, AdminPaymentRoutes);
     // app.use('/api', assignAssignedTo, AdminInventoryRoutes);
     // app.use('/api', assignAssignedTo, AdminNotificationRoutes);
     // app.use('/api', assignAssignedTo, AdminSubscriptionRoutes);
     // app.use('/api', assignAssignedTo, AdminReportingRoutes);
-    app.use('/api', assignAssignedTo, AdminRequestOfferRoutes);
+    // app.use('/api', assignAssignedTo, AdminRequestOfferRoutes);
     app.use('/api', assignAssignedTo, AdminMasterRoutes);
     // app.use('/api', assignAssignedTo, AdminIntegrationRoutes);
     // app.use('/api', assignAssignedTo, AdminCMSRoutes);

@@ -2,82 +2,82 @@ version: "3.3"
 
 services:
 
-  admin-iam-service:
-    build:
-      context: .
-      dockerfile: development.Dockerfile
-    image: microservices-workshop/admin-iam-service:dev
-    restart: on-failure
-    environment: &admin-env
-      DB_HOST: host.docker.internal
-      DB_PORT: 5432
-      DB_USER: postgres
-      DB_PASSWORD: admin
-      DB_NAME: eparts_development
-    volumes:
-      - ./microservices/admin/iam-service:C:/app/src
-      - ./libs:C:/app/libs
-      - ./assets:C:/app/assets
-      - ./logs:C:/app/logs
+  # admin-iam-service:
+  #   build:
+  #     context: .
+  #     dockerfile: development.Dockerfile
+  #   image: microservices-workshop/admin-iam-service:dev
+  #   restart: on-failure
+  #   environment: &admin-env
+  #     DB_HOST: host.docker.internal
+  #     DB_PORT: 5432
+  #     DB_USER: postgres
+  #     DB_PASSWORD: admin
+  #     DB_NAME: eparts_development
+  #   volumes:
+  #     - ./microservices/admin/iam-service:C:/app/src
+  #     - ./libs:C:/app/libs
+  #     - ./assets:C:/app/assets
+  #     - ./logs:C:/app/logs
      
 
-  admin-users-service:
-    build:
-      context: .
-      dockerfile: development.Dockerfile
-    image: microservices-workshop/admin-users-service:dev
-    restart: on-failure
-    environment: *admin-env
-    volumes:
-      - ./microservices/admin/users-service:C:/app/src
-      - ./libs:C:/app/libs
-      - ./assets:C:/app/assets
-      - ./logs:C:/app/logs
+  # admin-users-service:
+  #   build:
+  #     context: .
+  #     dockerfile: development.Dockerfile
+  #   image: microservices-workshop/admin-users-service:dev
+  #   restart: on-failure
+  #   environment: *admin-env
+  #   volumes:
+  #     - ./microservices/admin/users-service:C:/app/src
+  #     - ./libs:C:/app/libs
+  #     - ./assets:C:/app/assets
+  #     - ./logs:C:/app/logs
    
 
 
-  admin-product-catalog-service:
-    build:
-      context: .
-      dockerfile: development.Dockerfile
-    image: microservices-workshop/admin-product-catalog-service:dev
-    restart: on-failure
-    environment: *admin-env
-    volumes:
-      - ./microservices/admin/product-catalog-service:C:/app/src
-      - ./libs:C:/app/libs
-      - ./assets:C:/app/assets
-      - ./logs:C:/app/logs
+  # admin-product-catalog-service:
+  #   build:
+  #     context: .
+  #     dockerfile: development.Dockerfile
+  #   image: microservices-workshop/admin-product-catalog-service:dev
+  #   restart: on-failure
+  #   environment: *admin-env
+  #   volumes:
+  #     - ./microservices/admin/product-catalog-service:C:/app/src
+  #     - ./libs:C:/app/libs
+  #     - ./assets:C:/app/assets
+  #     - ./logs:C:/app/logs
 
 
 
-  admin-order-quote-service:
-    build:
-      context: .
-      dockerfile: development.Dockerfile
-    image: microservices-workshop/admin-order-quote-service:dev
-    restart: on-failure
-    environment: *admin-env
-    volumes:
-      - ./microservices/admin/order-quote-service:C:/app/src
-      - ./libs:C:/app/libs
-      - ./assets:C:/app/assets
-      - ./logs:C:/app/logs
+  # admin-order-quote-service:
+  #   build:
+  #     context: .
+  #     dockerfile: development.Dockerfile
+  #   image: microservices-workshop/admin-order-quote-service:dev
+  #   restart: on-failure
+  #   environment: *admin-env
+  #   volumes:
+  #     - ./microservices/admin/order-quote-service:C:/app/src
+  #     - ./libs:C:/app/libs
+  #     - ./assets:C:/app/assets
+  #     - ./logs:C:/app/logs
 
 
 
-  admin-payment-finance-service:
-    build:
-      context: .
-      dockerfile: development.Dockerfile
-    image: microservices-workshop/admin-payment-finance-service:dev
-    restart: on-failure
-    environment: *admin-env
-    volumes:
-      - ./microservices/admin/payment-finance-service:C:/app/src
-      - ./libs:C:/app/libs
-      - ./assets:C:/app/assets
-      - ./logs:C:/app/logs
+  # admin-payment-finance-service:
+  #   build:
+  #     context: .
+  #     dockerfile: development.Dockerfile
+  #   image: microservices-workshop/admin-payment-finance-service:dev
+  #   restart: on-failure
+  #   environment: *admin-env
+  #   volumes:
+  #     - ./microservices/admin/payment-finance-service:C:/app/src
+  #     - ./libs:C:/app/libs
+  #     - ./assets:C:/app/assets
+  #     - ./logs:C:/app/logs
 
 
 
@@ -137,18 +137,18 @@ services:
   #     - ./microservices/admin/reporting-service:C:/app/src
 
 
-  admin-request-offer-service:
-    build:
-      context: .
-      dockerfile: development.Dockerfile
-    image: microservices-workshop/admin-request-offer-service:dev
-    restart: on-failure
-    environment: *admin-env
-    volumes:
-      - ./microservices/admin/request-offer-service:C:/app/src
-      - ./libs:C:/app/libs
-      - ./assets:C:/app/assets
-      - ./logs:C:/app/logs
+  # admin-request-offer-service:
+  #   build:
+  #     context: .
+  #     dockerfile: development.Dockerfile
+  #   image: microservices-workshop/admin-request-offer-service:dev
+  #   restart: on-failure
+  #   environment: *admin-env
+  #   volumes:
+  #     - ./microservices/admin/request-offer-service:C:/app/src
+  #     - ./libs:C:/app/libs
+  #     - ./assets:C:/app/assets
+  #     - ./logs:C:/app/logs
 
 
 
@@ -167,18 +167,18 @@ services:
 
 
 
-  admin-integration-service:
-    build:
-      context: .
-      dockerfile: development.Dockerfile
-    image: microservices-workshop/admin-integration-service:dev
-    restart: on-failure
-    environment: *admin-env
-    volumes:
-      - ./microservices/admin/integration-service:C:/app/src
-      - ./libs:C:/app/libs
-      - ./assets:C:/app/assets
-      - ./logs:C:/app/logs
+  # admin-integration-service:
+  #   build:
+  #     context: .
+  #     dockerfile: development.Dockerfile
+  #   image: microservices-workshop/admin-integration-service:dev
+  #   restart: on-failure
+  #   environment: *admin-env
+  #   volumes:
+  #     - ./microservices/admin/integration-service:C:/app/src
+  #     - ./libs:C:/app/libs
+  #     - ./assets:C:/app/assets
+  #     - ./logs:C:/app/logs
       
 
 

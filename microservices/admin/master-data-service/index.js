@@ -13,5 +13,5 @@ module.exports = {
     webVersionResponder: require('./responder/web_version.responder'),
     prefixRefNoResponder: require('./responder/prefix_refno.responder'),
     addressTypeResponder: require('./responder/address_type_master.responder'),
-
+   uomResponder: require('./responder/uom.responder'),
 };

@@ -17,6 +17,7 @@ const settingRoutes = require('../../routes/admin/master-data-routes/settings.ro
 const prefixRefnoRoutes = require('../../routes/admin/master-data-routes/prefix_refno.routes');
 const webVersionRoutes = require('../../routes/admin/master-data-routes/web_version.routes');
 const addressTypeRoutes = require('../../routes/admin/master-data-routes/address_type_master.routes.js');
+const uomRoutes = require('../../routes/admin/master-data-routes/uom.routes.js');
 
 router.use('/country', countryRoutes);
 router.use('/state', stateRoutes);
@@ -32,6 +33,6 @@ router.use('/setting', settingRoutes);
 router.use('/prefix-refno', prefixRefnoRoutes);
 router.use('/web-version', webVersionRoutes);
 router.use('/address-type', addressTypeRoutes);
-
+router.use('/uom', uomRoutes);
 
 module.exports = router;

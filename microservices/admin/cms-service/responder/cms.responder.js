@@ -8015,26 +8015,28 @@ responder.on('list-pages', async (req, cb) => {
             'seller home'
         ];
 
-        // Fetch pages that are active and not deleted
+        // Fetch full page details for active and non-deleted pages
         const pageRes = await pool.query(
             `
-            SELECT page_key
-            FROM pages
-            WHERE page_key = ANY($1)
-              AND is_deleted = FALSE
-              AND is_active = TRUE
+            SELECT *
+    FROM pages
+    WHERE page_key = ANY($1)
+      AND is_deleted = FALSE
+      AND is_active = TRUE
             `,
             [requiredPages]
         );
 
-        // Get available page keys
-        const availableKeys = pageRes.rows.map(r => r.page_key);
+        // Prepare response with availability + page data
+        const pageAvailability = requiredPages.map(key => {
+            const pageData = pageRes.rows.find(row => row.page_key === key);
 
-        // Prepare availability status for each required page
-        const pageAvailability = requiredPages.map(key => ({
-            page_key: key,
-            is_available: availableKeys.includes(key)
-        }));
+            return {
+                page_key: key,
+                is_available: !!pageData,
+                page_data: pageData || null
+            };
+        });
 
         // Flag to check if all required pages exist
         const allPagesAvailable = pageAvailability.every(p => p.is_available);
@@ -8053,6 +8055,7 @@ responder.on('list-pages', async (req, cb) => {
 
     } catch (err) {
         logger.error('Page availability check error:', err);
+
         return cb(null, {
             header_type: "ERROR",
             message_visibility: true,

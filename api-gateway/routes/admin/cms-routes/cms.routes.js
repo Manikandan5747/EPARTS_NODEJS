@@ -2,12 +2,12 @@ require('module-alias/register');
 
 const express = require('express');
 const router = express.Router();
-const cmsRequester = require('@libs/requesters/admin/cms-requesters/cms-requesters');
+const cmsRequester = require('@libs/requesters/admin-requesters/cms-requester');
 const logger = require('@libs/logger/logger');
 const { saveErrorLog } = require('@libs/common/common-util');
 const multipart = require("connect-multiparty");
 const path = require('path');
-const uploadDir = path.join('/app/assets', 'cms');
+const uploadDir = path.join('/app/assets','cms');
 const multipartMiddleware = multipart({ uploadDir });
 
 
@@ -15,196 +15,38 @@ const multipartMiddleware = multipart({ uploadDir });
 // UPLOAD FILE (IMAGE / VIDEO)
 // --------------------------------------
 
-// router.post("/filesave", multipartMiddleware, async (req, res) => {
-//     try {
-//         if (!req.files?.file) {
-//             return res.status(400).json({
-//                 header_type: "ERROR",
-//                 message_visibility: true,
-//                 status: false,
-//                 code: 2001,
-//                 message: "Validation failed",
-//                 error: "File is required"
-//             });
-//         }
 
-//         const file = req.files.file;
-
-//         // -------------------------------
-//         // MIME TYPE VALIDATION
-//         // -------------------------------
-//         const allowedMimeTypes = [
-//             "image/jpeg",
-//             "image/png",
-//             "image/webp",
-//             "image/jpg",
-//             "video/mp4",
-//             "video/webm",
-//             "video/quicktime" // mov
-//         ];
-
-//         if (!allowedMimeTypes.includes(file.type)) {
-//             return res.status(400).json({
-//                  header_type: "ERROR",
-//                 message_visibility: true,
-//                 status: false,
-//                 code: 2002,
-//                 message: "Invalid file type",
-//                 error: "Only image and video files are allowed"
-//             });
-//         }
-
-//         // -------------------------------
-//         // FILE SIZE VALIDATION (OPTIONAL)
-//         // -------------------------------
-//         const MAX_SIZE_MB = 50; // change if needed
-//         const maxSize = MAX_SIZE_MB * 1024 * 1024;
-
-//         if (file.size > maxSize) {
-//             return res.status(400).json({
-//                  header_type: "ERROR",
-//                 message_visibility: true,
-//                 status: false,
-//                 code: 2003,
-//                 message: "File size limit exceeded",
-//                 error: `File size should not exceed ${MAX_SIZE_MB}MB`
-//             });
-//         }
-
-//         // -------------------------------
-//         // SUCCESS RESPONSE
-//         // -------------------------------
-//         return res.status(200).json({
-//             header_type: "SUCCESS",
-//             message_visibility: true,
-//             status: true,
-//             code: 1000,
-//             message: "File uploaded successfully",
-//             path: file.path
-//         });
-
-//     } catch (err) {
-//         logger.error("Upload error:", err);
-//         return res.status(500).json({
-//             header_type: "ERROR",
-//             message_visibility: true,
-//             status: false,
-//             code: 2004,
-//             message: "File upload failed",
-//             error: err.message
-//         });
-//     }
-// });
-
-
-router.post("/filesave", multipartMiddleware, async (req, res) => {
+router.post('/filesave', multipartMiddleware, async (req, res) => {
     try {
 
-        // -------------------------------
-        // FILE REQUIRED VALIDATION
-        // -------------------------------
-        if (!req.files?.file) {
+        const result = await cmsRequester.send({
+            type: 'cms-filesave',
+            body: req.body,
+            files: req.files
+        });
+
+        if (!result.status) {
 
             await saveErrorLog({
-                api_name: 'filesave',
+                api_name: 'cms-filesave',
                 method: 'POST',
                 payload: req.body,
-                message: 'File is required',
-                stack: '',
-                error_code: 2001
+                message: result.error,
+                stack: result.stack || '',
+                error_code: result.code || 2004
             });
 
-            return res.status(400).json({
-                header_type: "ERROR",
-                message_visibility: true,
-                status: false,
-                code: 2001,
-                message: "Validation failed",
-                error: "File is required"
-            });
+            return res.status(500).json(result);
         }
 
-        const file = req.files.file;
-
-        // -------------------------------
-        // MIME TYPE VALIDATION
-        // -------------------------------
-        const allowedMimeTypes = [
-            "image/jpeg",
-            "image/png",
-            "image/webp",
-            "image/jpg",
-            "video/mp4",
-            "video/webm",
-            "video/quicktime"
-        ];
-
-        if (!allowedMimeTypes.includes(file.type)) {
-
-            await saveErrorLog({
-                api_name: 'filesave',
-                method: 'POST',
-                payload: { file_type: file.type },
-                message: 'Invalid file type',
-                stack: '',
-                error_code: 2002
-            });
-
-            return res.status(400).json({
-                header_type: "ERROR",
-                message_visibility: true,
-                status: false,
-                code: 2002,
-                message: "Invalid file type",
-                error: "Only image and video files are allowed"
-            });
-        }
-
-        // -------------------------------
-        // FILE SIZE VALIDATION
-        // -------------------------------
-        const MAX_SIZE_MB = 50;
-        const maxSize = MAX_SIZE_MB * 1024 * 1024;
-
-        if (file.size > maxSize) {
-
-            await saveErrorLog({
-                api_name: 'filesave',
-                method: 'POST',
-                payload: { file_size: file.size },
-                message: `File size exceeded ${MAX_SIZE_MB}MB`,
-                stack: '',
-                error_code: 2003
-            });
-
-            return res.status(400).json({
-                header_type: "ERROR",
-                message_visibility: true,
-                status: false,
-                code: 2003,
-                message: "File size limit exceeded",
-                error: `File size should not exceed ${MAX_SIZE_MB}MB`
-            });
-        }
-
-        // -------------------------------
-        // SUCCESS RESPONSE
-        // -------------------------------
-        return res.status(200).json({
-            header_type: "SUCCESS",
-            message_visibility: true,
-            status: true,
-            code: 1000,
-            message: "File uploaded successfully",
-            path: file.path
-        });
+        return res.status(200).json(result);
 
     } catch (err) {
 
-        logger.error("Upload error:", err.message);
+        logger.error("Error in filesave:", err.message);
 
         await saveErrorLog({
-            api_name: 'filesave',
+            api_name: 'cms-filesave',
             method: 'POST',
             payload: req.body,
             message: err.message,
@@ -217,11 +59,12 @@ router.post("/filesave", multipartMiddleware, async (req, res) => {
             message_visibility: true,
             status: false,
             code: 2004,
-            message: "File upload failed",
+            message: err.message,
             error: err.message
         });
     }
 });
+
 
 // --------------------------------------
 // DELETE 
@@ -335,7 +178,7 @@ router.post('/update-home/:page_key', async (req, res) => {
             page_key: req.params.page_key,
             body: {
                 ...req.body
-            }
+            }        
         });
 
         if (!result.status) {
@@ -403,25 +246,24 @@ router.get('/list-admin-home/:page_key', async (req, res) => {
     } catch (err) {
         logger.error("Error in cms/listbypagekey:", err.message);
 
-        // SAVE ERROR LOG for unexpected exception
-        await saveErrorLog({
-            api_name: 'list-admin-home',
-            method: 'GET',
-            payload: { page_key: req.params.page_key },
-            message: err.message,
-            stack: err.stack,
-            error_code: 2004
-        });
+    // SAVE ERROR LOG for unexpected exception
+    await saveErrorLog({
+      api_name: 'list-admin-home',
+      method: 'GET',
+      payload: { page_key: req.params.page_key },
+      message: err.message,
+      stack: err.stack,
+      error_code: 2004
+    });
 
-        res.status(500).json({
-            header_type: "ERROR",
-            message_visibility: true,
-            status: false,
-            code: 2004,
-            message: err.message,
-            error: err.message
-        });
-    }
+    res.status(500).json({
+      header_type: "ERROR",
+      message_visibility: true,
+      status: false,
+      code: 2004,
+      message: err.message,
+      error: err.message
+    });    }
 });
 
 // --------------------------------------------------
@@ -499,25 +341,24 @@ router.post('/listbyidwithlock-admin-home/:id', async (req, res) => {
     } catch (err) {
         logger.error("Error in cms/listbyidwithlock:", err.message);
 
-        // SAVE ERROR LOG for unexpected exception
-        await saveErrorLog({
-            api_name: 'listbyidwithlock-home',
-            method: 'POST',
-            payload: { page_uuid: req.params.id },
-            message: err.message,
-            stack: err.stack,
-            error_code: 2004
-        });
+    // SAVE ERROR LOG for unexpected exception
+    await saveErrorLog({
+      api_name: 'listbyidwithlock-home',
+      method: 'POST',
+      payload: { page_uuid: req.params.id },
+      message: err.message,
+      stack: err.stack,
+      error_code: 2004
+    });
 
-        res.status(500).json({
-            header_type: "ERROR",
-            message_visibility: true,
-            status: false,
-            code: 2004,
-            message: err.message,
-            error: err.message
-        });
-    }
+    res.status(500).json({
+      header_type: "ERROR",
+      message_visibility: true,
+      status: false,
+      code: 2004,
+      message: err.message,
+      error: err.message
+    });    }
 });
 
 // --------------------------------------
@@ -582,7 +423,7 @@ router.post('/update-aboutus/:page_key', async (req, res) => {
             page_key: req.params.page_key,
             body: {
                 ...req.body
-            }
+            }        
         });
 
         if (!result.status) {
@@ -650,25 +491,24 @@ router.get('/list-admin-aboutus/:page_key', async (req, res) => {
     } catch (err) {
         logger.error("Error in aboutus/listbypagekey:", err.message);
 
-        // SAVE ERROR LOG for unexpected exception
-        await saveErrorLog({
-            api_name: 'list-admin-aboutus',
-            method: 'GET',
-            payload: { page_key: req.params.page_key },
-            message: err.message,
-            stack: err.stack,
-            error_code: 2004
-        });
+    // SAVE ERROR LOG for unexpected exception
+    await saveErrorLog({
+      api_name: 'list-admin-aboutus',
+      method: 'GET',
+      payload: { page_key: req.params.page_key },
+      message: err.message,
+      stack: err.stack,
+      error_code: 2004
+    });
 
-        res.status(500).json({
-            header_type: "ERROR",
-            message_visibility: true,
-            status: false,
-            code: 2004,
-            message: err.message,
-            error: err.message
-        });
-    }
+    res.status(500).json({
+      header_type: "ERROR",
+      message_visibility: true,
+      status: false,
+      code: 2004,
+      message: err.message,
+      error: err.message
+    });    }
 });
 
 // --------------------------------------
@@ -742,25 +582,24 @@ router.post('/listbyidwithlock-admin-aboutus/:id', async (req, res) => {
     } catch (err) {
         logger.error("Error in aboutus/listbyidwithlock:", err.message);
 
-        // SAVE ERROR LOG for unexpected exception
-        await saveErrorLog({
-            api_name: 'listbyidwithlock-aboutus',
-            method: 'POST',
-            payload: { page_uuid: req.params.id },
-            message: err.message,
-            stack: err.stack,
-            error_code: 2004
-        });
+    // SAVE ERROR LOG for unexpected exception
+    await saveErrorLog({
+      api_name: 'listbyidwithlock-aboutus',
+      method: 'POST',
+      payload: { page_uuid: req.params.id },
+      message: err.message,
+      stack: err.stack,
+      error_code: 2004
+    });
 
-        res.status(500).json({
-            header_type: "ERROR",
-            message_visibility: true,
-            status: false,
-            code: 2004,
-            message: err.message,
-            error: err.message
-        });
-    }
+    res.status(500).json({
+      header_type: "ERROR",
+      message_visibility: true,
+      status: false,
+      code: 2004,
+      message: err.message,
+      error: err.message
+    });    }
 });
 
 // --------------------------------------
@@ -825,7 +664,7 @@ router.post('/update-contactus/:page_key', async (req, res) => {
             page_key: req.params.page_key,
             body: {
                 ...req.body
-            }
+            }        
         });
 
         if (!result.status) {
@@ -893,25 +732,24 @@ router.get('/list-admin-contactus/:page_key', async (req, res) => {
     } catch (err) {
         logger.error("Error in contactus/listbypagekey:", err.message);
 
-        // SAVE ERROR LOG for unexpected exception
-        await saveErrorLog({
-            api_name: 'list-admin-contactus',
-            method: 'GET',
-            payload: { page_key: req.params.page_key },
-            message: err.message,
-            stack: err.stack,
-            error_code: 2004
-        });
+    // SAVE ERROR LOG for unexpected exception
+    await saveErrorLog({
+      api_name: 'list-admin-contactus',
+      method: 'GET',
+      payload: { page_key: req.params.page_key },
+      message: err.message,
+      stack: err.stack,
+      error_code: 2004
+    });
 
-        res.status(500).json({
-            header_type: "ERROR",
-            message_visibility: true,
-            status: false,
-            code: 2004,
-            message: err.message,
-            error: err.message
-        });
-    }
+    res.status(500).json({
+      header_type: "ERROR",
+      message_visibility: true,
+      status: false,
+      code: 2004,
+      message: err.message,
+      error: err.message
+    });    }
 });
 
 
@@ -969,7 +807,7 @@ router.post('/listbyidwithlock-admin-contactus/:id', async (req, res) => {
         const result = await cmsRequester.send({
             type: 'listbyidwithlock-contactus',
             page_uuid: req.params.id,
-            body: { user_id: req.body.user_id, mode: req.body.mode }
+             body: { user_id: req.body.user_id, mode: req.body.mode }
         });
         if (!result.status) {
             // SAVE ERROR LOG
@@ -986,25 +824,24 @@ router.post('/listbyidwithlock-admin-contactus/:id', async (req, res) => {
     } catch (err) {
         logger.error("Error in contactus/listbyidwithlock:", err.message);
 
-        // SAVE ERROR LOG for unexpected exception
-        await saveErrorLog({
-            api_name: 'listbyidwithlock',
-            method: 'POST',
-            payload: { page_uuid: req.params.id },
-            message: err.message,
-            stack: err.stack,
-            error_code: 2004
-        });
+    // SAVE ERROR LOG for unexpected exception
+    await saveErrorLog({
+      api_name: 'listbyidwithlock',
+      method: 'POST',
+      payload: { page_uuid: req.params.id },
+      message: err.message,
+      stack: err.stack,
+      error_code: 2004
+    });
 
-        res.status(500).json({
-            header_type: "ERROR",
-            message_visibility: true,
-            status: false,
-            code: 2004,
-            message: err.message,
-            error: err.message
-        });
-    }
+    res.status(500).json({
+      header_type: "ERROR",
+      message_visibility: true,
+      status: false,
+      code: 2004,
+      message: err.message,
+      error: err.message
+    });    }
 });
 
 // --------------------------------------
@@ -1032,25 +869,24 @@ router.get('/list-companyinfo', async (req, res) => {
     } catch (err) {
         logger.error("Error in companyinfo/list:", err.message);
 
-        // SAVE ERROR LOG for unexpected exception
-        await saveErrorLog({
-            api_name: 'list-companyinfo',
-            method: 'GET',
-            payload: { page_key: req.params.page_key },
-            message: err.message,
-            stack: err.stack,
-            error_code: 2004
-        });
+    // SAVE ERROR LOG for unexpected exception
+    await saveErrorLog({
+      api_name: 'list-companyinfo',
+      method: 'GET',
+      payload: { page_key: req.params.page_key },
+      message: err.message,
+      stack: err.stack,
+      error_code: 2004
+    });
 
-        res.status(500).json({
-            header_type: "ERROR",
-            message_visibility: true,
-            status: false,
-            code: 2004,
-            message: err.message,
-            error: err.message
-        });
-    }
+    res.status(500).json({
+      header_type: "ERROR",
+      message_visibility: true,
+      status: false,
+      code: 2004,
+      message: err.message,
+      error: err.message
+    });    }
 });
 
 
@@ -1058,7 +894,7 @@ router.get('/list-companyinfo', async (req, res) => {
 // HOME PAGE - LIST
 // --------------------------------------
 router.get('/list-home/:page_key', async (req, res) => {
-    try {
+  try {
 
 
         const result = await cmsRequester.send({
@@ -1080,32 +916,31 @@ router.get('/list-home/:page_key', async (req, res) => {
     } catch (err) {
         logger.error("Error in home/list:", err.message);
 
-        // SAVE ERROR LOG for unexpected exception
-        await saveErrorLog({
-            api_name: 'list-home',
-            method: 'GET',
-            payload: { page_key: req.params.page_key },
-            message: err.message,
-            stack: err.stack,
-            error_code: 2004
-        });
+    // SAVE ERROR LOG for unexpected exception
+    await saveErrorLog({
+      api_name: 'list-home',
+      method: 'GET',
+      payload: { page_key: req.params.page_key },
+      message: err.message,
+      stack: err.stack,
+      error_code: 2004
+    });
 
-        res.status(500).json({
-            header_type: "ERROR",
-            message_visibility: true,
-            status: false,
-            code: 2004,
-            message: err.message,
-            error: err.message
-        });
-    }
+    res.status(500).json({
+      header_type: "ERROR",
+      message_visibility: true,
+      status: false,
+      code: 2004,
+      message: err.message,
+      error: err.message
+    });    }
 });
 
 // --------------------------------------
 // ABOUT US PAGE - LIST
 // --------------------------------------
 router.get('/list-aboutus/:page_key', async (req, res) => {
-    try {
+  try {
 
 
         const result = await cmsRequester.send({
@@ -1127,32 +962,31 @@ router.get('/list-aboutus/:page_key', async (req, res) => {
     } catch (err) {
         logger.error("Error in aboutus/list:", err.message);
 
-        // SAVE ERROR LOG for unexpected exception
-        await saveErrorLog({
-            api_name: 'list-aboutus',
-            method: 'GET',
-            payload: { page_key: req.params.page_key },
-            message: err.message,
-            stack: err.stack,
-            error_code: 2004
-        });
+    // SAVE ERROR LOG for unexpected exception
+    await saveErrorLog({
+      api_name: 'list-aboutus',
+      method: 'GET',
+      payload: { page_key: req.params.page_key },
+      message: err.message,
+      stack: err.stack,
+      error_code: 2004
+    });
 
-        res.status(500).json({
-            header_type: "ERROR",
-            message_visibility: true,
-            status: false,
-            code: 2004,
-            message: err.message,
-            error: err.message
-        });
-    }
+    res.status(500).json({
+      header_type: "ERROR",
+      message_visibility: true,
+      status: false,
+      code: 2004,
+      message: err.message,
+      error: err.message
+    });    }
 });
 
 // --------------------------------------
 // CONTACT US PAGE - LIST
 // --------------------------------------
 router.get('/list-contactus/:page_key', async (req, res) => {
-    try {
+  try {
 
         const result = await cmsRequester.send({
             type: 'list-contactus',
@@ -1173,25 +1007,24 @@ router.get('/list-contactus/:page_key', async (req, res) => {
     } catch (err) {
         logger.error("Error in contactus/list:", err.message);
 
-        // SAVE ERROR LOG for unexpected exception
-        await saveErrorLog({
-            api_name: 'list-contactus',
-            method: 'GET',
-            payload: { page_key: req.params.page_key },
-            message: err.message,
-            stack: err.stack,
-            error_code: 2004
-        });
+    // SAVE ERROR LOG for unexpected exception
+    await saveErrorLog({
+      api_name: 'list-contactus',
+      method: 'GET',
+      payload: { page_key: req.params.page_key },
+      message: err.message,
+      stack: err.stack,
+      error_code: 2004
+    });
 
-        res.status(500).json({
-            header_type: "ERROR",
-            message_visibility: true,
-            status: false,
-            code: 2004,
-            message: err.message,
-            error: err.message
-        });
-    }
+    res.status(500).json({
+      header_type: "ERROR",
+      message_visibility: true,
+      status: false,
+      code: 2004,
+      message: err.message,
+      error: err.message
+    });    }
 });
 
 // --------------------------------------
@@ -1301,7 +1134,7 @@ router.post('/update-buyerhome/:page_key', async (req, res) => {
             page_key: req.params.page_key,
             body: {
                 ...req.body
-            }
+            }        
         });
 
         if (!result.status) {
@@ -1347,7 +1180,7 @@ router.post('/update-buyerhome/:page_key', async (req, res) => {
 // ADMIN - BUYER HOME - LIST BY ID WITH EDIT LOCK
 // --------------------------------------------------
 
-router.post('/listbyidwithlock-admin-buyerhome/:id', async (req, res) => {
+router.post('/listbyidwithlock-cmshome/:id', async (req, res) => {
     try {
 
 
@@ -1372,25 +1205,24 @@ router.post('/listbyidwithlock-admin-buyerhome/:id', async (req, res) => {
     } catch (err) {
         logger.error("Error in cms/listbyidwithlock:", err.message);
 
-        // SAVE ERROR LOG for unexpected exception
-        await saveErrorLog({
-            api_name: 'listbyidwithlock-buyerhome',
-            method: 'POST',
-            payload: { page_uuid: req.params.id },
-            message: err.message,
-            stack: err.stack,
-            error_code: 2004
-        });
+    // SAVE ERROR LOG for unexpected exception
+    await saveErrorLog({
+      api_name: 'listbyidwithlock-buyerhome',
+      method: 'POST',
+      payload: { page_uuid: req.params.id },
+      message: err.message,
+      stack: err.stack,
+      error_code: 2004
+    });
 
-        res.status(500).json({
-            header_type: "ERROR",
-            message_visibility: true,
-            status: false,
-            code: 2004,
-            message: err.message,
-            error: err.message
-        });
-    }
+    res.status(500).json({
+      header_type: "ERROR",
+      message_visibility: true,
+      status: false,
+      code: 2004,
+      message: err.message,
+      error: err.message
+    });    }
 });
 
 
@@ -1399,7 +1231,7 @@ router.post('/listbyidwithlock-admin-buyerhome/:id', async (req, res) => {
 // --------------------------------------
 
 router.get('/list-buyerhome/:page_key', async (req, res) => {
-    try {
+  try {
 
 
         const result = await cmsRequester.send({
@@ -1421,25 +1253,24 @@ router.get('/list-buyerhome/:page_key', async (req, res) => {
     } catch (err) {
         logger.error("Error in buyerhome/list:", err.message);
 
-        // SAVE ERROR LOG for unexpected exception
-        await saveErrorLog({
-            api_name: 'list-buyerhome',
-            method: 'GET',
-            payload: { page_key: req.params.page_key },
-            message: err.message,
-            stack: err.stack,
-            error_code: 2004
-        });
+    // SAVE ERROR LOG for unexpected exception
+    await saveErrorLog({
+      api_name: 'list-buyerhome',
+      method: 'GET',
+      payload: { page_key: req.params.page_key },
+      message: err.message,
+      stack: err.stack,
+      error_code: 2004
+    });
 
-        res.status(500).json({
-            header_type: "ERROR",
-            message_visibility: true,
-            status: false,
-            code: 2004,
-            message: err.message,
-            error: err.message
-        });
-    }
+    res.status(500).json({
+      header_type: "ERROR",
+      message_visibility: true,
+      status: false,
+      code: 2004,
+      message: err.message,
+      error: err.message
+    });    }
 });
 
 
@@ -1507,7 +1338,7 @@ router.post('/update-sellerhome/:page_key', async (req, res) => {
             page_key: req.params.page_key,
             body: {
                 ...req.body
-            }
+            }        
         });
 
         if (!result.status) {
@@ -1578,25 +1409,24 @@ router.post('/listbyidwithlock-admin-sellerhome/:id', async (req, res) => {
     } catch (err) {
         logger.error("Error in cms/listbyidwithlock:", err.message);
 
-        // SAVE ERROR LOG for unexpected exception
-        await saveErrorLog({
-            api_name: 'listbyidwithlock-sellerhome',
-            method: 'POST',
-            payload: { page_uuid: req.params.id },
-            message: err.message,
-            stack: err.stack,
-            error_code: 2004
-        });
+    // SAVE ERROR LOG for unexpected exception
+    await saveErrorLog({
+      api_name: 'listbyidwithlock-sellerhome',
+      method: 'POST',
+      payload: { page_uuid: req.params.id },
+      message: err.message,
+      stack: err.stack,
+      error_code: 2004
+    });
 
-        res.status(500).json({
-            header_type: "ERROR",
-            message_visibility: true,
-            status: false,
-            code: 2004,
-            message: err.message,
-            error: err.message
-        });
-    }
+    res.status(500).json({
+      header_type: "ERROR",
+      message_visibility: true,
+      status: false,
+      code: 2004,
+      message: err.message,
+      error: err.message
+    });    }
 });
 
 
@@ -1605,7 +1435,7 @@ router.post('/listbyidwithlock-admin-sellerhome/:id', async (req, res) => {
 // --------------------------------------
 
 router.get('/list-sellerhome/:page_key', async (req, res) => {
-    try {
+  try {
 
 
         const result = await cmsRequester.send({
@@ -1627,31 +1457,28 @@ router.get('/list-sellerhome/:page_key', async (req, res) => {
     } catch (err) {
         logger.error("Error in sellerhome/list:", err.message);
 
-        // SAVE ERROR LOG for unexpected exception
-        await saveErrorLog({
-            api_name: 'list-sellerhome',
-            method: 'GET',
-            payload: { page_key: req.params.page_key },
-            message: err.message,
-            stack: err.stack,
-            error_code: 2004
-        });
+    // SAVE ERROR LOG for unexpected exception
+    await saveErrorLog({
+      api_name: 'list-sellerhome',
+      method: 'GET',
+      payload: { page_key: req.params.page_key },
+      message: err.message,
+      stack: err.stack,
+      error_code: 2004
+    });
 
-        res.status(500).json({
-            header_type: "ERROR",
-            message_visibility: true,
-            status: false,
-            code: 2004,
-            message: err.message,
-            error: err.message
-        });
-    }
+    res.status(500).json({
+      header_type: "ERROR",
+      message_visibility: true,
+      status: false,
+      code: 2004,
+      message: err.message,
+      error: err.message
+    });    }
 });
 
-
-
 // --------------------------------------
-//  SECTION LIMIT - UPDATE
+//  SECTION LIMIT - UPDATE 
 // --------------------------------------
 router.post('/update-section-limit', async (req, res) => {
     try {
@@ -1659,7 +1486,7 @@ router.post('/update-section-limit', async (req, res) => {
             type: 'update-section-limit',
             body: {
                 ...req.body
-            }
+            }        
         });
 
         if (!result.status) {
@@ -1706,7 +1533,7 @@ router.post('/update-section-limit', async (req, res) => {
 // --------------------------------------
 
 router.get('/list-pages', async (req, res) => {
-    try {
+  try {
 
         const result = await cmsRequester.send({
             type: 'list-pages'
@@ -1726,25 +1553,23 @@ router.get('/list-pages', async (req, res) => {
     } catch (err) {
         logger.error("Error in page records/list:", err.message);
 
-        // SAVE ERROR LOG for unexpected exception
-        await saveErrorLog({
-            api_name: 'list-pages',
-            method: 'GET',
-            message: err.message,
-            stack: err.stack,
-            error_code: 2004
-        });
+    // SAVE ERROR LOG for unexpected exception
+    await saveErrorLog({
+      api_name: 'list-pages',
+      method: 'GET',
+      message: err.message,
+      stack: err.stack,
+      error_code: 2004
+    });
 
-        res.status(500).json({
-            header_type: "ERROR",
-            message_visibility: true,
-            status: false,
-            code: 2004,
-            message: err.message,
-            error: err.message
-        });
-    }
+    res.status(500).json({
+      header_type: "ERROR",
+      message_visibility: true,
+      status: false,
+      code: 2004,
+      message: err.message,
+      error: err.message
+    });    }
 });
-
 
 module.exports = router;

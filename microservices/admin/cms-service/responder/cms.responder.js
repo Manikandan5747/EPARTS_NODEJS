@@ -2,7 +2,9 @@ require('module-alias/register');
 const cote = require('cote');
 const pool = require('@libs/db/postgresql_index');
 const logger = require('@libs/logger/logger');
-
+const path = require("path");
+const uploadDir = path.join('/app/assets', 'admin-buyer');
+const fs = require("fs");
 
 // REDIS CONNECTION & COTE RESPONDER SETUP
 const redisHost = process.env.COTE_DISCOVERY_REDIS_HOST || '127.0.0.1';
@@ -14,556 +16,179 @@ const responder = new cote.Responder({
     redis: { host: redisHost, port: redisPort }
 });
 
-responder.on('update-home', async (req, cb) => {
+
+// --------------------------------------------------
+// CMS - FILE SAVE 
+// --------------------------------------------------
+
+// ================= FILE NAME GENERATOR =================
+function generateFileName(file, section_key, filetype_name) {
+    const ext = path.extname(file.name).toLowerCase();
+    const name = path.basename(file.name, ext);
+    const safeSectionKey = section_key
+        .trim()
+        .toLowerCase()
+        .replace(/\s+/g, "")              // spaces → _
+        .replace(/[^a-z0-9_-]/g, "");      // remove special chars
+ const safeFileTypeName = filetype_name
+        .trim()
+        .toLowerCase()
+        .replace(/\s+/g, "")              // spaces → _
+        .replace(/[^a-z0-9_-]/g, "");      // remove special chars
+    return `${safeSectionKey}_${safeFileTypeName}_${name}${ext}`;
+}
+
+// ================= API =================
+responder.on("cms-filesave", async (req, cb) => {
+
     const client = await pool.connect();
 
     try {
-        const { page_key, body } = req;
-        const { page, sections = [], company_info } = body;
+        let { section_key, filetype_name } = req.body;
+        const file = req.files?.file;
+        section_key = section_key?.toLowerCase();
+        filetype_name = filetype_name?.toLowerCase();
 
-        const modified_by = page?.modified_by || null;
 
-        if (!page_key?.trim()) {
+        /* ======================================================
+           VALIDATION
+        ====================================================== */
+
+        if (!section_key) {
             return cb(null, {
                 header_type: "ERROR",
                 message_visibility: true,
                 status: false,
                 code: 2001,
                 message: "Validation failed",
-                error: "page key is required"
+                error: "section key is required"
             });
         }
 
-        if (!page?.page_uuid) {
+        if (!file) {
             return cb(null, {
                 header_type: "ERROR",
                 message_visibility: true,
                 status: false,
                 code: 2001,
                 message: "Validation failed",
-                error: "page uuid is required for update"
+                error: "File is required"
             });
         }
 
-        await client.query('BEGIN');
-
-        /* ======================================================
-           CHECK EDIT LOCK (PAGE LEVEL)
-        ====================================================== */
-        const lockCheck = await client.query(
-            `
-            SELECT 1
-            FROM record_locks
-            WHERE table_name = 'pages'
-              AND record_id = $1
-              AND locked_by = $2
-              AND is_deleted = FALSE
-              AND expires_at > NOW()
-            `,
-            [page.page_uuid, modified_by]
-        );
-
-        if (lockCheck.rowCount === 0) {
-            await client.query('ROLLBACK');
+        if (!filetype_name) {
             return cb(null, {
                 header_type: "ERROR",
                 message_visibility: true,
                 status: false,
-                code: 2005,
-                message: "You must lock the page before updating",
-                error: "Edit lock missing or expired"
+                code: 2001,
+                message: "Validation failed",
+                error: "filetype name is required"
             });
         }
 
         /* ======================================================
-           PAGE VALIDATION
+           MIME TYPE VALIDATION
         ====================================================== */
-        const pageRes = await client.query(
-            `
-            SELECT page_id, is_active, is_deleted
-            FROM pages
-            WHERE page_uuid = $1
-            `,
-            [page.page_uuid]
-        );
 
-        if (pageRes.rowCount === 0) {
-            throw new Error('Invalid page UUID');
-        }
+        const allowedMimeTypes = [
+            "image/jpeg",
+            "image/png",
+            "image/webp",
+            "image/jpg",
+            "image/gif",
+            "video/mp4",
+            "video/webm",
+            "video/quicktime"
+        ];
 
-        if (!pageRes.rows[0].is_active) {
-            throw new Error('Inactive page cannot be updated');
-        }
-
-        if (pageRes.rows[0].is_deleted) {
-            throw new Error('Deleted page cannot be updated');
-        }
-
-        const page_id = pageRes.rows[0].page_id;
-
-        /* ======================================================
-           PAGE UPDATE
-        ====================================================== */
-        await client.query(
-            `
-            UPDATE pages
-            SET page_title = $1,
-                slug = $2,
-                sort_order = $3,
-                is_active = $4,
-                modified_by = $5,
-                modified_at = NOW()
-            WHERE page_uuid = $6
-            `,
-            [
-                page.page_title,
-                page.slug,
-                page.sort_order,
-                page.is_active,
-                modified_by,
-                page.page_uuid
-            ]
-        );
-
-        /* ======================================================
-           COMPANY INFO UPDATE
-        ====================================================== */
-        if (company_info?.cms_company_info_uuid) {
-
-            const companyRes = await client.query(
-                `
-                SELECT is_active, is_deleted
-                FROM cms_company_info
-                WHERE cms_company_info_uuid = $1
-                `,
-                [company_info.cms_company_info_uuid]
-            );
-
-            if (
-                companyRes.rowCount === 0 ||
-                !companyRes.rows[0].is_active ||
-                companyRes.rows[0].is_deleted
-            ) {
-                throw new Error('Cannot update inactive or invalid company info');
-            }
-
-            await client.query(
-                `
-                UPDATE cms_company_info
-                SET company_name = $1,
-                    description = $2,
-                    support_email = $3,
-                    contact_number = $4,
-                    logo = $5,
-                    ssl = $6,
-                    master_card = $7,
-                    visa = $8,
-                    erp = $9,
-                    footer_text = $10,
-                    copyright = $11,
-                    is_active = $12,
-                    modified_by = $13,
-                    modified_at = NOW()
-                WHERE cms_company_info_uuid = $14
-                `,
-                [
-                    company_info.company_name,
-                    company_info.description,
-                    company_info.support_email,
-                    company_info.contact_number,
-                    company_info.logo,
-                    company_info.ssl,
-                    company_info.master_card,
-                    company_info.visa,
-                    company_info.erp,
-                    company_info.footer_text,
-                    company_info.copyright,
-                    company_info.is_active,
-                    modified_by,
-                    company_info.cms_company_info_uuid
-                ]
-            );
+        if (!allowedMimeTypes.includes(file.type)) {
+            return cb(null, {
+                header_type: "ERROR",
+                message_visibility: true,
+                status: false,
+                code: 2001,
+                message: "Invalid file type",
+                error: "Only image, gif and video files are allowed"
+            });
         }
 
         /* ======================================================
-           SECTIONS & ITEMS UPDATE / INSERT
+           FILE SIZE VALIDATION
         ====================================================== */
-        for (const section of sections) {
 
-            let section_id;
-            let section_limit;
+        const MAX_SIZE_MB = 50;
+        const maxSize = MAX_SIZE_MB * 1024 * 1024;
 
-            if (section.section_uuid) {
-
-                const secRes = await client.query(
-                    `
-            SELECT section_id, section_limit, is_active, is_deleted
-            FROM page_sections
-            WHERE section_uuid = $1
-            `,
-                    [section.section_uuid]
-                );
-
-                if (
-                    secRes.rowCount === 0 ||
-                    !secRes.rows[0].is_active ||
-                    secRes.rows[0].is_deleted
-                ) {
-                    throw new Error('Invalid or inactive section UUID');
-                }
-
-                section_id = secRes.rows[0].section_id;
-                section_limit = secRes.rows[0].section_limit;
-
-            } else {
-                section_limit = section.section_limit;
-            }
-
-            // -----------------------------
-            // SECTION TYPE VALIDATION
-            // -----------------------------
-            if (section.section_type === 'single') {
-                if (section.section_limit !== null)
-                    throw new Error(`Section ${section.section_key} is single type; section limit must be null`);
-
-                if ((section.items || []).length > 0)
-                    throw new Error(`Section ${section.section_key} is single type; no items allowed`);
-
-            } else if (section.section_type === 'multiple') {
-
-                if (section.section_limit === null || section.section_limit <= 0)
-                    throw new Error(`Section ${section.section_key} is multiple type; section limit must have a positive value`);
-
-                if ((section.items || []).length > section.section_limit)
-                    throw new Error(`Only ${section.section_limit} items allowed for section ${section.section_key}`);
-
-            } else {
-                throw new Error(`Invalid section type ${section.section_type} for section ${section.section_key}`);
-            }
-
-
-            // -----------------------------
-            // DUPLICATE SECTION CHECK
-            // -----------------------------
-            const duplicateSectionRes = await client.query(
-                `
-        SELECT 1
-        FROM page_sections
-        WHERE page_id = $1
-          AND LOWER(section_key) = LOWER($2)
-          AND is_deleted = FALSE
-        AND is_active = TRUE
-          AND ($3::uuid IS NULL OR section_uuid != $3)
-        `,
-                [
-                    page_id,
-                    section.section_key,
-                    section.section_uuid || null
-                ]
-            );
-            if (duplicateSectionRes.rowCount > 0) {
-                throw new Error(`Section ${section.section_key} already exists`);
-            }
-
-            // -----------------------------
-            // UPDATE / INSERT SECTION
-            // -----------------------------
-            if (section.section_uuid) {
-
-                await client.query(
-                    `
-            UPDATE page_sections
-            SET section_key = $1,
-                section_type = $2,
-                title = $3,
-                content = $4,
-                image = $5,
-                video = $6,
-                button_label = $7,
-                button_url = $8,
-                section_limit = $9,
-                is_active = $10,
-                sort_order = $11,
-                playstore_link = $12,
-                playstore_image = $13,
-                appstore_link = $14,
-                appstore_image = $15,
-                modified_by = $16,
-                modified_at = NOW()
-            WHERE section_uuid = $17
-            `,
-                    [
-                        section.section_key,
-                        section.section_type,
-                        section.title,
-                        section.content,
-                        section.image,
-                        section.video,
-                        section.button_label,
-                        section.button_url,
-                        section.section_limit,
-                        section.is_active,
-                        section.sort_order,
-                        section.playstore_link,
-                        section.playstore_image,
-                        section.appstore_link,
-                        section.appstore_image,
-                        modified_by,
-                        section.section_uuid
-                    ]
-                );
-
-            } else {
-
-                const insertSectionRes = await client.query(
-                    `
-            INSERT INTO page_sections (
-                section_uuid,
-                page_id,
-                section_key,
-                section_type,
-                title,
-                content,
-                image,
-                video,
-                button_label,
-                button_url,
-                section_limit,
-                is_active,
-                sort_order,
-                playstore_link,
-                playstore_image,
-                appstore_link,
-                appstore_image,
-                created_by,
-                assigned_to,
-                created_at
-            )
-            VALUES (
-                gen_random_uuid(),
-                $1,
-                $2,
-                $3,
-                $4,
-                $5,
-                $6,
-                $7,
-                $8,
-                $9,
-                $10,
-                $11,
-                $12,
-                $13,
-                $14,
-                $15,
-                $16,
-                $17,
-                $18,
-                NOW()
-            )
-            RETURNING section_id
-            `,
-                    [
-                        page_id,
-                        section.section_key,
-                        section.section_type,
-                        section.title,
-                        section.content,
-                        section.image,
-                        section.video,
-                        section.button_label,
-                        section.button_url,
-                        section.section_limit,
-                        section.is_active,
-                        section.sort_order,
-                        section.playstore_link,
-                        section.playstore_image,
-                        section.appstore_link,
-                        section.appstore_image,
-                        modified_by,
-                        modified_by
-
-                    ]
-                );
-
-                section_id = insertSectionRes.rows[0].section_id;
-                section_limit = section.section_limit;
-            }
-
-            /* ---------- SECTION LIMIT VALIDATION ---------- */
-            if (section_limit === null && section.items?.length > 0) {
-                throw new Error(`Items not allowed for section ${section.section_key}`);
-            }
-
-            if (section_limit !== null && (section.items || []).length > section_limit) {
-                throw new Error(`Only ${section_limit} items allowed for section ${section.section_key}`);
-            }
-
-            /* ---------- ITEMS UPDATE / INSERT ---------- */
-            for (const item of section.items || []) {
-
-                const duplicateItemRes = await client.query(
-                    `
-            SELECT 1
-            FROM section_items
-            WHERE section_id = $1
-              AND LOWER(title) = LOWER($2)
-              AND is_deleted = FALSE
-              AND is_active = TRUE
-              AND ($3::uuid IS NULL OR item_uuid != $3)
-            `,
-                    [
-                        section_id,
-                        item.title,
-                        item.item_uuid || null
-                    ]
-                );
-
-                if (duplicateItemRes.rowCount > 0) {
-                    throw new Error(`Item ${item.title} already exists for this section`);
-                }
-
-                if (item.item_uuid) {
-
-                    const itemRes = await client.query(
-                        `
-                SELECT is_active, is_deleted
-                FROM section_items
-                WHERE item_uuid = $1
-                `,
-                        [item.item_uuid]
-                    );
-
-                    if (
-                        itemRes.rowCount === 0 ||
-                        !itemRes.rows[0].is_active ||
-                        itemRes.rows[0].is_deleted
-                    ) {
-                        throw new Error('Invalid or inactive item UUID');
-                    }
-
-                    await client.query(
-                        `
-                UPDATE section_items
-                SET title = $1,
-                    content = $2,
-                    image = $3,
-                    icon = $4,
-                    filetype = $5,
-                    sort_order = $6,
-                    is_active = $7,
-                    modified_by = $8,
-                    modified_at = NOW()
-                WHERE item_uuid = $9
-                `,
-                        [
-                            item.title,
-                            item.content,
-                            item.image,
-                            item.icon,
-                            item.filetype,
-                            item.sort_order,
-                            item.is_active,
-                            modified_by,
-                            item.item_uuid
-                        ]
-                    );
-
-                } else {
-
-                    await client.query(
-                        `
-                INSERT INTO section_items (
-                    item_uuid,
-                    section_id,
-                    title,
-                    content,
-                    image,
-                    icon,
-                    filetype,
-                    sort_order,
-                    is_active,
-                    created_by,
-                    assigned_to,
-                    created_at
-                )
-                VALUES (
-                    gen_random_uuid(),
-                    $1,
-                    $2,
-                    $3,
-                    $4,
-                    $5,
-                    $6,
-                    $7,
-                    $8,
-                    $9,
-                    $10,
-                    NOW()
-                )
-                `,
-                        [
-                            section_id,
-                            item.title,
-                            item.content,
-                            item.image,
-                            item.icon,
-                            item.filetype,
-                            item.sort_order,
-                            item.is_active,
-                            modified_by,
-                            modified_by
-                        ]
-                    );
-                }
-            }
+        if (file.size > maxSize) {
+            return cb(null, {
+                header_type: "ERROR",
+                message_visibility: true,
+                status: false,
+                code: 2001,
+                message: "Validation failed",
+                error: `File size should not exceed ${MAX_SIZE_MB}MB`
+            });
         }
 
+        // limit for GIF
+        if (file.type === "image/gif" && file.size > 10 * 1024 * 1024) {
+            return cb(null, {
+                header_type: "ERROR",
+                message_visibility: true,
+                status: false,
+                code: 2001,
+                message: "Validation failed",
+                error: "GIF size should not exceed 10MB"
+            });
+        }
 
         /* ======================================================
-           AUTO-UNLOCK AFTER SUCCESS
+           FILE SAVE
         ====================================================== */
-        await client.query(
-            `
-            UPDATE record_locks
-            SET is_deleted = TRUE,
-            deleted_by = $1,
-            deleted_at = NOW()
-            WHERE table_name = 'pages'
-              AND record_id = $2
-              AND locked_by = $3
-              AND is_deleted = FALSE
-            `,
-            [modified_by, page.page_uuid, modified_by]
-        );
 
-        await client.query('COMMIT');
+        const newFileName = generateFileName(file, section_key, filetype_name);
+        const finalPath = path.join(uploadDir, newFileName);
+
+        // Move file
+        fs.renameSync(file.path, finalPath);
+
+        /* ======================================================
+           SUCCESS RESPONSE
+        ====================================================== */
 
         return cb(null, {
             header_type: "SUCCESS",
-            message_visibility: false,
+            message_visibility: true,
             status: true,
             code: 1000,
-            message: "CMS home page updated successfully"
+            message: "File uploaded successfully",
+            data: {
+                file_path: newFileName
+            }
         });
 
     } catch (err) {
-        await client.query('ROLLBACK');
-        logger.error('CMS home page update Error:', err);
+
+        logger.error("Responder Error (filesave):", err);
 
         return cb(null, {
             header_type: "ERROR",
             message_visibility: true,
             status: false,
             code: 2004,
-            message: "CMS home page update failed",
+            message: err.message,
             error: err.message
         });
+
     } finally {
         client.release();
     }
 });
 
+// --------------------------------------------------
+// DELETE CMS 
+// --------------------------------------------------
 
 responder.on('delete-cms', async (req, cb) => {
     const client = await pool.connect();
@@ -627,8 +252,9 @@ responder.on('delete-cms', async (req, cb) => {
               AND record_id = $1
               AND is_deleted = FALSE
               AND expires_at > NOW()
+              AND locked_by <> $2
             `,
-            [page_uuid]
+            [page_uuid,deleted_by]
         );
 
         if (lockCheck.rowCount > 0) {
@@ -639,9 +265,34 @@ responder.on('delete-cms', async (req, cb) => {
                 status: false,
                 code: 2005,
                 message: "Item cannot be deleted",
-                error: "This page is currently locked by another user"
+                error: "Record is currently locked"
             });
         }
+
+    const selfLockCheck = await client.query(
+    `
+    SELECT 1
+    FROM record_locks
+    WHERE table_name = 'pages'
+      AND record_id = $1
+      AND is_deleted = FALSE
+      AND expires_at > NOW()
+      AND locked_by = $2
+    `,
+    [page_uuid, deleted_by]
+);
+
+if (selfLockCheck.rowCount === 0) {
+    await client.query('ROLLBACK');
+    return cb(null, {
+        header_type: "ERROR",
+        message_visibility: true,
+        status: false,
+        code: 2005,
+        message: "You must lock the page before deleting",
+        error: "Lock missing or expired"
+    });
+}
 
         /* ======================================================
            SOFT DELETE ITEM
@@ -697,7 +348,6 @@ responder.on('create-home', async (req, cb) => {
     try {
         const { page_key, body } = req;
         const { page, sections = [], company_info } = body;
-
         const created_by = page.created_by;
         const assigned_to = created_by;
 
@@ -715,19 +365,25 @@ responder.on('create-home', async (req, cb) => {
             });
         }
 
-        // -----------------------------
-        // HOME PAGE VALIDATION
-        // -----------------------------
-        if (!['home', 'HOME'].includes(page_key)) {
-            return cb(null, {
-                header_type: "ERROR",
-                message_visibility: true,
-                status: false,
-                code: 2001,
-                message: "Validation failed",
-                error: "Only home page is allowed"
-            });
-        }
+const pageKeyRes = await client.query(
+    `SELECT page_key_id 
+     FROM page_key 
+     WHERE LOWER(name) = LOWER($1) AND is_active = TRUE AND is_deleted = FALSE`,
+    [page_key]
+);
+
+if (pageKeyRes.rowCount === 0) {
+    return cb(null, {
+        header_type: "ERROR",
+        message_visibility: true,
+        status: false,
+        code: 2001,
+        message: "Validation failed",
+        error: "Invalid page key"
+    });
+}
+
+const page_key_id = pageKeyRes.rows[0].page_key_id;
 
         await client.query('BEGIN');
 
@@ -786,8 +442,8 @@ responder.on('create-home', async (req, cb) => {
                         header_type: "ERROR",
                         message_visibility: true,
                         status: false,
-                        code: 2005,
-                        message: "CMS home page creation failed",
+                        code: 2001,
+                        message: "Validation failed",
                         error: "Cannot insert because inactive page has active sections or items"
                     });
                 }
@@ -796,6 +452,7 @@ responder.on('create-home', async (req, cb) => {
         // -----------------------------
         // INSERT PAGE
         // -----------------------------
+
         const insertPage = await client.query(
             `INSERT INTO pages
              (page_key, page_title, slug, is_active, sort_order, created_by, assigned_to, created_at, assigned_at)
@@ -863,6 +520,27 @@ responder.on('create-home', async (req, cb) => {
         // SECTIONS & ITEMS
         // -----------------------------
         for (const section of sections) {
+
+            const sectionKeyRes = await client.query(
+    `SELECT section_key_id 
+     FROM section_key 
+     WHERE LOWER(name) = LOWER($1) 
+       AND page_key_id = $2 
+       AND is_active = TRUE
+       AND is_deleted = FALSE`,
+    [section.section_key, page_key_id]
+);
+
+if (sectionKeyRes.rowCount === 0) {
+    return cb(null, {
+        header_type: "ERROR",
+        message_visibility: true,
+        status: false,
+        code: 2001,
+        message: "Validation failed",
+        error: `Invalid section key '${section.section_key}'`
+    });
+}
 
             const secCheck = await client.query(
                 `SELECT section_id 
@@ -1017,6 +695,723 @@ responder.on('create-home', async (req, cb) => {
             status: false,
             code: 2004,
             message: "CMS home page creation failed",
+            error: err.message
+        });
+    } finally {
+        client.release();
+    }
+});
+
+responder.on('update-home', async (req, cb) => {
+    const client = await pool.connect();
+
+    try {
+        const { page_key, body } = req;
+        const { page, sections = [], company_info } = body;
+
+        const modified_by = page?.modified_by || null;
+
+        if (!page_key?.trim()) {
+            return cb(null, {
+                header_type: "ERROR",
+                message_visibility: true,
+                status: false,
+                code: 2001,
+                message: "Validation failed",
+                error: "page key is required"
+            });
+        }
+
+        if (!page?.page_uuid) {
+            return cb(null, {
+                header_type: "ERROR",
+                message_visibility: true,
+                status: false,
+                code: 2001,
+                message: "Validation failed",
+                error: "page uuid is required for update"
+            });
+        }
+
+        const pageKeyRes = await client.query(
+    `SELECT page_key_id 
+     FROM page_key 
+     WHERE LOWER(name) = LOWER($1) AND is_active = TRUE AND is_deleted = FALSE`,
+    [page_key]
+);
+
+if (pageKeyRes.rowCount === 0) {
+    return cb(null, {
+        header_type: "ERROR",
+        message_visibility: true,
+        status: false,
+        code: 2001,
+        message: "Validation failed",
+        error: "Invalid page key"
+    });
+}
+
+const page_key_id = pageKeyRes.rows[0].page_key_id;
+
+        await client.query('BEGIN');
+
+        /* ======================================================
+           CHECK EDIT LOCK (PAGE LEVEL)
+        ====================================================== */
+        const lockCheck = await client.query(
+            `
+            SELECT 1
+            FROM record_locks
+            WHERE table_name = 'pages'
+              AND record_id = $1
+              AND locked_by = $2
+              AND is_deleted = FALSE
+              AND expires_at > NOW()
+            `,
+            [page.page_uuid, modified_by]
+        );
+
+        if (lockCheck.rowCount === 0) {
+            await client.query('ROLLBACK');
+            return cb(null, {
+                header_type: "ERROR",
+                message_visibility: true,
+                status: false,
+                code: 2005,
+                message: "You must lock the page before updating",
+                error: "Edit lock missing or expired"
+            });
+        }
+
+        /* ======================================================
+           PAGE VALIDATION
+        ====================================================== */
+        const pageRes = await client.query(
+            `
+            SELECT page_id, is_active, is_deleted
+            FROM pages
+            WHERE page_uuid = $1
+            `,
+            [page.page_uuid]
+        );
+
+        if (pageRes.rowCount === 0) {
+
+             return {
+        header_type: "ERROR",
+        message_visibility: true,
+        status: false,
+        code: 2001,
+        message: "Validation failed",
+        error: "Invalid page UUID"
+    };
+            //throw new Error('Invalid page UUID');
+        }
+
+        if (!pageRes.rows[0].is_active) {
+                 return {
+        header_type: "ERROR",
+        message_visibility: true,
+        status: false,
+        code: 2001,
+        message: "Validation failed",
+        error: "Inactive page cannot be updated"
+    };
+            //throw new Error('Inactive page cannot be updated');
+        }
+
+        if (pageRes.rows[0].is_deleted) {
+                 return {
+        header_type: "ERROR",
+        message_visibility: true,
+        status: false,
+        code: 2001,
+        message: "Validation failed",
+        error: "Deleted page cannot be updated"
+    };
+            //throw new Error('Deleted page cannot be updated');
+        }
+
+        const page_id = pageRes.rows[0].page_id;
+
+        /* ======================================================
+           PAGE UPDATE
+        ====================================================== */
+        await client.query(
+            `
+            UPDATE pages
+            SET page_title = $1,
+                slug = $2,
+                sort_order = $3,
+                is_active = $4,
+                modified_by = $5,
+                modified_at = NOW()
+            WHERE page_uuid = $6
+            `,
+            [
+                page.page_title,
+                page.slug,
+                page.sort_order,
+                page.is_active,
+                modified_by,
+                page.page_uuid
+            ]
+        );
+
+        /* ======================================================
+           COMPANY INFO UPDATE
+        ====================================================== */
+        if (company_info?.cms_company_info_uuid) {
+
+            const companyRes = await client.query(
+                `
+                SELECT is_active, is_deleted
+                FROM cms_company_info
+                WHERE cms_company_info_uuid = $1
+                `,
+                [company_info.cms_company_info_uuid]
+            );
+
+            if (
+                companyRes.rowCount === 0 ||
+                !companyRes.rows[0].is_active ||
+                companyRes.rows[0].is_deleted
+            ) {
+                     return {
+        header_type: "ERROR",
+        message_visibility: true,
+        status: false,
+        code: 2001,
+        message: "Validation failed",
+        error: "Cannot update inactive or invalid company info"
+    };
+                //throw new Error('Cannot update inactive or invalid company info');
+            }
+
+            await client.query(
+                `
+                UPDATE cms_company_info
+                SET company_name = $1,
+                    description = $2,
+                    support_email = $3,
+                    contact_number = $4,
+                    logo = $5,
+                    ssl = $6,
+                    master_card = $7,
+                    visa = $8,
+                    erp = $9,
+                    footer_text = $10,
+                    copyright = $11,
+                    is_active = $12,
+                    modified_by = $13,
+                    modified_at = NOW()
+                WHERE cms_company_info_uuid = $14
+                `,
+                [
+                    company_info.company_name,
+                    company_info.description,
+                    company_info.support_email,
+                    company_info.contact_number,
+                    company_info.logo,
+                    company_info.ssl,
+                    company_info.master_card,
+                    company_info.visa,
+                    company_info.erp,
+                    company_info.footer_text,
+                    company_info.copyright,
+                    company_info.is_active,
+                    modified_by,
+                    company_info.cms_company_info_uuid
+                ]
+            );
+        }
+
+/* ======================================================
+   SECTIONS & ITEMS UPDATE / INSERT
+====================================================== */
+for (const section of sections) {
+
+    
+    const sectionKeyRes = await client.query(
+    `SELECT section_key_id 
+     FROM section_key 
+     WHERE LOWER(name) = LOWER($1) 
+       AND page_key_id = $2 
+       AND is_active = TRUE
+       AND is_deleted = FALSE`,
+    [section.section_key, page_key_id]
+);
+
+if (sectionKeyRes.rowCount === 0) {
+    return cb(null, {
+        header_type: "ERROR",
+        message_visibility: true,
+        status: false,
+        code: 2001,
+        message: "Validation failed",
+        error: `Invalid section key '${section.section_key}'`
+    });
+}
+
+
+    let section_id;
+    let section_limit;
+
+    if (section.section_uuid) {
+
+        const secRes = await client.query(
+            `
+            SELECT section_id, section_limit, is_active, is_deleted
+            FROM page_sections
+            WHERE section_uuid = $1
+            `,
+            [section.section_uuid]
+        );
+
+        if (
+            secRes.rowCount === 0 ||
+            !secRes.rows[0].is_active ||
+            secRes.rows[0].is_deleted
+        ) {
+                 return {
+        header_type: "ERROR",
+        message_visibility: true,
+        status: false,
+        code: 2001,
+        message: "Validation failed",
+        error: "Invalid or inactive section UUID"
+    };
+            //throw new Error('Invalid or inactive section UUID');
+        }
+
+        section_id = secRes.rows[0].section_id;
+        //section_limit = secRes.rows[0].section_limit;
+
+    } 
+    //else {
+       // section_limit = section.section_limit;
+    //}
+
+    // -----------------------------
+    // SECTION TYPE VALIDATION
+    // -----------------------------
+    if (section.section_type === 'single') {
+        if (section.section_limit !== null)
+            return cb(null,{
+        header_type: "ERROR",
+        message_visibility: true,
+        status: false,
+        code: 2001,
+        message: "Validation failed",
+        error: `Section ${section.section_key} is single type; section limit must be null`
+    });
+            // throw new Error(`Section ${section.section_key} is single type; section limit must be null`);
+
+        if ((section.items || []).length > 0)
+             return cb(null,{
+        header_type: "ERROR",
+        message_visibility: true,
+        status: false,
+        code: 2001,
+        message: "Validation failed",
+        error: `Section ${section.section_key} is single type; no items allowed`
+    });
+            // throw new Error(`Section ${section.section_key} is single type; no items allowed`);
+
+    } else if (section.section_type === 'multiple') {
+
+        if (section.section_limit === null || section.section_limit <= 0)
+             return cb(null,{
+        header_type: "ERROR",
+        message_visibility: true,
+        status: false,
+        code: 2001,
+        message: "Validation failed",
+        error: `Section ${section.section_key} is multiple type; section limit must have a positive value`
+    });
+            // throw new Error(`Section ${section.section_key} is multiple type; section limit must have a positive value`);
+
+        if ((section.items || []).length > section.section_limit)
+             return cb(null,{
+        header_type: "ERROR",
+        message_visibility: true,
+        status: false,
+        code: 2001,
+        message: "Validation failed",
+        error: `Only ${section.section_limit} items allowed for section ${section.section_key}`
+    });
+            // throw new Error(`Only ${section.section_limit} items allowed for section ${section.section_key}`);
+
+    } else {
+         return cb(null,{
+        header_type: "ERROR",
+        message_visibility: true,
+        status: false,
+        code: 2001,
+        message: "Validation failed",
+        error: `Invalid section type ${section.section_type} for section ${section.section_key}`
+    });
+        // throw new Error(`Invalid section type ${section.section_type} for section ${section.section_key}`);
+    }
+
+
+     // -----------------------------
+    // DUPLICATE SECTION CHECK
+    // -----------------------------
+    const duplicateSectionRes = await client.query(
+        `
+        SELECT 1
+        FROM page_sections
+        WHERE page_id = $1
+          AND LOWER(section_key) = LOWER($2)
+          AND is_deleted = FALSE
+        AND is_active = TRUE
+          AND ($3::uuid IS NULL OR section_uuid != $3)
+        `,
+        [
+            page_id,
+            section.section_key,
+            section.section_uuid || null
+        ]
+    );
+ if (duplicateSectionRes.rowCount > 0) {
+      return cb(null,{
+        header_type: "ERROR",
+        message_visibility: true,
+        status: false,
+        code: 2002,
+        message: "Updation failed",
+        error: `Section ${section.section_key} already exists`
+    });
+    }
+
+    // -----------------------------
+    // UPDATE / INSERT SECTION
+    // -----------------------------
+    if (section.section_uuid) {
+
+        await client.query(
+            `
+            UPDATE page_sections
+            SET section_key = $1,
+                section_type = $2,
+                title = $3,
+                content = $4,
+                image = $5,
+                video = $6,
+                button_label = $7,
+                button_url = $8,
+                section_limit = $9,
+                is_active = $10,
+                sort_order = $11,
+                playstore_link = $12,
+                playstore_image = $13,
+                appstore_link = $14,
+                appstore_image = $15,
+                modified_by = $16,
+                modified_at = NOW()
+            WHERE section_uuid = $17
+            `,
+            [
+                section.section_key,
+                section.section_type,
+                section.title,
+                section.content,
+                section.image,
+                section.video,
+                section.button_label,
+                section.button_url,
+                section.section_limit,
+                section.is_active,
+                section.sort_order,
+                section.playstore_link,
+                section.playstore_image,
+                section.appstore_link,
+                section.appstore_image,
+                modified_by,
+                section.section_uuid
+            ]
+        );
+        section_limit = section.section_limit;
+
+    } 
+    
+    else {
+
+        const insertSectionRes = await client.query(
+            `
+            INSERT INTO page_sections (
+                section_uuid,
+                page_id,
+                section_key,
+                section_type,
+                title,
+                content,
+                image,
+                video,
+                button_label,
+                button_url,
+                section_limit,
+                is_active,
+                sort_order,
+                playstore_link,
+                playstore_image,
+                appstore_link,
+                appstore_image,
+                created_by,
+                assigned_to,
+                created_at
+            )
+            VALUES (
+                gen_random_uuid(),
+                $1,
+                $2,
+                $3,
+                $4,
+                $5,
+                $6,
+                $7,
+                $8,
+                $9,
+                $10,
+                $11,
+                $12,
+                $13,
+                $14,
+                $15,
+                $16,
+                $17,
+                $18,
+                NOW()
+            )
+            RETURNING section_id
+            `,
+            [
+                page_id,
+                section.section_key,
+                section.section_type,
+                section.title,
+                section.content,
+                section.image,
+                section.video,
+                section.button_label,
+                section.button_url,
+                section.section_limit,
+                section.is_active,
+                section.sort_order,
+                section.playstore_link,
+                section.playstore_image,
+                section.appstore_link,
+                section.appstore_image,
+                modified_by,
+                modified_by
+
+            ]
+        );
+
+        section_id = insertSectionRes.rows[0].section_id;
+        section_limit = section.section_limit;
+    }
+
+    /* ---------- SECTION LIMIT VALIDATION ---------- */
+    if (section_limit === null && section.items?.length > 0) {
+
+           return cb(null,{
+        header_type: "ERROR",
+        message_visibility: true,
+        status: false,
+        code: 2002,
+        message: "updation failed",
+        error: `Items not allowed for section ${section.section_key}`
+    });
+    }
+
+    if (section_limit !== null && (section.items || []).length > section_limit) {
+        return cb(null,{
+        header_type: "ERROR",
+        message_visibility: true,
+        status: false,
+        code: 2001,
+        message: "Validation failed",
+        error: `Only ${section_limit} items are allowed for section ${section.section_key}`
+    });
+        // throw new Error(`Only ${section_limit} items allowed for section ${section.section_key}`);
+    }
+
+    /* ---------- ITEMS UPDATE / INSERT ---------- */
+    for (const item of section.items || []) {
+
+        const duplicateItemRes = await client.query(
+            `
+            SELECT 1
+            FROM section_items
+            WHERE section_id = $1
+              AND LOWER(title) = LOWER($2)
+              AND is_deleted = FALSE
+              AND is_active = TRUE
+              AND ($3::uuid IS NULL OR item_uuid != $3)
+            `,
+            [
+                section_id,
+                item.title,
+                item.item_uuid || null
+            ]
+        );
+
+        if (duplicateItemRes.rowCount > 0) {
+               return cb(null,{
+        header_type: "ERROR",
+        message_visibility: true,
+        status: false,
+        code: 2002,
+        message: "Updation failed",
+        error: `Item ${item.title} already exists for this section`
+    });
+           // throw new Error(`Item ${item.title} already exists for this section`);
+        }
+
+        if (item.item_uuid) {
+
+            const itemRes = await client.query(
+                `
+                SELECT is_active, is_deleted
+                FROM section_items
+                WHERE item_uuid = $1
+                `,
+                [item.item_uuid]
+            );
+
+            if (
+                itemRes.rowCount === 0 ||
+                !itemRes.rows[0].is_active ||
+                itemRes.rows[0].is_deleted
+            ) {
+                return {
+        header_type: "ERROR",
+        message_visibility: true,
+        status: false,
+        code: 2001,
+        message: "Validation failed",
+        error: "Invalid or inactive item UUID"
+    };
+               // throw new Error('Invalid or inactive item UUID');
+            }
+
+            await client.query(
+                `
+                UPDATE section_items
+                SET title = $1,
+                    content = $2,
+                    image = $3,
+                    icon = $4,
+                    filetype = $5,
+                    sort_order = $6,
+                    is_active = $7,
+                    modified_by = $8,
+                    modified_at = NOW()
+                WHERE item_uuid = $9
+                `,
+                [
+                    item.title,
+                    item.content,
+                    item.image,
+                    item.icon,
+                    item.filetype,
+                    item.sort_order,
+                    item.is_active,
+                    modified_by,
+                    item.item_uuid
+                ]
+            );
+
+        } else {
+
+            await client.query(
+                `
+                INSERT INTO section_items (
+                    item_uuid,
+                    section_id,
+                    title,
+                    content,
+                    image,
+                    icon,
+                    filetype,
+                    sort_order,
+                    is_active,
+                    created_by,
+                    assigned_to,
+                    created_at
+                )
+                VALUES (
+                    gen_random_uuid(),
+                    $1,
+                    $2,
+                    $3,
+                    $4,
+                    $5,
+                    $6,
+                    $7,
+                    $8,
+                    $9,
+                    $10,
+                    NOW()
+                )
+                `,
+                [
+                    section_id,
+                    item.title,
+                    item.content,
+                    item.image,
+                    item.icon,
+                    item.filetype,
+                    item.sort_order,
+                    item.is_active,
+                    modified_by,
+                    modified_by
+                ]
+            );
+        }
+    }
+}
+
+
+        /* ======================================================
+           AUTO-UNLOCK AFTER SUCCESS
+        ====================================================== */
+        await client.query(
+            `
+            UPDATE record_locks
+            SET is_deleted = TRUE,
+            deleted_by = $1,
+            deleted_at = NOW()
+            WHERE table_name = 'pages'
+              AND record_id = $2
+              AND locked_by = $3
+              AND is_deleted = FALSE
+            `,
+            [modified_by,page.page_uuid,modified_by]
+        );
+
+        await client.query('COMMIT');
+
+        return cb(null, {
+            header_type: "SUCCESS",
+            message_visibility: false,
+            status: true,
+            code: 1000,
+            message: "CMS home page updated successfully"
+        });
+
+    } catch (err) {
+        await client.query('ROLLBACK');
+        logger.error('CMS home page update Error:', err);
+
+        return cb(null, {
+            header_type: "ERROR",
+            message_visibility: true,
+            status: false,
+            code: 2004,
+            message: "CMS home page update failed",
             error: err.message
         });
     } finally {
@@ -1206,297 +1601,10 @@ responder.on('listbypagekey-home', async (req, cb) => {
     }
 });
 
-// responder.on('listwithlock-home', async (req, cb) => {
-
-//       const client = await pool.connect();
-
-
-//     try {
-
-//         const { page_key } = req;
-//         const mode = req.body?.mode;
-//         const user_id = req.body?.user_id;
-
-//         const LOCK_MINUTES = 1;
-
-//         if (!page_key?.trim()) {
-//             return cb(null, {
-//                 header_type: "ERROR",
-//                 message_visibility: true,
-//                 status: false,
-//                 code: 2001,
-//                 message: "Validation failed",
-//                 error: 'page key is required'
-//             });
-//         }
-//  await client.query('BEGIN');
-
-//         // -----------------------------
-//         // FETCH PAGE (ACTIVE ONLY)
-//         // -----------------------------
-//         const pageRes = await client.query(
-//             `SELECT
-//                 p.page_id,
-//                 p.page_uuid,
-//                 p.page_key,
-//                 p.page_title,
-//                 p.slug,
-//                 p.is_active,
-//                 p.sort_order,
-//                 p.assigned_to,
-//                 p.assigned_at,
-//                 p.created_at,
-//                 p.created_by,
-//                 p.modified_at,
-//                 p.modified_by,
-//                 p.deleted_at,
-//                 p.deleted_by,
-//                 p.is_deleted,
-//                 creators.username AS createdByName,
-//                 updaters.username AS updatedByName
-//              FROM pages p
-//              LEFT JOIN users creators ON p.created_by = creators.user_uuid
-//              LEFT JOIN users updaters ON p.modified_by = updaters.user_uuid
-//              WHERE p.page_key = $1
-//                AND p.is_deleted = FALSE
-//              ORDER BY p.sort_order ASC, p.created_at ASC`,
-//             [page_key]
-//         );
-
-//         if (pageRes.rowCount === 0) {
-//              await client.query('ROLLBACK');
-//             return cb(null, {
-//                 header_type: "SUCCESS",
-//                 message_visibility: true,
-//                 status: true,
-//                 code: 2003,
-//                 message: 'No active record found',
-//                 data: []
-//             });
-//         }
-
-//         const page = pageRes.rows[0];
-
-//         // -----------------------------
-//         // EDIT MODE → LOCK HANDLING
-//         // -----------------------------
-//         let lockRow = null;
-//         if (mode === 'edit') {
-//             if (!user_id) {
-//                 await client.query('ROLLBACK');
-//                 return cb(null, {
-//                     status: false,
-//                     code: 2001,
-//                     error: "User ID required for edit"
-//                 });
-//             }
-
-//             // Check existing lock
-//             const lockResult = await client.query(
-//                 `SELECT RL.*, U.username AS locked_by_name
-//                  FROM record_locks RL
-//                  LEFT JOIN users U ON U.user_uuid = RL.locked_by
-//                  WHERE RL.table_name = 'pages'
-//                    AND RL.record_id = $1
-//                    AND RL.is_deleted = FALSE`,
-//                 [page.page_uuid]
-//             );
-
-//             lockRow = lockResult.rows[0];
-//             const isExpired = lockRow && new Date(lockRow.expires_at).getTime() < Date.now();
-
-//             // Locked by another active user
-//             if (lockRow && lockRow.locked_by !== user_id && !isExpired) {
-//                 await client.query('ROLLBACK');
-//                 return cb(null, {
-//                     status: false,
-//                     code: 2008,
-//                     error: `This record is currently being edited by ${lockRow.locked_by_name || 'another user'}.`
-//                 });
-//             }
-
-//             // Soft-delete expired lock
-//             if (lockRow && isExpired) {
-//                 await client.query(
-//                     `UPDATE record_locks SET is_deleted = TRUE WHERE lock_id = $1`,
-//                     [lockRow.lock_id]
-//                 );
-//                 lockRow = null;
-//             }
-
-//             // Create new lock
-//             if (!lockRow) {
-
-//                 const insertLock = await client.query(
-//                     `INSERT INTO record_locks (
-//                         table_name,
-//                         record_id,
-//                         locked_by,
-//                         expires_at,
-//                         created_by
-//                     )
-//                     VALUES (
-//                         'pages',
-//                         $1,
-//                         $2,
-//                         NOW() + ($3 || ' minute')::INTERVAL,
-//                         $2
-//                     )
-//                     RETURNING *`,
-//                     [page.page_uuid, user_id, LOCK_MINUTES]
-//                 );
-//                 lockRow = insertLock.rows[0];
-//             }
-
-//             // Refresh lock if same user
-//             else if (lockRow.locked_by === user_id) {
-//                 const refresh = await client.query(
-//                     `UPDATE record_locks
-//                      SET expires_at = NOW() + ($2 || ' minute')::INTERVAL
-//                      WHERE lock_id = $1
-//                      RETURNING *`,
-//                     [lockRow.lock_id, LOCK_MINUTES]
-//                 );
-//                 lockRow = refresh.rows[0];
-//             }
-//         }
-
-
-//         // -----------------------------
-//         // FETCH SECTIONS (ACTIVE ONLY)
-//         // -----------------------------
-//         const sectionsRes = await client.query(
-//             `SELECT *
-//              FROM page_sections
-//              WHERE page_id = $1
-//                AND is_deleted = FALSE
-//              ORDER BY sort_order ASC`,
-//             [page.page_id]
-//         );
-
-//         let sections = sectionsRes.rows;
-
-//         // -----------------------------
-//         // FETCH ITEMS ONLY FOR MULTIPLE SECTIONS
-//         // -----------------------------
-//         const multipleSections = sections.filter(
-//             section => section.section_type === 'multiple'
-//         );
-
-//         if (multipleSections.length > 0) {
-//             const sectionIds = multipleSections.map(s => s.section_id);
-
-//             const itemsRes = await client.query(
-//                 `
-//         SELECT *
-//         FROM section_items
-//         WHERE section_id = ANY($1)
-//           AND is_deleted = FALSE
-//         ORDER BY sort_order ASC
-//         `,
-//                 [sectionIds]
-//             );
-
-//             // Group items by section_id
-//             const itemsBySection = {};
-//             for (const item of itemsRes.rows) {
-//                 if (!itemsBySection[item.section_id]) {
-//                     itemsBySection[item.section_id] = [];
-//                 }
-//                 itemsBySection[item.section_id].push(item);
-//             }
-
-//             // Attach items to sections
-//             sections = sections.map(section => ({
-//                 ...section,
-//                 items:
-//                     section.section_type === 'multiple'
-//                         ? itemsBySection[section.section_id] || []
-//                         : []   // single → no items
-//             }));
-//         } else {
-//             // No multiple sections → all get empty items
-//             sections = sections.map(section => ({
-//                 ...section,
-//                 items: []
-//             }));
-//         }
-
-//         // -----------------------------
-//         // FETCH COMPANY INFO
-//         // -----------------------------
-//         const companyRes = await client.query(
-//             `
-//             SELECT
-//             cms_company_info_id,
-//             cms_company_info_uuid,
-//                 company_name,
-//                 description,
-//                 support_email,
-//                 contact_number,
-//                 logo,
-//                 ssl,
-//                 master_card,
-//                 visa,
-//                 erp,
-//                 footer_text,
-//                 is_active,
-//                 copyright
-//             FROM cms_company_info
-//             WHERE is_deleted = FALSE
-//               AND is_active = TRUE
-//             ORDER BY created_at DESC
-//             LIMIT 1
-//             `
-//         );
-
-//         const company_info = companyRes.rowCount > 0
-//             ? companyRes.rows[0]
-//             : {};
-
-//         await client.query('COMMIT');
-
-//         // Attach lock status to page
-//         page.lock_status = lockRow && new Date(lockRow.expires_at).getTime() >= Date.now();
-
-//         // -----------------------------
-//         // FINAL RESPONSE
-//         // -----------------------------
-//         return cb(null, {
-//             header_type: "SUCCESS",
-//             message_visibility: false,
-//             status: true,
-//             code: 1000,
-//             message: 'CMS home page data fetched successfully',
-//             data: {
-//                 page,
-//                 sections,
-//                 company_info
-//             }
-//         });
-
-//     } catch (err) {
-//          await client.query('ROLLBACK');
-//         logger.error('CMS home page list Error:', err);
-//         return cb(null, {
-//             header_type: "ERROR",
-//             message_visibility: true,
-//             status: false,
-//             code: 2004,
-//             message: err.message,
-//             error: err.message
-//         });
-
-//           } finally {
-//         client.release();
-//     }
-// });
-
-
 responder.on('listbyidwithlock-home', async (req, cb) => {
 
-    const client = await pool.connect();
-
+      const client = await pool.connect();
+      
 
     try {
 
@@ -1516,7 +1624,7 @@ responder.on('listbyidwithlock-home', async (req, cb) => {
                 error: 'page uuid is required'
             });
         }
-        await client.query('BEGIN');
+ await client.query('BEGIN');
 
         // -----------------------------
         // FETCH PAGE (ACTIVE ONLY)
@@ -1551,7 +1659,7 @@ responder.on('listbyidwithlock-home', async (req, cb) => {
         );
 
         if (pageRes.rowCount === 0) {
-            await client.query('ROLLBACK');
+             await client.query('ROLLBACK');
             return cb(null, {
                 header_type: "SUCCESS",
                 message_visibility: true,
@@ -1607,16 +1715,16 @@ responder.on('listbyidwithlock-home', async (req, cb) => {
                 await client.query(
                     `UPDATE record_locks SET is_deleted = TRUE,
                     deleted_by = $1,
-                    deleted_at = NOW()
+                    deleted_at = NOW() 
                     WHERE lock_id = $2`,
-                    [user_id, lockRow.lock_id]
+                    [user_id,lockRow.lock_id]
                 );
                 lockRow = null;
             }
 
             // Create new lock
             if (!lockRow) {
-
+                
                 const insertLock = await client.query(
                     `INSERT INTO record_locks (
                         table_name,
@@ -1766,7 +1874,7 @@ responder.on('listbyidwithlock-home', async (req, cb) => {
         });
 
     } catch (err) {
-        await client.query('ROLLBACK');
+         await client.query('ROLLBACK');
         logger.error('CMS home page list Error:', err);
         return cb(null, {
             header_type: "ERROR",
@@ -1777,7 +1885,7 @@ responder.on('listbyidwithlock-home', async (req, cb) => {
             error: err.message
         });
 
-    } finally {
+          } finally {
         client.release();
     }
 });
@@ -1814,19 +1922,27 @@ responder.on('create-aboutus', async (req, cb) => {
             });
         }
 
-        // -----------------------------
-        // ABOUT US PAGE VALIDATION
-        // -----------------------------
-        if (!['about us', 'ABOUT US'].includes(page_key)) {
-            return cb(null, {
-                header_type: "ERROR",
-                message_visibility: true,
-                status: false,
-                code: 2001,
-                message: "Validation failed",
-                error: "Only About Us page is allowed"
-            });
-        }
+     
+const pageKeyRes = await client.query(
+    `SELECT page_key_id 
+     FROM page_key 
+     WHERE LOWER(name) = LOWER($1) AND is_active = TRUE AND is_deleted = FALSE`,
+    [page_key]
+);
+
+if (pageKeyRes.rowCount === 0) {
+    return cb(null, {
+        header_type: "ERROR",
+        message_visibility: true,
+        status: false,
+        code: 2001,
+        message: "Validation failed",
+        error: "Invalid page key"
+    });
+}
+
+const page_key_id = pageKeyRes.rows[0].page_key_id;
+
 
         await client.query('BEGIN');
 
@@ -1885,8 +2001,8 @@ responder.on('create-aboutus', async (req, cb) => {
                         header_type: "ERROR",
                         message_visibility: true,
                         status: false,
-                        code: 2005,
-                        message: "CMS about us page creation failed",
+                        code: 2001,
+                        message: "Validation failed",
                         error: "Cannot insert because inactive page has active sections or items"
                     });
                 }
@@ -1895,6 +2011,7 @@ responder.on('create-aboutus', async (req, cb) => {
         // -----------------------------
         // INSERT PAGE
         // -----------------------------
+
         const insertPage = await client.query(
             `INSERT INTO pages
              (page_key, page_title, slug, is_active, sort_order, created_by, assigned_to, created_at, assigned_at)
@@ -1917,6 +2034,27 @@ responder.on('create-aboutus', async (req, cb) => {
         // SECTIONS & ITEMS
         // -----------------------------
         for (const section of sections) {
+
+            const sectionKeyRes = await client.query(
+    `SELECT section_key_id 
+     FROM section_key 
+     WHERE LOWER(name) = LOWER($1) 
+       AND page_key_id = $2 
+       AND is_active = TRUE
+       AND is_deleted = FALSE`,
+    [section.section_key, page_key_id]
+);
+
+if (sectionKeyRes.rowCount === 0) {
+    return cb(null, {
+        header_type: "ERROR",
+        message_visibility: true,
+        status: false,
+        code: 2001,
+        message: "Validation failed",
+        error: `Invalid section key '${section.section_key}'`
+    });
+}
 
             const secCheck = await client.query(
                 `SELECT section_id 
@@ -2073,485 +2211,6 @@ responder.on('create-aboutus', async (req, cb) => {
     }
 });
 
-// responder.on('update-aboutus', async (req, cb) => {
-//     const client = await pool.connect();
-
-//     try {
-//         const { page_key, body } = req;
-//         const { page, sections = [] } = body;
-
-//         const modified_by = page.modified_by || null;
-
-//         if (!page_key?.trim()) {
-//             return cb(null, {
-//                 header_type: "ERROR",
-//                 message_visibility: true,
-//                 status: false,
-//                 code: 2001,
-//                 message: "Validation failed",
-//                 error: "page key is required"
-//             });
-//         }
-
-//         if (!page.page_uuid) {
-//             return cb(null, {
-//                 header_type: "ERROR",
-//                 message_visibility: true,
-//                 status: false,
-//                 code: 2001,
-//                 message: "Validation failed",
-//                 error: "page uuid is required for update"
-//             });
-//         }
-
-//         await client.query('BEGIN');
-
-//         // -----------------------------
-//         // PAGE UPDATE
-//         // -----------------------------
-//         const pageRes = await client.query(
-//             `SELECT page_id, is_active, is_deleted
-//              FROM pages 
-//              WHERE page_uuid = $1`,
-//             [page.page_uuid]
-//         );
-
-//         if (pageRes.rowCount === 0) {
-//             throw new Error('Invalid page UUID');
-//         }
-
-//         if (!pageRes.rows[0].is_active) {
-//             throw new Error('Inactive page cannot be updated');
-//         }
-
-
-//         if (pageRes.rows[0].is_deleted === true) {
-//             throw new Error('Deleted page cannot be updated');
-//         }
-
-//         const page_id = pageRes.rows[0].page_id;
-
-//         await client.query(
-//             `UPDATE pages
-//              SET page_title=$1,
-//                  slug=$2,
-//                  sort_order=$3,
-//                 is_active=$4,
-//                  modified_by=$5,
-//                  modified_at=NOW()
-//              WHERE page_uuid=$6`,
-//             [
-//                 page.page_title,
-//                 page.slug,
-//                 page.sort_order,
-//                 page.is_active,
-//                 modified_by,
-//                 page.page_uuid
-//             ]
-//         );
-
-
-//         // -----------------------------
-//         // SECTIONS & ITEMS UPDATE
-//         // -----------------------------
-//         for (const section of sections) {
-
-//             if (!section.section_uuid) {
-//                 throw new Error('section uuid is required for update');
-//             }
-
-//             const secRes = await client.query(
-//                 `SELECT section_id, section_limit, is_active, is_deleted
-//                  FROM page_sections
-//                  WHERE section_uuid=$1`,
-//                 [section.section_uuid]
-//             );
-
-//             if (secRes.rowCount === 0 || !secRes.rows[0].is_active || secRes.rows[0].is_deleted === true) {
-//                 throw new Error('Invalid or inactive section UUID');
-//             }
-
-//             const section_id = secRes.rows[0].section_id;
-//             const section_limit = secRes.rows[0].section_limit;
-
-//             await client.query(
-//                 `UPDATE page_sections
-//                  SET section_key=$1,
-//                      section_type=$2,
-//                      title=$3,
-//                      content=$4,
-//                      image=$5,
-//                      video=$6,
-//                      button_label=$7,
-//                      button_url=$8,
-//                      section_limit=$9,
-//                      is_active=$10,
-//                      sort_order=$11,
-//                      modified_by=$12,
-//                      modified_at=NOW()
-//                  WHERE section_uuid=$13`,
-//                 [
-//                     section.section_key,
-//                     section.section_type,
-//                     section.title,
-//                     section.content,
-//                     section.image,
-//                     section.video,
-//                     section.button_label,
-//                     section.button_url,
-//                     section.section_limit,
-//                     section.is_active,
-//                     section.sort_order,
-//                     modified_by,
-//                     section.section_uuid
-//                 ]
-//             );
-
-//             // SECTION LIMIT VALIDATION
-//             if (section_limit === null && section.items?.length > 0) {
-//                 throw new Error(`Items not allowed for section ${section.section_key}`);
-//             }
-
-//             if (section_limit !== null && section.items.length > section_limit) {
-//                 throw new Error(`Only ${section_limit} items allowed for section ${section.section_key}`);
-//             }
-
-//             // -----------------------------
-//             // ITEMS UPDATE
-//             // -----------------------------
-//             for (const item of section.items || []) {
-
-//                 if (!item.item_uuid) {
-//                     throw new Error('item_uuid is required for update');
-//                 }
-
-//                 const itemRes = await client.query(
-//                     `SELECT is_active, is_deleted
-//                      FROM section_items 
-//                      WHERE item_uuid=$1`,
-//                     [item.item_uuid]
-//                 );
-
-//                 if (itemRes.rowCount === 0 || !itemRes.rows[0].is_active || itemRes.rows[0].is_deleted === true) {
-//                     throw new Error('Invalid or inactive item UUID');
-//                 }
-
-//                 await client.query(
-//                     `UPDATE section_items
-//                      SET title=$1,
-//                          content=$2,
-//                          image=$3,
-//                          icon=$4,
-//                          filetype=$5,
-//                          sort_order=$6,
-//                          is_active=$7,
-//                          modified_by=$8,
-//                          modified_at=NOW()
-//                      WHERE item_uuid=$9`,
-//                     [
-//                         item.title,
-//                         item.description,
-//                         item.image,
-//                         item.icon,
-//                         item.filetype,
-//                         item.sort_order,
-//                         item.is_active,
-//                         modified_by,
-//                         item.item_uuid
-//                     ]
-//                 );
-//             }
-//         }
-
-//         await client.query('COMMIT');
-
-//         return cb(null, {
-//             header_type: "SUCCESS",
-//             message_visibility: false,
-//             status: true,
-//             code: 1000,
-//             message: "CMS about us page updated successfully"
-//         });
-
-//     } catch (err) {
-//         await client.query('ROLLBACK');
-//         logger.error('CMS about us page update Error:', err);
-
-//         return cb(null, {
-//             header_type: "ERROR",
-//             message_visibility: true,
-//             status: false,
-//             code: 2004,
-//             message: "CMS about us page update failed",
-//             error: err.message
-//         });
-//     } finally {
-//         client.release();
-//     }
-// });
-
-// responder.on('update-aboutus', async (req, cb) => {
-//     const client = await pool.connect();
-
-//     try {
-//         const { page_key, body } = req;
-//         const { page, sections = [] } = body;
-
-//         const modified_by = page.modified_by || null;
-
-//         if (!page_key?.trim()) {
-//             return cb(null, {
-//                 header_type: "ERROR",
-//                 message_visibility: true,
-//                 status: false,
-//                 code: 2001,
-//                 message: "Validation failed",
-//                 error: "page key is required"
-//             });
-//         }
-
-//         if (!page.page_uuid) {
-//             return cb(null, {
-//                 header_type: "ERROR",
-//                 message_visibility: true,
-//                 status: false,
-//                 code: 2001,
-//                 message: "Validation failed",
-//                 error: "page uuid is required for update"
-//             });
-//         }
-
-//         await client.query('BEGIN');
-
-//         /* ======================================================
-//            1️⃣ CHECK EDIT LOCK (PAGE LEVEL)
-//         ====================================================== */
-//         const lockCheck = await client.query(
-//             `
-//             SELECT 1
-//             FROM record_locks
-//             WHERE table_name = 'pages'
-//               AND record_id = $1
-//               AND locked_by = $2
-//               AND is_deleted = FALSE
-//               AND expires_at > NOW()
-//             `,
-//             [page.page_uuid, modified_by]
-//         );
-
-//         if (lockCheck.rowCount === 0) {
-//             await client.query('ROLLBACK');
-//             return cb(null, {
-//                 header_type: "ERROR",
-//                 message_visibility: true,
-//                 status: false,
-//                 code: 2005,
-//                 message: "You must lock the page before updating",
-//                 error: "Edit lock missing or expired"
-//             });
-//         }
-
-//         /* ======================================================
-//            PAGE VALIDATION
-//         ====================================================== */
-//         const pageRes = await client.query(
-//             `SELECT page_id, is_active, is_deleted
-//              FROM pages 
-//              WHERE page_uuid = $1`,
-//             [page.page_uuid]
-//         );
-
-//         if (pageRes.rowCount === 0) {
-//             throw new Error('Invalid page UUID');
-//         }
-
-//         if (!pageRes.rows[0].is_active) {
-//             throw new Error('Inactive page cannot be updated');
-//         }
-
-
-//         if (pageRes.rows[0].is_deleted === true) {
-//             throw new Error('Deleted page cannot be updated');
-//         }
-
-//         const page_id = pageRes.rows[0].page_id;
-
-//         await client.query(
-//             `UPDATE pages
-//              SET page_title=$1,
-//                  slug=$2,
-//                  sort_order=$3,
-//                 is_active=$4,
-//                  modified_by=$5,
-//                  modified_at=NOW()
-//              WHERE page_uuid=$6`,
-//             [
-//                 page.page_title,
-//                 page.slug,
-//                 page.sort_order,
-//                 page.is_active,
-//                 modified_by,
-//                 page.page_uuid
-//             ]
-//         );
-
-
-//         // -----------------------------
-//         // SECTIONS & ITEMS UPDATE
-//         // -----------------------------
-//         for (const section of sections) {
-
-//             if (!section.section_uuid) {
-//                 throw new Error('section uuid is required for update');
-//             }
-
-//             const secRes = await client.query(
-//                 `SELECT section_id, section_limit, is_active, is_deleted
-//                  FROM page_sections
-//                  WHERE section_uuid=$1`,
-//                 [section.section_uuid]
-//             );
-
-//             if (secRes.rowCount === 0 || !secRes.rows[0].is_active || secRes.rows[0].is_deleted === true) {
-//                 throw new Error('Invalid or inactive section UUID');
-//             }
-
-//             const section_id = secRes.rows[0].section_id;
-//             const section_limit = secRes.rows[0].section_limit;
-
-//             await client.query(
-//                 `UPDATE page_sections
-//                  SET section_key=$1,
-//                      section_type=$2,
-//                      title=$3,
-//                      content=$4,
-//                      image=$5,
-//                      video=$6,
-//                      button_label=$7,
-//                      button_url=$8,
-//                      section_limit=$9,
-//                      is_active=$10,
-//                      sort_order=$11,
-//                      modified_by=$12,
-//                      modified_at=NOW()
-//                  WHERE section_uuid=$13`,
-//                 [
-//                     section.section_key,
-//                     section.section_type,
-//                     section.title,
-//                     section.content,
-//                     section.image,
-//                     section.video,
-//                     section.button_label,
-//                     section.button_url,
-//                     section.section_limit,
-//                     section.is_active,
-//                     section.sort_order,
-//                     modified_by,
-//                     section.section_uuid
-//                 ]
-//             );
-
-//             // SECTION LIMIT VALIDATION
-//             if (section_limit === null && section.items?.length > 0) {
-//                 throw new Error(`Items not allowed for section ${section.section_key}`);
-//             }
-
-//             if (section_limit !== null && section.items.length > section_limit) {
-//                 throw new Error(`Only ${section_limit} items allowed for section ${section.section_key}`);
-//             }
-
-//             // -----------------------------
-//             // ITEMS UPDATE
-//             // -----------------------------
-//             for (const item of section.items || []) {
-
-//                 if (!item.item_uuid) {
-//                     throw new Error('item_uuid is required for update');
-//                 }
-
-//                 const itemRes = await client.query(
-//                     `SELECT is_active, is_deleted
-//                      FROM section_items 
-//                      WHERE item_uuid=$1`,
-//                     [item.item_uuid]
-//                 );
-
-//                 if (itemRes.rowCount === 0 || !itemRes.rows[0].is_active || itemRes.rows[0].is_deleted === true) {
-//                     throw new Error('Invalid or inactive item UUID');
-//                 }
-
-//                 await client.query(
-//                     `UPDATE section_items
-//                      SET title=$1,
-//                          content=$2,
-//                          image=$3,
-//                          icon=$4,
-//                          filetype=$5,
-//                          sort_order=$6,
-//                          is_active=$7,
-//                          modified_by=$8,
-//                          modified_at=NOW()
-//                      WHERE item_uuid=$9`,
-//                     [
-//                         item.title,
-//                         item.description,
-//                         item.image,
-//                         item.icon,
-//                         item.filetype,
-//                         item.sort_order,
-//                         item.is_active,
-//                         modified_by,
-//                         item.item_uuid
-//                     ]
-//                 );
-//             }
-//         }
-
-//         /* ======================================================
-//            AUTO-UNLOCK AFTER SUCCESS
-//         ====================================================== */
-//         await client.query(
-//             `
-//             UPDATE record_locks
-//             SET is_deleted = TRUE,
-//             deleted_by = $1,
-//             deleted_at = NOW()
-//             WHERE table_name = 'pages'
-//               AND record_id = $2
-//               AND locked_by = $3
-//               AND is_deleted = FALSE
-//             `,
-//             [modified_by,page.page_uuid,modified_by]
-//         );
-
-//         await client.query('COMMIT');
-
-//         return cb(null, {
-//             header_type: "SUCCESS",
-//             message_visibility: false,
-//             status: true,
-//             code: 1000,
-//             message: "CMS about us page updated successfully"
-//         });
-
-//     } catch (err) {
-//         await client.query('ROLLBACK');
-//         logger.error('CMS about us page update Error:', err);
-
-//         return cb(null, {
-//             header_type: "ERROR",
-//             message_visibility: true,
-//             status: false,
-//             code: 2004,
-//             message: "CMS about us page update failed",
-//             error: err.message
-//         });
-//     } finally {
-//         client.release();
-//     }
-// });
-
 
 responder.on('update-aboutus', async (req, cb) => {
     const client = await pool.connect();
@@ -2582,6 +2241,27 @@ responder.on('update-aboutus', async (req, cb) => {
                 error: "page uuid is required for update"
             });
         }
+
+        const pageKeyRes = await client.query(
+    `SELECT page_key_id 
+     FROM page_key 
+     WHERE LOWER(name) = LOWER($1) AND is_active = TRUE AND is_deleted = FALSE`,
+    [page_key]
+);
+
+if (pageKeyRes.rowCount === 0) {
+    return cb(null, {
+        header_type: "ERROR",
+        message_visibility: true,
+        status: false,
+        code: 2001,
+        message: "Validation failed",
+        error: "Invalid page key"
+    });
+}
+
+const page_key_id = pageKeyRes.rows[0].page_key_id;
+
 
         await client.query('BEGIN');
 
@@ -2622,13 +2302,30 @@ responder.on('update-aboutus', async (req, cb) => {
              WHERE page_uuid = $1`,
             [page.page_uuid]
         );
-
+const page_id = pageRes.rows[0].page_id;
         if (pageRes.rowCount === 0) {
-            throw new Error('Invalid page UUID');
+                return cb(null,{
+         header_type: "ERROR",
+            message_visibility: true,
+            status: false,
+            code: 2001,
+            message: "Validation failed",
+            error: "Invalid page UUID"
+    });
+
+            //throw new Error('Invalid page UUID');
         }
 
         if (!pageRes.rows[0].is_active || pageRes.rows[0].is_deleted) {
-            throw new Error('Inactive or deleted page cannot be updated');
+            return {
+        header_type: "ERROR",
+        message_visibility: true,
+        status: false,
+        code: 2001,
+        message: "Validation failed",
+        error: "Inactive or deleted page cannot be updated"
+    };
+            //throw new Error('Inactive or deleted page cannot be updated');
         }
 
         await client.query(
@@ -2650,156 +2347,460 @@ responder.on('update-aboutus', async (req, cb) => {
             ]
         );
 
+/* ======================================================
+   SECTIONS & ITEMS UPDATE / INSERT
+====================================================== */
+for (const section of sections) {
+
+    
+    const sectionKeyRes = await client.query(
+    `SELECT section_key_id 
+     FROM section_key 
+     WHERE LOWER(name) = LOWER($1) 
+       AND page_key_id = $2 
+       AND is_active = TRUE
+       AND is_deleted = FALSE`,
+    [section.section_key, page_key_id]
+);
+
+if (sectionKeyRes.rowCount === 0) {
+    return cb(null, {
+        header_type: "ERROR",
+        message_visibility: true,
+        status: false,
+        code: 2001,
+        message: "Validation failed",
+        error: `Invalid section key '${section.section_key}'`
+    });
+}
+
+
+    let section_id;
+
+    /* ======================================================
+       DUPLICATE SECTION CHECK
+    ====================================================== */
+    const duplicateSectionRes = await client.query(
+        `
+        SELECT 1
+        FROM page_sections
+        WHERE page_id = $1
+          AND LOWER(section_key) = LOWER($2)
+          AND is_deleted = FALSE
+          AND ($3::uuid IS NULL OR section_uuid != $3)
+        `,
+        [
+            page_id,
+            section.section_key,
+            section.section_uuid || null
+        ]
+    );
+
+    if (duplicateSectionRes.rowCount > 0) {
+          return cb(null,{
+        header_type: "ERROR",
+        message_visibility: true,
+        status: false,
+        code: 2002,
+        message: "Updation failed",
+        error: `Section ${section.section_key} already exists`
+    });
+        // throw new Error(
+
+        //     `Section ${section.section_key} already exists`
+        // );
+    }
+
+    /* ======================================================
+       SECTION VALIDATION
+    ====================================================== */
+    const items = section.items || [];
+
+    if (section.section_type === 'single') {
+
+        if (section.section_limit !== null) {
+            return {
+        header_type: "ERROR",
+        message_visibility: true,
+        status: false,
+        code: 2001,
+        message: "Validation failed",
+        error: `Section limit must be null for single section ${section.section_key}`
+    };
+            // throw new Error(
+            //     `section limit must be null for single section ${section.section_key}`
+            // );
+        }
+
+        if (items.length > 0) {
+
+        return cb(null,{
+        header_type: "ERROR",
+        message_visibility: true,
+        status: false,
+        code: 2001,
+        message: "Validation failed",
+        error: `Items are not allowed for single section ${section.section_key}`
+    });
+            // throw new Error(
+            //     `Items are not allowed for single section ${section.section_key}`
+            // );
+        }
+    }
+
+    if (section.section_type === 'multiple') {
+
+        if (
+            section.section_limit === null ||
+            isNaN(section.section_limit) ||
+            section.section_limit <= 0
+        ) {
+            return {
+        header_type: "ERROR",
+        message_visibility: true,
+        status: false,
+        code: 2001,
+        message: "Validation failed",
+        error: `Section limit must be greater than 0 for multiple section ${section.section_key}`
+    };
+
+            // throw new Error(
+            //     `section limit must be greater than 0 for multiple section ${section.section_key}`
+            // );
+        }
+
+        if (items.length > section.section_limit) {
+            return {
+        header_type: "ERROR",
+        message_visibility: true,
+        status: false,
+        code: 2001,
+        message: "Section validation failed",
+        error: `Only ${section.section_limit} items allowed for section ${section.section_key}`
+    };
+            // throw new Error(
+            //     `Only ${section.section_limit} items allowed for section ${section.section_key}`
+            // );
+        }
+    }
+
+    /* ======================================================
+       UPDATE EXISTING SECTION
+    ====================================================== */
+    if (section.section_uuid) {
+
+        const secRes = await client.query(
+            `
+            SELECT section_id, is_active, is_deleted
+            FROM page_sections
+            WHERE section_uuid = $1
+            `,
+            [section.section_uuid]
+        );
+
+        if (
+            secRes.rowCount === 0 ||
+            !secRes.rows[0].is_active ||
+            secRes.rows[0].is_deleted
+        ) {
+
+              return cb(null,{
+        header_type: "ERROR",
+        message_visibility: true,
+        status: false,
+        code: 2001,
+        message: "Validation failed",
+        error: "Invalid or inactive section"
+    });
+            //throw new Error(`Invalid or inactive section`);
+        }
+
+        section_id = secRes.rows[0].section_id;
+
+        await client.query(
+            `
+            UPDATE page_sections
+            SET section_key = $1,
+                section_type = $2,
+                title = $3,
+                content = $4,
+                image = $5,
+                video = $6,
+                button_label = $7,
+                button_url = $8,
+                section_limit = $9,
+                is_active = $10,
+                sort_order = $11,
+                modified_by = $12,
+                modified_at = NOW()
+            WHERE section_uuid = $13
+            `,
+            [
+                section.section_key,
+                section.section_type,
+                section.title,
+                section.content,
+                section.image,
+                section.video,
+                section.button_label,
+                section.button_url,
+                section.section_limit,
+                section.is_active,
+                section.sort_order,
+                modified_by,
+                section.section_uuid
+            ]
+        );
+        section_limit = section.section_limit;
+
+    } 
+    else {
+
         /* ======================================================
-           SECTIONS & ITEMS UPDATE
+           INSERT NEW SECTION
         ====================================================== */
-        for (const section of sections) {
+        const insertSectionRes = await client.query(
+            `
+            INSERT INTO page_sections (
+                section_uuid,
+                page_id,
+                section_key,
+                section_type,
+                title,
+                content,
+                image,
+                video,
+                button_label,
+                button_url,
+                section_limit,
+                is_active,
+                sort_order,
+                created_by,
+                assigned_to,
+                created_at
+            )
+            VALUES (
+                gen_random_uuid(),
+                $1,
+                $2,
+                $3,
+                $4,
+                $5,
+                $6,
+                $7,
+                $8,
+                $9,
+                $10,
+                $11,
+                $12,
+                $13,
+                $14,
+                NOW()
+            )
+            RETURNING section_id
+            `,
+            [
+                page_id,
+                section.section_key,
+                section.section_type,
+                section.title,
+                section.content,
+                section.image,
+                section.video,
+                section.button_label,
+                section.button_url,
+                section.section_limit,
+                section.is_active,
+                section.sort_order,
+                modified_by,
+                modified_by
+            ]
+        );
 
-            if (!section.section_uuid) {
-                throw new Error('section uuid is required for update');
-            }
+        section_id = insertSectionRes.rows[0].section_id;
+        section_limit = section.section_limit;
+    }
 
-            const secRes = await client.query(
-                `SELECT section_id, is_active, is_deleted
-                 FROM page_sections
-                 WHERE section_uuid = $1`,
-                [section.section_uuid]
-            );
 
-            if (secRes.rowCount === 0 || !secRes.rows[0].is_active || secRes.rows[0].is_deleted) {
-                throw new Error(`Invalid or inactive section`);
-            }
+     /* ---------- SECTION LIMIT VALIDATION ---------- */
+    if (section_limit === null && section.items?.length > 0) {
 
-            const items = section.items || [];
+         return cb(null,{
+        header_type: "ERROR",
+        message_visibility: true,
+        status: false,
+        code: 2001,
+        message: "Validation failed",
+        error: `Items not allowed for section ${section.section_key}`
+    });
+        //throw new Error(`Items not allowed for section ${section.section_key}`);
+    }
+
+    if (section_limit !== null && (section.items || []).length > section_limit) {
+
+         return {
+        header_type: "ERROR",
+        message_visibility: true,
+        status: false,
+        code: 2001,
+        message: "Validation failed",
+        error: `Only ${section_limit} items are allowed for section ${section.section_key}`
+    };
+        // throw new Error(`Only ${section_limit} items allowed for section ${section.section_key}`);
+    }
+
+    /* ======================================================
+       ITEMS UPDATE / INSERT (MULTIPLE ONLY)
+    ====================================================== */
+    //if (section.section_type === 'multiple') {
+     
+    for (const item of items) {
 
             /* ======================================================
-               SECTION TYPE VALIDATION
+               DUPLICATE ITEM CHECK
             ====================================================== */
-
-            // SINGLE SECTION
-            if (section.section_type === 'single') {
-
-                if (section.section_limit !== null) {
-                    throw new Error(
-                        `section limit must be null for single section ${section.section_key}`
-                    );
-                }
-
-                if (items.length > 0) {
-                    throw new Error(
-                        `Items are not allowed for single section ${section.section_key}`
-                    );
-                }
-            }
-
-            // MULTIPLE SECTION
-            if (section.section_type === 'multiple') {
-
-                if (
-                    section.section_limit === null ||
-                    isNaN(section.section_limit) ||
-                    section.section_limit <= 0
-                ) {
-                    throw new Error(
-                        `section limit must be greater than 0 for multiple section ${section.section_key}`
-                    );
-                }
-
-                if (items.length > section.section_limit) {
-                    throw new Error(
-                        `Only ${section.section_limit} items allowed for section ${section.section_key}`
-                    );
-                }
-            }
-
-            /* ======================================================
-               UPDATE SECTION
-            ====================================================== */
-            await client.query(
-                `UPDATE page_sections
-                 SET section_key = $1,
-                     section_type = $2,
-                     title = $3,
-                     content = $4,
-                     image = $5,
-                     video = $6,
-                     button_label = $7,
-                     button_url = $8,
-                     section_limit = $9,
-                     is_active = $10,
-                     sort_order = $11,
-                     modified_by = $12,
-                     modified_at = NOW()
-                 WHERE section_uuid = $13`,
+            const duplicateItemRes = await client.query(
+                `
+                SELECT 1
+                FROM section_items
+                WHERE section_id = $1
+                  AND LOWER(title) = LOWER($2)
+                  AND is_deleted = FALSE
+                  AND ($3::uuid IS NULL OR item_uuid != $3)
+                `,
                 [
-                    section.section_key,
-                    section.section_type,
-                    section.title,
-                    section.content,
-                    section.image,
-                    section.video,
-                    section.button_label,
-                    section.button_url,
-                    section.section_limit,
-                    section.is_active,
-                    section.sort_order,
-                    modified_by,
-                    section.section_uuid
+                    section_id,
+                    item.title,
+                    item.item_uuid || null
                 ]
             );
 
+            if (duplicateItemRes.rowCount > 0) {
+
+                   return cb(null,{
+        header_type: "ERROR",
+        message_visibility: true,
+        status: false,
+        code: 2002,
+        message: "Updation failed",
+        error: `Item ${item.title} already exists for this section`
+    });
+
+                // throw new Error(
+                //     `Item ${item.title} already exists for this section`
+                // );
+            }
+
             /* ======================================================
-               UPDATE ITEMS (MULTIPLE ONLY)
+               UPDATE EXISTING ITEM
             ====================================================== */
-            if (section.section_type === 'multiple') {
-                for (const item of items) {
+            if (item.item_uuid) {
 
-                    if (!item.item_uuid) {
-                        throw new Error('item_uuid is required for update');
-                    }
+                const itemRes = await client.query(
+                    `
+                    SELECT is_active, is_deleted
+                    FROM section_items
+                    WHERE item_uuid = $1
+                    `,
+                    [item.item_uuid]
+                );
 
-                    const itemRes = await client.query(
-                        `SELECT is_active, is_deleted
-                         FROM section_items
-                         WHERE item_uuid = $1`,
-                        [item.item_uuid]
-                    );
-
-                    if (
-                        itemRes.rowCount === 0 ||
-                        !itemRes.rows[0].is_active ||
-                        itemRes.rows[0].is_deleted
-                    ) {
-                        throw new Error(`Invalid or inactive item`);
-                    }
-
-                    await client.query(
-                        `UPDATE section_items
-                         SET title = $1,
-                             content = $2,
-                             image = $3,
-                             icon = $4,
-                             filetype = $5,
-                             sort_order = $6,
-                             is_active = $7,
-                             modified_by = $8,
-                             modified_at = NOW()
-                         WHERE item_uuid = $9`,
-                        [
-                            item.title,
-                            item.description,
-                            item.image,
-                            item.icon,
-                            item.filetype,
-                            item.sort_order,
-                            item.is_active,
-                            modified_by,
-                            item.item_uuid
-                        ]
-                    );
+                if (
+                    itemRes.rowCount === 0 ||
+                    !itemRes.rows[0].is_active ||
+                    itemRes.rows[0].is_deleted
+                ) {
+                    return {
+        header_type: "ERROR",
+        message_visibility: true,
+        status: false,
+        code: 2001,
+        message: "Validation failed",
+        error: "Invalid or inactive item"
+    };
+                   // throw new Error(`Invalid or inactive item`);
                 }
+
+                await client.query(
+                    `
+                    UPDATE section_items
+                    SET title = $1,
+                        content = $2,
+                        image = $3,
+                        icon = $4,
+                        filetype = $5,
+                        sort_order = $6,
+                        is_active = $7,
+                        modified_by = $8,
+                        modified_at = NOW()
+                    WHERE item_uuid = $9
+                    `,
+                    [
+                        item.title,
+                        item.description,
+                        item.image,
+                        item.icon,
+                        item.filetype,
+                        item.sort_order,
+                        item.is_active,
+                        modified_by,
+                        item.item_uuid
+                    ]
+                );
+
+            } else {
+
+                /* ======================================================
+                   INSERT NEW ITEM
+                ====================================================== */
+                await client.query(
+                    `
+                    INSERT INTO section_items (
+                        item_uuid,
+                        section_id,
+                        title,
+                        content,
+                        image,
+                        icon,
+                        filetype,
+                        sort_order,
+                        is_active,
+                        created_by,
+                        assigned_to,
+                        created_at
+                    )
+                    VALUES (
+                        gen_random_uuid(),
+                        $1,
+                        $2,
+                        $3,
+                        $4,
+                        $5,
+                        $6,
+                        $7,
+                        $8,
+                        $9,
+                        $10,
+                        NOW()
+                    )
+                    `,
+                    [
+                        section_id,
+                        item.title,
+                        item.description,
+                        item.image,
+                        item.icon,
+                        item.filetype,
+                        item.sort_order,
+                        item.is_active,
+                        modified_by,
+                        modified_by
+                    ]
+                );
             }
         }
+    //}
+}
 
         /* ======================================================
            AUTO UNLOCK
@@ -2844,6 +2845,7 @@ responder.on('update-aboutus', async (req, cb) => {
         client.release();
     }
 });
+
 
 responder.on('listbypagekey-aboutus', async (req, cb) => {
     try {
@@ -3006,8 +3008,8 @@ responder.on('listbypagekey-aboutus', async (req, cb) => {
 
 responder.on('listbyidwithlock-aboutus', async (req, cb) => {
 
-    const client = await pool.connect();
-
+      const client = await pool.connect();
+      
 
     try {
 
@@ -3028,7 +3030,7 @@ responder.on('listbyidwithlock-aboutus', async (req, cb) => {
                 error: 'page uuid is required'
             });
         }
-        await client.query('BEGIN');
+ await client.query('BEGIN');
 
         // -----------------------------
         // FETCH PAGE (ACTIVE ONLY)
@@ -3063,7 +3065,7 @@ responder.on('listbyidwithlock-aboutus', async (req, cb) => {
         );
 
         if (pageRes.rowCount === 0) {
-            await client.query('ROLLBACK');
+             await client.query('ROLLBACK');
             return cb(null, {
                 header_type: "SUCCESS",
                 message_visibility: true,
@@ -3102,7 +3104,7 @@ responder.on('listbyidwithlock-aboutus', async (req, cb) => {
             );
 
             lockRow = lockResult.rows[0];
-
+            
             const isExpired = lockRow && new Date(lockRow.expires_at).getTime() < Date.now();
 
             // Locked by another active user
@@ -3118,15 +3120,18 @@ responder.on('listbyidwithlock-aboutus', async (req, cb) => {
             // Soft-delete expired lock
             if (lockRow && isExpired) {
                 await client.query(
-                    `UPDATE record_locks SET is_deleted = TRUE WHERE lock_id = $1`,
-                    [lockRow.lock_id]
+                    `UPDATE record_locks SET is_deleted = TRUE ,
+                                        deleted_by = $1,
+                    deleted_at = NOW() 
+                    WHERE lock_id = $2`,
+                    [user_id,lockRow.lock_id]
                 );
                 lockRow = null;
             }
 
             // Create new lock
             if (!lockRow) {
-
+                
                 const insertLock = await client.query(
                     `INSERT INTO record_locks (
                         table_name,
@@ -3232,7 +3237,7 @@ responder.on('listbyidwithlock-aboutus', async (req, cb) => {
             }));
         }
 
-        await client.query('COMMIT');
+          await client.query('COMMIT');
 
         // Attach lock status to page
         page.lock_status = lockRow && new Date(lockRow.expires_at).getTime() >= Date.now();
@@ -3253,7 +3258,7 @@ responder.on('listbyidwithlock-aboutus', async (req, cb) => {
         });
 
     } catch (err) {
-        await client.query('ROLLBACK');
+         await client.query('ROLLBACK');
         logger.error('CMS about us page list Error:', err);
         return cb(null, {
             header_type: "ERROR",
@@ -3264,7 +3269,7 @@ responder.on('listbyidwithlock-aboutus', async (req, cb) => {
             error: err.message
         });
 
-    } finally {
+          } finally {
         client.release();
     }
 });
@@ -3301,16 +3306,28 @@ responder.on('create-contactus', async (req, cb) => {
         // -----------------------------
         // CONTACT US PAGE VALIDATION
         // -----------------------------
-        if (!['contact us', 'CONTACT US'].includes(page_key)) {
-            return cb(null, {
-                header_type: "ERROR",
-                message_visibility: true,
-                status: false,
-                code: 2001,
-                message: "Validation failed",
-                error: "Only Contact Us page is allowed"
-            });
-        }
+      
+        
+const pageKeyRes = await client.query(
+    `SELECT page_key_id 
+     FROM page_key 
+     WHERE LOWER(name) = LOWER($1) AND is_active = TRUE AND is_deleted = FALSE`,
+    [page_key]
+);
+
+if (pageKeyRes.rowCount === 0) {
+    return cb(null, {
+        header_type: "ERROR",
+        message_visibility: true,
+        status: false,
+        code: 2001,
+        message: "Validation failed",
+        error: "Invalid page key"
+    });
+}
+
+const page_key_id = pageKeyRes.rows[0].page_key_id;
+
 
         await client.query('BEGIN');
 
@@ -3369,8 +3386,8 @@ responder.on('create-contactus', async (req, cb) => {
                         header_type: "ERROR",
                         message_visibility: true,
                         status: false,
-                        code: 2005,
-                        message: "CMS contact us page creation failed",
+                        code: 2001,
+                        message: "Validation failed",
                         error: "Cannot insert because inactive page has active sections or items"
                     });
                 }
@@ -3401,6 +3418,28 @@ responder.on('create-contactus', async (req, cb) => {
         // SECTIONS & ITEMS
         // -----------------------------
         for (const section of sections) {
+
+                        const sectionKeyRes = await client.query(
+    `SELECT section_key_id 
+     FROM section_key 
+     WHERE LOWER(name) = LOWER($1) 
+       AND page_key_id = $2 
+       AND is_active = TRUE
+       AND is_deleted = FALSE`,
+    [section.section_key, page_key_id]
+);
+
+if (sectionKeyRes.rowCount === 0) {
+    return cb(null, {
+        header_type: "ERROR",
+        message_visibility: true,
+        status: false,
+        code: 2001,
+        message: "Validation failed",
+        error: `Invalid section key '${section.section_key}'`
+    });
+}
+
 
             const secCheck = await client.query(
                 `SELECT section_id 
@@ -3561,774 +3600,6 @@ responder.on('create-contactus', async (req, cb) => {
     }
 });
 
-// responder.on('update-contactus', async (req, cb) => {
-//     const client = await pool.connect();
-
-//     try {
-//         const { page_key, body } = req;
-//         const { page, sections = [] } = body;
-
-//         const modified_by = page.modified_by || null;
-
-//         if (!page_key?.trim()) {
-//             return cb(null, {
-//                 header_type: "ERROR",
-//                 message_visibility: true,
-//                 status: false,
-//                 code: 2001,
-//                 message: "Validation failed",
-//                 error: "page key is required"
-//             });
-//         }
-
-//         if (!page.page_uuid) {
-//             return cb(null, {
-//                 header_type: "ERROR",
-//                 message_visibility: true,
-//                 status: false,
-//                 code: 2001,
-//                 message: "Validation failed",
-//                 error: "page uuid is required for update"
-//             });
-//         }
-
-//         await client.query('BEGIN');
-
-//         // -----------------------------
-//         // PAGE UPDATE
-//         // -----------------------------
-//         const pageRes = await client.query(
-//             `SELECT page_id, is_active, is_deleted
-//              FROM pages 
-//              WHERE page_uuid = $1`,
-//             [page.page_uuid]
-//         );
-
-//         if (pageRes.rowCount === 0) {
-//             throw new Error('Invalid page UUID');
-//         }
-
-//         if (!pageRes.rows[0].is_active) {
-//             throw new Error('Inactive page cannot be updated');
-//         }
-
-
-//         if (pageRes.rows[0].is_deleted === true) {
-//             throw new Error('Deleted page cannot be updated');
-//         }
-
-//         const page_id = pageRes.rows[0].page_id;
-
-//         await client.query(
-//             `UPDATE pages
-//              SET page_title=$1,
-//                  slug=$2,
-//                  sort_order=$3,
-//                 is_active=$4,
-//                  modified_by=$5,
-//                  modified_at=NOW()
-//              WHERE page_uuid=$6`,
-//             [
-//                 page.page_title,
-//                 page.slug,
-//                 page.sort_order,
-//                 page.is_active,
-//                 modified_by,
-//                 page.page_uuid
-//             ]
-//         );
-
-
-//         // -----------------------------
-//         // SECTIONS & ITEMS UPDATE
-//         // -----------------------------
-//         for (const section of sections) {
-
-//             if (!section.section_uuid) {
-//                 throw new Error('section uuid is required for update');
-//             }
-
-//             const secRes = await client.query(
-//                 `SELECT section_id, section_limit, is_active, is_deleted
-//                  FROM page_sections
-//                  WHERE section_uuid=$1`,
-//                 [section.section_uuid]
-//             );
-
-//             if (secRes.rowCount === 0 || !secRes.rows[0].is_active || secRes.rows[0].is_deleted === true) {
-//                 throw new Error('Invalid or inactive section UUID');
-//             }
-
-//             const section_id = secRes.rows[0].section_id;
-//             const section_limit = secRes.rows[0].section_limit;
-
-//             await client.query(
-//                 `UPDATE page_sections
-//                  SET section_key=$1,
-//                      section_type=$2,
-//                      title=$3,
-//                      content=$4,
-//                      image=$5,
-//                      video=$6,
-//                      button_label=$7,
-//                      button_url=$8,
-//                      section_limit=$9,
-//                      is_active=$10,
-//                      sort_order=$11,
-//                      modified_by=$12,
-//                      modified_at=NOW()
-//                  WHERE section_uuid=$13`,
-//                 [
-//                     section.section_key,
-//                     section.section_type,
-//                     section.title,
-//                     section.content,
-//                     section.image,
-//                     section.video,
-//                     section.button_label,
-//                     section.button_url,
-//                     section.section_limit,
-//                     section.is_active,
-//                     section.sort_order,
-//                     modified_by,
-//                     section.section_uuid
-//                 ]
-//             );
-
-//             // SECTION LIMIT VALIDATION
-//             if (section_limit === null && section.items?.length > 0) {
-//                 throw new Error(`Items not allowed for section ${section.section_key}`);
-//             }
-
-//             if (section_limit !== null && section.items.length > section_limit) {
-//                 throw new Error(`Only ${section_limit} items allowed for section ${section.section_key}`);
-//             }
-
-//             // -----------------------------
-//             // ITEMS UPDATE
-//             // -----------------------------
-//             for (const item of section.items || []) {
-
-//                 if (!item.item_uuid) {
-//                     throw new Error('item_uuid is required for update');
-//                 }
-
-//                 const itemRes = await client.query(
-//                     `SELECT is_active, is_deleted
-//                      FROM section_items 
-//                      WHERE item_uuid=$1`,
-//                     [item.item_uuid]
-//                 );
-
-//                 if (itemRes.rowCount === 0 || !itemRes.rows[0].is_active || itemRes.rows[0].is_deleted === true) {
-//                     throw new Error('Invalid or inactive item UUID');
-//                 }
-
-//                 await client.query(
-//                     `UPDATE section_items
-//                      SET title=$1,
-//                          content=$2,
-//                          image=$3,
-//                          icon=$4,
-//                          filetype=$5,
-//                          sort_order=$6,
-//                          is_active=$7,
-//                         address=$8,
-//                          link=$9,
-//                          day=$10,
-//                          time=$11,
-//                          modified_by=$12,
-//                          modified_at=NOW()
-//                      WHERE item_uuid=$13`,
-//                     [
-//                         item.label_for_name,
-//                         item.label_for_message,
-//                         item.image,
-//                         item.label_for_email,
-//                         item.name,
-//                         item.sort_order,
-//                         item.is_active,
-//                         item.address,
-//                         item.link,
-//                         item.day,
-//                         item.time,
-//                         modified_by,
-//                         item.item_uuid
-//                     ]
-//                 );
-//             }
-//         }
-
-//         await client.query('COMMIT');
-
-//         return cb(null, {
-//             header_type: "SUCCESS",
-//             message_visibility: false,
-//             status: true,
-//             code: 1000,
-//             message: "CMS contact us page updated successfully"
-//         });
-
-//     } catch (err) {
-//         await client.query('ROLLBACK');
-//         logger.error('CMS contact us page update Error:', err);
-
-//         return cb(null, {
-//             header_type: "ERROR",
-//             message_visibility: true,
-//             status: false,
-//             code: 2004,
-//             message: "CMS contact us page update failed",
-//             error: err.message
-//         });
-//     } finally {
-//         client.release();
-//     }
-// });
-
-
-// responder.on('update-contactus', async (req, cb) => {
-//     const client = await pool.connect();
-
-//     try {
-//         const { page_key, body } = req;
-//         const { page, sections = [] } = body;
-
-//         const modified_by = page.modified_by || null;
-
-//         if (!page_key?.trim()) {
-//             return cb(null, {
-//                 header_type: "ERROR",
-//                 message_visibility: true,
-//                 status: false,
-//                 code: 2001,
-//                 message: "Validation failed",
-//                 error: "page key is required"
-//             });
-//         }
-
-//         if (!page.page_uuid) {
-//             return cb(null, {
-//                 header_type: "ERROR",
-//                 message_visibility: true,
-//                 status: false,
-//                 code: 2001,
-//                 message: "Validation failed",
-//                 error: "page uuid is required for update"
-//             });
-//         }
-
-//         await client.query('BEGIN');
-
-//         /* ======================================================
-//            1️⃣ CHECK EDIT LOCK (PAGE LEVEL)
-//         ====================================================== */
-//         const lockCheck = await client.query(
-//             `
-//             SELECT 1
-//             FROM record_locks
-//             WHERE table_name = 'pages'
-//               AND record_id = $1
-//               AND locked_by = $2
-//               AND is_deleted = FALSE
-//               AND expires_at > NOW()
-//             `,
-//             [page.page_uuid, modified_by]
-//         );
-
-//         if (lockCheck.rowCount === 0) {
-//             await client.query('ROLLBACK');
-//             return cb(null, {
-//                 header_type: "ERROR",
-//                 message_visibility: true,
-//                 status: false,
-//                 code: 2005,
-//                 message: "You must lock the page before updating",
-//                 error: "Edit lock missing or expired"
-//             });
-//         }
-
-//         /* ======================================================
-//            PAGE VALIDATION
-//         ====================================================== */
-//         const pageRes = await client.query(
-//             `SELECT page_id, is_active, is_deleted
-//              FROM pages 
-//              WHERE page_uuid = $1`,
-//             [page.page_uuid]
-//         );
-
-//         if (pageRes.rowCount === 0) {
-//             throw new Error('Invalid page UUID');
-//         }
-
-//         if (!pageRes.rows[0].is_active) {
-//             throw new Error('Inactive page cannot be updated');
-//         }
-
-
-//         if (pageRes.rows[0].is_deleted === true) {
-//             throw new Error('Deleted page cannot be updated');
-//         }
-
-//         const page_id = pageRes.rows[0].page_id;
-
-//         await client.query(
-//             `UPDATE pages
-//              SET page_title=$1,
-//                  slug=$2,
-//                  sort_order=$3,
-//                 is_active=$4,
-//                  modified_by=$5,
-//                  modified_at=NOW()
-//              WHERE page_uuid=$6`,
-//             [
-//                 page.page_title,
-//                 page.slug,
-//                 page.sort_order,
-//                 page.is_active,
-//                 modified_by,
-//                 page.page_uuid
-//             ]
-//         );
-
-
-//         // -----------------------------
-//         // SECTIONS & ITEMS UPDATE
-//         // -----------------------------
-//         for (const section of sections) {
-
-//             if (!section.section_uuid) {
-//                 throw new Error('section uuid is required for update');
-//             }
-
-//             const secRes = await client.query(
-//                 `SELECT section_id, section_limit, is_active, is_deleted
-//                  FROM page_sections
-//                  WHERE section_uuid=$1`,
-//                 [section.section_uuid]
-//             );
-
-//             if (secRes.rowCount === 0 || !secRes.rows[0].is_active || secRes.rows[0].is_deleted === true) {
-//                 throw new Error('Invalid or inactive section UUID');
-//             }
-
-//             const section_id = secRes.rows[0].section_id;
-//             const section_limit = secRes.rows[0].section_limit;
-
-//             await client.query(
-//                 `UPDATE page_sections
-//                  SET section_key=$1,
-//                      section_type=$2,
-//                      title=$3,
-//                      content=$4,
-//                      image=$5,
-//                      video=$6,
-//                      button_label=$7,
-//                      button_url=$8,
-//                      section_limit=$9,
-//                      is_active=$10,
-//                      sort_order=$11,
-//                      modified_by=$12,
-//                      modified_at=NOW()
-//                  WHERE section_uuid=$13`,
-//                 [
-//                     section.section_key,
-//                     section.section_type,
-//                     section.title,
-//                     section.content,
-//                     section.image,
-//                     section.video,
-//                     section.button_label,
-//                     section.button_url,
-//                     section.section_limit,
-//                     section.is_active,
-//                     section.sort_order,
-//                     modified_by,
-//                     section.section_uuid
-//                 ]
-//             );
-
-//             // SECTION LIMIT VALIDATION
-//             if (section_limit === null && section.items?.length > 0) {
-//                 throw new Error(`Items not allowed for section ${section.section_key}`);
-//             }
-
-//             if (section_limit !== null && section.items.length > section_limit) {
-//                 throw new Error(`Only ${section_limit} items allowed for section ${section.section_key}`);
-//             }
-
-//             // -----------------------------
-//             // ITEMS UPDATE
-//             // -----------------------------
-//             for (const item of section.items || []) {
-
-//                 if (!item.item_uuid) {
-//                     throw new Error('item_uuid is required for update');
-//                 }
-
-//                 const itemRes = await client.query(
-//                     `SELECT is_active, is_deleted
-//                      FROM section_items 
-//                      WHERE item_uuid=$1`,
-//                     [item.item_uuid]
-//                 );
-
-//                 if (itemRes.rowCount === 0 || !itemRes.rows[0].is_active || itemRes.rows[0].is_deleted === true) {
-//                     throw new Error('Invalid or inactive item UUID');
-//                 }
-
-//                 await client.query(
-//                     `UPDATE section_items
-//                      SET title=$1,
-//                          content=$2,
-//                          image=$3,
-//                          icon=$4,
-//                          filetype=$5,
-//                          sort_order=$6,
-//                          is_active=$7,
-//                         address=$8,
-//                          link=$9,
-//                          day=$10,
-//                          time=$11,
-//                          modified_by=$12,
-//                          modified_at=NOW()
-//                      WHERE item_uuid=$13`,
-//                     [
-//                         item.label_for_name,
-//                         item.label_for_message,
-//                         item.image,
-//                         item.label_for_email,
-//                         item.name,
-//                         item.sort_order,
-//                         item.is_active,
-//                         item.address,
-//                         item.link,
-//                         item.day,
-//                         item.time,
-//                         modified_by,
-//                         item.item_uuid
-//                     ]
-//                 );
-//             }
-//         }
-
-//         /* ======================================================
-//            AUTO-UNLOCK AFTER SUCCESS
-//         ====================================================== */
-//         await client.query(
-//             `
-//             UPDATE record_locks
-//             SET is_deleted = TRUE,
-//             deleted_by = $1,
-//             deleted_at = NOW()
-//             WHERE table_name = 'pages'
-//               AND record_id = $2
-//               AND locked_by = $3
-//               AND is_deleted = FALSE
-//             `,
-//             [modified_by,page.page_uuid,modified_by]
-//         );
-
-//         await client.query('COMMIT');
-
-//         return cb(null, {
-//             header_type: "SUCCESS",
-//             message_visibility: false,
-//             status: true,
-//             code: 1000,
-//             message: "CMS contact us page updated successfully"
-//         });
-
-//     } catch (err) {
-//         await client.query('ROLLBACK');
-//         logger.error('CMS contact us page update Error:', err);
-
-//         return cb(null, {
-//             header_type: "ERROR",
-//             message_visibility: true,
-//             status: false,
-//             code: 2004,
-//             message: "CMS contact us page update failed",
-//             error: err.message
-//         });
-//     } finally {
-//         client.release();
-//     }
-// });
-
-
-
-// responder.on('update-contactus', async (req, cb) => {
-//     const client = await pool.connect();
-
-//     try {
-//         const { page_key, body } = req;
-//         const { page, sections = [] } = body;
-
-//         const modified_by = page.modified_by || null;
-
-//         if (!page_key?.trim()) {
-//             return cb(null, {
-//                 header_type: "ERROR",
-//                 message_visibility: true,
-//                 status: false,
-//                 code: 2001,
-//                 message: "Validation failed",
-//                 error: "page key is required"
-//             });
-//         }
-
-//         if (!page.page_uuid) {
-//             return cb(null, {
-//                 header_type: "ERROR",
-//                 message_visibility: true,
-//                 status: false,
-//                 code: 2001,
-//                 message: "Validation failed",
-//                 error: "page uuid is required for update"
-//             });
-//         }
-
-//         await client.query('BEGIN');
-
-//         /* ======================================================
-//            1️⃣ CHECK EDIT LOCK (PAGE LEVEL)
-//         ====================================================== */
-//         const lockCheck = await client.query(
-//             `
-//             SELECT 1
-//             FROM record_locks
-//             WHERE table_name = 'pages'
-//               AND record_id = $1
-//               AND locked_by = $2
-//               AND is_deleted = FALSE
-//               AND expires_at > NOW()
-//             `,
-//             [page.page_uuid, modified_by]
-//         );
-
-//         if (lockCheck.rowCount === 0) {
-//             await client.query('ROLLBACK');
-//             return cb(null, {
-//                 header_type: "ERROR",
-//                 message_visibility: true,
-//                 status: false,
-//                 code: 2005,
-//                 message: "You must lock the page before updating",
-//                 error: "Edit lock missing or expired"
-//             });
-//         }
-
-//         /* ======================================================
-//            PAGE VALIDATION
-//         ====================================================== */
-//         const pageRes = await client.query(
-//             `SELECT page_id, is_active, is_deleted
-//              FROM pages 
-//              WHERE page_uuid = $1`,
-//             [page.page_uuid]
-//         );
-
-//         if (pageRes.rowCount === 0) {
-//             throw new Error('Invalid page UUID');
-//         }
-
-//         if (!pageRes.rows[0].is_active) {
-//             throw new Error('Inactive page cannot be updated');
-//         }
-
-
-//         if (pageRes.rows[0].is_deleted === true) {
-//             throw new Error('Deleted page cannot be updated');
-//         }
-
-//         const page_id = pageRes.rows[0].page_id;
-
-//         await client.query(
-//             `UPDATE pages
-//              SET page_title=$1,
-//                  slug=$2,
-//                  sort_order=$3,
-//                 is_active=$4,
-//                  modified_by=$5,
-//                  modified_at=NOW()
-//              WHERE page_uuid=$6`,
-//             [
-//                 page.page_title,
-//                 page.slug,
-//                 page.sort_order,
-//                 page.is_active,
-//                 modified_by,
-//                 page.page_uuid
-//             ]
-//         );
-
-
-//         // -----------------------------
-//         // SECTIONS & ITEMS UPDATE
-//         // -----------------------------
-//         for (const section of sections) {
-
-//             if (!section.section_uuid) {
-//                 throw new Error('section uuid is required for update');
-//             }
-
-//             const secRes = await client.query(
-//                 `SELECT section_id, section_limit, is_active, is_deleted
-//                  FROM page_sections
-//                  WHERE section_uuid=$1`,
-//                 [section.section_uuid]
-//             );
-
-//             if (secRes.rowCount === 0 || !secRes.rows[0].is_active || secRes.rows[0].is_deleted === true) {
-//                 throw new Error('Invalid or inactive section UUID');
-//             }
-
-//             const section_id = secRes.rows[0].section_id;
-//             const section_limit = secRes.rows[0].section_limit;
-
-//             await client.query(
-//                 `UPDATE page_sections
-//                  SET section_key=$1,
-//                      section_type=$2,
-//                      title=$3,
-//                      content=$4,
-//                      image=$5,
-//                      video=$6,
-//                      button_label=$7,
-//                      button_url=$8,
-//                      section_limit=$9,
-//                      is_active=$10,
-//                      sort_order=$11,
-//                      modified_by=$12,
-//                      modified_at=NOW()
-//                  WHERE section_uuid=$13`,
-//                 [
-//                     section.section_key,
-//                     section.section_type,
-//                     section.title,
-//                     section.content,
-//                     section.image,
-//                     section.video,
-//                     section.button_label,
-//                     section.button_url,
-//                     section.section_limit,
-//                     section.is_active,
-//                     section.sort_order,
-//                     modified_by,
-//                     section.section_uuid
-//                 ]
-//             );
-
-//             // SECTION LIMIT VALIDATION
-//             if (section_limit === null && section.items?.length > 0) {
-//                 throw new Error(`Items not allowed for section ${section.section_key}`);
-//             }
-
-//             if (section_limit !== null && section.items.length > section_limit) {
-//                 throw new Error(`Only ${section_limit} items allowed for section ${section.section_key}`);
-//             }
-
-//             // -----------------------------
-//             // ITEMS UPDATE
-//             // -----------------------------
-//             for (const item of section.items || []) {
-
-//                 if (!item.item_uuid) {
-//                     throw new Error('item_uuid is required for update');
-//                 }
-
-//                 const itemRes = await client.query(
-//                     `SELECT is_active, is_deleted
-//                      FROM section_items 
-//                      WHERE item_uuid=$1`,
-//                     [item.item_uuid]
-//                 );
-
-//                 if (itemRes.rowCount === 0 || !itemRes.rows[0].is_active || itemRes.rows[0].is_deleted === true) {
-//                     throw new Error('Invalid or inactive item UUID');
-//                 }
-
-//                 await client.query(
-//                     `UPDATE section_items
-//                      SET title=$1,
-//                          content=$2,
-//                          image=$3,
-//                          icon=$4,
-//                          filetype=$5,
-//                          sort_order=$6,
-//                          is_active=$7,
-//                         address=$8,
-//                          link=$9,
-//                          day=$10,
-//                          time=$11,
-//                          modified_by=$12,
-//                          modified_at=NOW()
-//                      WHERE item_uuid=$13`,
-//                     [
-//                         item.label_for_name,
-//                         item.label_for_message,
-//                         item.image,
-//                         item.label_for_email,
-//                         item.name,
-//                         item.sort_order,
-//                         item.is_active,
-//                         item.address,
-//                         item.link,
-//                         item.day,
-//                         item.time,
-//                         modified_by,
-//                         item.item_uuid
-//                     ]
-//                 );
-//             }
-//         }
-
-//         /* ======================================================
-//            AUTO-UNLOCK AFTER SUCCESS
-//         ====================================================== */
-//         await client.query(
-//             `
-//             UPDATE record_locks
-//             SET is_deleted = TRUE,
-//             deleted_by = $1,
-//             deleted_at = NOW()
-//             WHERE table_name = 'pages'
-//               AND record_id = $2
-//               AND locked_by = $3
-//               AND is_deleted = FALSE
-//             `,
-//             [modified_by,page.page_uuid,modified_by]
-//         );
-
-//         await client.query('COMMIT');
-
-//         return cb(null, {
-//             header_type: "SUCCESS",
-//             message_visibility: false,
-//             status: true,
-//             code: 1000,
-//             message: "CMS contact us page updated successfully"
-//         });
-
-//     } catch (err) {
-//         await client.query('ROLLBACK');
-//         logger.error('CMS contact us page update Error:', err);
-
-//         return cb(null, {
-//             header_type: "ERROR",
-//             message_visibility: true,
-//             status: false,
-//             code: 2004,
-//             message: "CMS contact us page update failed",
-//             error: err.message
-//         });
-//     } finally {
-//         client.release();
-//     }
-// });
-
 
 responder.on('update-contactus', async (req, cb) => {
     const client = await pool.connect();
@@ -4361,10 +3632,30 @@ responder.on('update-contactus', async (req, cb) => {
             });
         }
 
+        const pageKeyRes = await client.query(
+    `SELECT page_key_id 
+     FROM page_key 
+     WHERE LOWER(name) = LOWER($1) AND is_active = TRUE AND is_deleted = FALSE`,
+    [page_key]
+);
+
+if (pageKeyRes.rowCount === 0) {
+    return cb(null, {
+        header_type: "ERROR",
+        message_visibility: true,
+        status: false,
+        code: 2001,
+        message: "Validation failed",
+        error: "Invalid page key"
+    });
+}
+
+const page_key_id = pageKeyRes.rows[0].page_key_id;
+
         await client.query('BEGIN');
 
         /* ======================================================
-           1️⃣ CHECK EDIT LOCK (PAGE LEVEL)
+           CHECK EDIT LOCK (PAGE LEVEL)
         ====================================================== */
         const lockCheck = await client.query(
             `
@@ -4402,16 +3693,41 @@ responder.on('update-contactus', async (req, cb) => {
         );
 
         if (pageRes.rowCount === 0) {
-            throw new Error('Invalid page UUID');
+             return {
+        header_type: "ERROR",
+        message_visibility: true,
+        status: false,
+        code: 2001,
+        message: "Validation failed",
+        error: "Invalid page UUID"
+    };
+            //throw new Error('Invalid page UUID');
         }
 
         if (!pageRes.rows[0].is_active) {
-            throw new Error('Inactive page cannot be updated');
+             return cb(null,{
+        header_type: "ERROR",
+        message_visibility: true,
+        status: false,
+        code: 2001,
+        message: "Validation failed",
+        error: "Inactive page cannot be updated"
+    });
+           // throw new Error('Inactive page cannot be updated');
         }
 
 
         if (pageRes.rows[0].is_deleted === true) {
-            throw new Error('Deleted page cannot be updated');
+                         return cb(null,{
+        header_type: "ERROR",
+        message_visibility: true,
+        status: false,
+        code: 2001,
+        message: "Validation failed",
+        error: "Deleted page cannot be updated"
+    });
+
+            //throw new Error('Deleted page cannot be updated');
         }
 
         const page_id = pageRes.rows[0].page_id;
@@ -4435,138 +3751,422 @@ responder.on('update-contactus', async (req, cb) => {
             ]
         );
 
+// -----------------------------
+// SECTIONS & ITEMS UPDATE / INSERT
+// -----------------------------
+for (const section of sections) {
+
+    
+    const sectionKeyRes = await client.query(
+    `SELECT section_key_id 
+     FROM section_key 
+     WHERE LOWER(name) = LOWER($1) 
+       AND page_key_id = $2 
+       AND is_active = TRUE
+       AND is_deleted = FALSE`,
+    [section.section_key, page_key_id]
+);
+
+if (sectionKeyRes.rowCount === 0) {
+    return cb(null, {
+        header_type: "ERROR",
+        message_visibility: true,
+        status: false,
+        code: 2001,
+        message: "Validation failed",
+        error: `Invalid section key '${section.section_key}'`
+    });
+}
+
+    let section_id = null;
+
+    // -----------------------------
+    // SECTION TYPE VALIDATION
+    // -----------------------------
+    if (section.section_type === 'single') {
+        if (section.section_limit !== null)
+                                     return cb(null,{
+        header_type: "ERROR",
+        message_visibility: true,
+        status: false,
+        code: 2001,
+        message: "Validation failed",
+        error: `Section ${section.section_key} is single type; section limit must be null`
+    });
+            // throw new Error(`Section ${section.section_key} is single type; section limit must be null`);
+
+        if ((section.items || []).length > 0)
+
+        return cb(null,{
+        header_type: "ERROR",
+        message_visibility: true,
+        status: false,
+        code: 2001,
+        message: "Validation failed",
+        error: `Section ${section.section_key} is single type; no items allowed`
+    });
+            // throw new Error(`Section ${section.section_key} is single type; no items allowed`);
+
+    } else if (section.section_type === 'multiple') {
+        if (section.section_limit === null || section.section_limit <= 0)
+            
+        return cb(null,{
+        header_type: "ERROR",
+        message_visibility: true,
+        status: false,
+        code: 2001,
+        message: "Validation failed",
+        error: `Section ${section.section_key} is multiple type; section limit must have a positive value`
+    });
+
+            // throw new Error(`Section ${section.section_key} is multiple type; section limit must have a positive value`);
+
+        if ((section.items || []).length > section.section_limit)
+
+                    return cb(null,{
+        header_type: "ERROR",
+        message_visibility: true,
+        status: false,
+        code: 2001,
+        message: "Validation failed",
+        error: `Section ${section.section_key} is multiple type; section limit must have a positive value`
+    });
+
+
+
+            // throw new Error(`Only ${section.section_limit} items allowed for section ${section.section_key}`);
+    } else {
+
+                            return cb(null,{
+        header_type: "ERROR",
+        message_visibility: true,
+        status: false,
+        code: 2001,
+        message: "Validation failed",
+        error: `Invalid section type ${section.section_type} for section ${section.section_key}`
+    });
+        // throw new Error(`Invalid section type ${section.section_type} for section ${section.section_key}`);
+    }
+
+    // -----------------------------
+    // DUPLICATE SECTION KEY CHECK
+    // -----------------------------
+    const duplicateSectionRes = await client.query(
+        `
+        SELECT 1
+        FROM page_sections
+        WHERE page_id = $1
+          AND LOWER(section_key) = LOWER($2)
+          AND is_deleted = FALSE
+          AND ($3::uuid IS NULL OR section_uuid != $3)
+        `,
+        [
+            page_id,
+            section.section_key,
+            section.section_uuid || null
+        ]
+    );
+
+    if (duplicateSectionRes.rowCount > 0) {
+
+          return {
+        header_type: "ERROR",
+        message_visibility: true,
+        status: false,
+        code: 2002,
+        message: "Updation failed",
+        error: `Section ${section.section_key} already exists`
+    };
+       // throw new Error(`Section ${section.section_key} already exists`);
+    }
+
+    // -----------------------------
+    // UPDATE SECTION
+    // -----------------------------
+    if (section.section_uuid) {
+
+        const secRes = await client.query(
+            `SELECT section_id, is_active, is_deleted
+             FROM page_sections
+             WHERE section_uuid = $1`,
+            [section.section_uuid]
+        );
+
+        if (
+            secRes.rowCount === 0 ||
+            !secRes.rows[0].is_active ||
+            secRes.rows[0].is_deleted === true
+        ) {
+                return {
+        header_type: "ERROR",
+        message_visibility: true,
+        status: false,
+        code: 2001,
+        message: "Validation failed",
+        error: "Invalid or inactive section UUID"
+    };
+
+            //throw new Error('Invalid or inactive section UUID');
+        }
+
+        section_id = secRes.rows[0].section_id;
+
+        await client.query(
+            `UPDATE page_sections
+             SET section_key = $1,
+                 section_type = $2,
+                 title = $3,
+                 content = $4,
+                 image = $5,
+                 video = $6,
+                 button_label = $7,
+                 button_url = $8,
+                 section_limit = $9,
+                 is_active = $10,
+                 sort_order = $11,
+                 modified_by = $12,
+                 modified_at = NOW()
+             WHERE section_uuid = $13`,
+            [
+                section.section_key,
+                section.section_type,
+                section.title,
+                section.content,
+                section.image,
+                section.video,
+                section.button_label,
+                section.button_url,
+                section.section_limit,
+                section.is_active,
+                section.sort_order,
+                modified_by,
+                section.section_uuid
+            ]
+        );
+         section_limit = section.section_limit;
+    } 
+    else {
 
         // -----------------------------
-        // SECTIONS & ITEMS UPDATE
+        // INSERT SECTION
         // -----------------------------
-        for (const section of sections) {
+        const insertSectionRes = await client.query(
+            `INSERT INTO page_sections
+            (
+                page_id,
+                section_key,
+                section_type,
+                title,
+                content,
+                image,
+                video,
+                button_label,
+                button_url,
+                section_limit,
+                is_active,
+                sort_order,
+                created_by,
+                created_at
+            )
+            VALUES
+            (
+                $1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,NOW()
+            )
+            RETURNING section_id`,
+            [
+                page_id,
+                section.section_key,
+                section.section_type,
+                section.title,
+                section.content,
+                section.image,
+                section.video,
+                section.button_label,
+                section.button_url,
+                section.section_limit,
+                section.is_active,
+                section.sort_order,
+                modified_by
+            ]
+        );
 
-            if (!section.section_uuid) {
-                throw new Error('section uuid is required for update');
-            }
+        section_id = insertSectionRes.rows[0].section_id;
+         section_limit = section.section_limit;
+    }
 
-            const secRes = await client.query(
-                `SELECT section_id, section_limit, is_active, is_deleted
-                 FROM page_sections
-                 WHERE section_uuid=$1`,
-                [section.section_uuid]
+     /* ---------- SECTION LIMIT VALIDATION ---------- */
+    if (section_limit === null && section.items?.length > 0) {
+
+          return cb(null,{
+        header_type: "ERROR",
+        message_visibility: true,
+        status: false,
+        code: 2001,
+        message: "Validation failed",
+        error: `Items not allowed for section ${section.section_key}`
+    });
+        //throw new Error(`Items not allowed for section ${section.section_key}`);
+    }
+
+    if (section_limit !== null && (section.items || []).length > section_limit) {
+
+        return cb(null,{
+        header_type: "ERROR",
+        message_visibility: true,
+        status: false,
+        code: 2001,
+        message: "Validation failed",
+        error: `Only ${section_limit} items allowed for section ${section.section_key}`
+    });
+
+        // throw new Error(`Only ${section_limit} items allowed for section ${section.section_key}`);
+    }
+
+    // -----------------------------
+    // ITEMS UPDATE / INSERT
+    // -----------------------------
+    for (const item of section.items || []) {
+
+        // -----------------------------
+        // DUPLICATE ITEM TITLE CHECK
+        // -----------------------------
+        const duplicateItemRes = await client.query(
+            `
+            SELECT 1
+            FROM section_items
+            WHERE section_id = $1
+              AND LOWER(title) = LOWER($2)
+              AND is_deleted = FALSE
+              AND ($3::uuid IS NULL OR item_uuid != $3)
+            `,
+            [
+                section_id,
+                item.label_for_name,
+                item.item_uuid || null
+            ]
+        );
+
+        if (duplicateItemRes.rowCount > 0) {
+
+            return cb(null,{
+        header_type: "ERROR",
+        message_visibility: true,
+        status: false,
+        code: 2002,
+        message: "Updation failed",
+        error: `Item ${item.label_for_name} already exists for this section`
+    });
+            // throw new Error(`Item ${item.label_for_name} already exists for this section`);
+        }
+
+        // -----------------------------
+        // UPDATE ITEM
+        // -----------------------------
+        if (item.item_uuid) {
+
+            const itemRes = await client.query(
+                `SELECT is_active, is_deleted
+                 FROM section_items
+                 WHERE item_uuid = $1`,
+                [item.item_uuid]
             );
 
-            if (secRes.rowCount === 0 || !secRes.rows[0].is_active || secRes.rows[0].is_deleted === true) {
-                throw new Error('Invalid or inactive section UUID');
+            if (
+                itemRes.rowCount === 0 ||
+                !itemRes.rows[0].is_active ||
+                itemRes.rows[0].is_deleted === true
+            ) {
+                      return {
+        header_type: "ERROR",
+        message_visibility: true,
+        status: false,
+        code: 2001,
+        message: "Validation failed",
+        error: "Invalid or inactive item"
+    };
+               // throw new Error('Invalid or inactive item');
             }
 
-            const section_id = secRes.rows[0].section_id;
-            const section_limit = secRes.rows[0].section_limit;
-
-            // -----------------------------
-            // SECTION TYPE VALIDATION
-            // -----------------------------
-            if (section.section_type === 'single') {
-                if (section.section_limit !== null)
-                    throw new Error(`Section ${section.section_key} is single type; section limit must be null`);
-                if ((section.items || []).length > 0)
-                    throw new Error(`Section ${section.section_key} is single type; no items allowed`);
-            } else if (section.section_type === 'multiple') {
-                if (section.section_limit === null || section.section_limit <= 0)
-                    throw new Error(`Section ${section.section_key} is multiple type; section limit must have a positive value`);
-                if ((section.items || []).length > section.section_limit)
-                    throw new Error(`Only ${section.section_limit} items allowed for section ${section.section_key}`);
-            } else {
-                throw new Error(`Invalid section type ${section.section_type} for section ${section.section_key}`);
-            }
-
-            // -----------------------------
-            // UPDATE SECTION
-            // -----------------------------
             await client.query(
-                `UPDATE page_sections
-                 SET section_key=$1,
-                     section_type=$2,
-                     title=$3,
-                     content=$4,
-                     image=$5,
-                     video=$6,
-                     button_label=$7,
-                     button_url=$8,
-                     section_limit=$9,
-                     is_active=$10,
-                     sort_order=$11,
-                     modified_by=$12,
-                     modified_at=NOW()
-                 WHERE section_uuid=$13`,
+                `UPDATE section_items
+                 SET title = $1,
+                     content = $2,
+                     image = $3,
+                     icon = $4,
+                     filetype = $5,
+                     sort_order = $6,
+                     is_active = $7,
+                     address = $8,
+                     link = $9,
+                     day = $10,
+                     time = $11,
+                     modified_by = $12,
+                     modified_at = NOW()
+                 WHERE item_uuid = $13`,
                 [
-                    section.section_key,
-                    section.section_type,
-                    section.title,
-                    section.content,
-                    section.image,
-                    section.video,
-                    section.button_label,
-                    section.button_url,
-                    section.section_limit,
-                    section.is_active,
-                    section.sort_order,
+                    item.label_for_name,
+                    item.label_for_message,
+                    item.image,
+                    item.label_for_email,
+                    item.name,
+                    item.sort_order,
+                    item.is_active,
+                    item.address,
+                    item.link,
+                    item.day,
+                    item.time,
                     modified_by,
-                    section.section_uuid
+                    item.item_uuid
                 ]
             );
 
+        } else {
 
             // -----------------------------
-            // ITEMS UPDATE
+            // INSERT ITEM
             // -----------------------------
-            for (const item of section.items || []) {
-
-                if (!item.item_uuid) {
-                    throw new Error('item_uuid is required for update');
-                }
-
-                const itemRes = await client.query(
-                    `SELECT is_active, is_deleted
-                     FROM section_items 
-                     WHERE item_uuid=$1`,
-                    [item.item_uuid]
-                );
-
-                if (itemRes.rowCount === 0 || !itemRes.rows[0].is_active || itemRes.rows[0].is_deleted === true) {
-                    throw new Error('Invalid or inactive item');
-                }
-
-                await client.query(
-                    `UPDATE section_items
-                     SET title=$1,
-                         content=$2,
-                         image=$3,
-                         icon=$4,
-                         filetype=$5,
-                         sort_order=$6,
-                         is_active=$7,
-                        address=$8,
-                         link=$9,
-                         day=$10,
-                         time=$11,
-                         modified_by=$12,
-                         modified_at=NOW()
-                     WHERE item_uuid=$13`,
-                    [
-                        item.label_for_name,
-                        item.label_for_message,
-                        item.image,
-                        item.label_for_email,
-                        item.name,
-                        item.sort_order,
-                        item.is_active,
-                        item.address,
-                        item.link,
-                        item.day,
-                        item.time,
-                        modified_by,
-                        item.item_uuid
-                    ]
-                );
-            }
+            await client.query(
+                `INSERT INTO section_items
+                (
+                    section_id,
+                    title,
+                    content,
+                    image,
+                    icon,
+                    filetype,
+                    sort_order,
+                    is_active,
+                    address,
+                    link,
+                    day,
+                    time,
+                    created_by,
+                    created_at
+                )
+                VALUES
+                (
+                    $1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,NOW()
+                )`,
+                [
+                    section_id,
+                    item.label_for_name,
+                    item.label_for_message,
+                    item.image,
+                    item.label_for_email,
+                    item.name,
+                    item.sort_order,
+                    item.is_active,
+                    item.address,
+                    item.link,
+                    item.day,
+                    item.time,
+                    modified_by
+                ]
+            );
         }
+    }
+}
+
 
         /* ======================================================
            AUTO-UNLOCK AFTER SUCCESS
@@ -4582,7 +4182,7 @@ responder.on('update-contactus', async (req, cb) => {
               AND locked_by = $3
               AND is_deleted = FALSE
             `,
-            [modified_by, page.page_uuid, modified_by]
+            [modified_by,page.page_uuid,modified_by]
         );
 
         await client.query('COMMIT');
@@ -4780,8 +4380,8 @@ responder.on('listbypagekey-contactus', async (req, cb) => {
 
 responder.on('listbyidwithlock-contactus', async (req, cb) => {
 
-    const client = await pool.connect();
-
+      const client = await pool.connect();
+      
 
     try {
 
@@ -4801,7 +4401,7 @@ responder.on('listbyidwithlock-contactus', async (req, cb) => {
                 error: 'page uuid is required'
             });
         }
-        await client.query('BEGIN');
+ await client.query('BEGIN');
 
         // -----------------------------
         // FETCH PAGE (ACTIVE ONLY)
@@ -4836,7 +4436,7 @@ responder.on('listbyidwithlock-contactus', async (req, cb) => {
         );
 
         if (pageRes.rowCount === 0) {
-            await client.query('ROLLBACK');
+             await client.query('ROLLBACK');
             return cb(null, {
                 header_type: "SUCCESS",
                 message_visibility: true,
@@ -4890,15 +4490,18 @@ responder.on('listbyidwithlock-contactus', async (req, cb) => {
             // Soft-delete expired lock
             if (lockRow && isExpired) {
                 await client.query(
-                    `UPDATE record_locks SET is_deleted = TRUE WHERE lock_id = $1`,
-                    [lockRow.lock_id]
+                    `UPDATE record_locks SET is_deleted = TRUE,
+                                        deleted_by = $1,
+                    deleted_at = NOW() 
+                    WHERE lock_id = $2`,
+                    [user_id,lockRow.lock_id]
                 );
                 lockRow = null;
             }
 
             // Create new lock
             if (!lockRow) {
-
+                
                 const insertLock = await client.query(
                     `INSERT INTO record_locks (
                         table_name,
@@ -4931,7 +4534,7 @@ responder.on('listbyidwithlock-contactus', async (req, cb) => {
                 );
                 lockRow = refresh.rows[0];
             }
-            await client.query('COMMIT');
+             await client.query('COMMIT');
         }
 
 
@@ -5011,7 +4614,7 @@ responder.on('listbyidwithlock-contactus', async (req, cb) => {
             }));
         }
 
-
+        
 
         // -----------------------------
         // FINAL RESPONSE
@@ -5029,7 +4632,7 @@ responder.on('listbyidwithlock-contactus', async (req, cb) => {
         });
 
     } catch (err) {
-        await client.query('ROLLBACK');
+         await client.query('ROLLBACK');
         logger.error('CMS contact us page list Error:', err);
         return cb(null, {
             header_type: "ERROR",
@@ -5040,7 +4643,7 @@ responder.on('listbyidwithlock-contactus', async (req, cb) => {
             error: err.message
         });
 
-    } finally {
+          } finally {
         client.release();
     }
 });
@@ -5662,7 +5265,6 @@ responder.on('list-contactus', async (req, cb) => {
 // UNLOCK CMS (record_locks based)
 // --------------------------------------------------
 
-
 responder.on('unlock-cms', async (req, cb) => {
     const client = await pool.connect();
 
@@ -5771,16 +5373,27 @@ responder.on('create-buyerhome', async (req, cb) => {
         // -----------------------------
         //  PAGE VALIDATION
         // -----------------------------
-        if (!['buyer home', 'BUYER HOME'].includes(page_key)) {
-            return cb(null, {
-                header_type: "ERROR",
-                message_visibility: true,
-                status: false,
-                code: 2001,
-                message: "Validation failed",
-                error: "Only Buyer Home page is allowed"
-            });
-        }
+
+        
+const pageKeyRes = await client.query(
+    `SELECT page_key_id 
+     FROM page_key 
+     WHERE LOWER(name) = LOWER($1) AND is_active = TRUE AND is_deleted = FALSE`,
+    [page_key]
+);
+
+if (pageKeyRes.rowCount === 0) {
+    return cb(null, {
+        header_type: "ERROR",
+        message_visibility: true,
+        status: false,
+        code: 2001,
+        message: "Validation failed",
+        error: "Invalid page key"
+    });
+}
+
+const page_key_id = pageKeyRes.rows[0].page_key_id;
 
         await client.query('BEGIN');
 
@@ -5839,8 +5452,8 @@ responder.on('create-buyerhome', async (req, cb) => {
                         header_type: "ERROR",
                         message_visibility: true,
                         status: false,
-                        code: 2005,
-                        message: "CMS buyer home page creation failed",
+                        code: 2001,
+                        message: "Validation failed",
                         error: "Cannot insert because inactive page has active sections or items"
                     });
                 }
@@ -5872,6 +5485,28 @@ responder.on('create-buyerhome', async (req, cb) => {
         // SECTIONS & ITEMS
         // -----------------------------
         for (const section of sections) {
+
+                        const sectionKeyRes = await client.query(
+    `SELECT section_key_id 
+     FROM section_key 
+     WHERE LOWER(name) = LOWER($1) 
+       AND page_key_id = $2 
+       AND is_active = TRUE
+       AND is_deleted = FALSE`,
+    [section.section_key, page_key_id]
+);
+
+if (sectionKeyRes.rowCount === 0) {
+    return cb(null, {
+        header_type: "ERROR",
+        message_visibility: true,
+        status: false,
+        code: 2001,
+        message: "Validation failed",
+        error: `Invalid section key '${section.section_key}'`
+    });
+}
+
 
             const secCheck = await client.query(
                 `SELECT section_id 
@@ -6061,6 +5696,26 @@ responder.on('update-buyerhome', async (req, cb) => {
             });
         }
 
+        const pageKeyRes = await client.query(
+    `SELECT page_key_id 
+     FROM page_key 
+     WHERE LOWER(name) = LOWER($1) AND is_active = TRUE AND is_deleted = FALSE`,
+    [page_key]
+);
+
+if (pageKeyRes.rowCount === 0) {
+    return cb(null, {
+        header_type: "ERROR",
+        message_visibility: true,
+        status: false,
+        code: 2001,
+        message: "Validation failed",
+        error: "Invalid page key"
+    });
+}
+
+const page_key_id = pageKeyRes.rows[0].page_key_id;
+
         await client.query('BEGIN');
 
         /* ======================================================
@@ -6104,15 +5759,40 @@ responder.on('update-buyerhome', async (req, cb) => {
         );
 
         if (pageRes.rowCount === 0) {
-            throw new Error('Invalid page UUID');
+                  return {
+        header_type: "ERROR",
+        message_visibility: true,
+        status: false,
+        code: 2001,
+        message: "Validation failed",
+        error: "Invalid page UUID"
+    };
+           // throw new Error('Invalid page UUID');
         }
 
         if (!pageRes.rows[0].is_active) {
-            throw new Error('Inactive page cannot be updated');
+                  return {
+        header_type: "ERROR",
+        message_visibility: true,
+        status: false,
+        code: 2001,
+        message: "Validation failed",
+        error: "Inactive page cannot be updated"
+    };
+            //throw new Error('Inactive page cannot be updated');
         }
 
         if (pageRes.rows[0].is_deleted) {
-            throw new Error('Deleted page cannot be updated');
+
+                        return {
+        header_type: "ERROR",
+        message_visibility: true,
+        status: false,
+        code: 2001,
+        message: "Validation failed",
+        error: "Deleted page cannot be updated"
+    };
+            //throw new Error('Deleted page cannot be updated');
         }
 
         const page_id = pageRes.rows[0].page_id;
@@ -6142,151 +5822,416 @@ responder.on('update-buyerhome', async (req, cb) => {
         );
 
 
-        /* ======================================================
-           SECTIONS & ITEMS UPDATE
-        ====================================================== */
-        for (const section of sections) {
+      /* ======================================================
+    SECTIONS & ITEMS UPDATE / INSERT
+====================================================== */
+for (const section of sections) {
 
-            if (!section.section_uuid) {
-                throw new Error('section uuid is required for update');
-            }
+    
+    const sectionKeyRes = await client.query(
+    `SELECT section_key_id 
+     FROM section_key 
+     WHERE LOWER(name) = LOWER($1) 
+       AND page_key_id = $2 
+       AND is_active = TRUE
+       AND is_deleted = FALSE`,
+    [section.section_key, page_key_id]
+);
 
-            const secRes = await client.query(
+if (sectionKeyRes.rowCount === 0) {
+    return cb(null, {
+        header_type: "ERROR",
+        message_visibility: true,
+        status: false,
+        code: 2001,
+        message: "Validation failed",
+        error: `Invalid section key '${section.section_key}'`
+    });
+}
+
+    let section_id = null;
+    let existing_section_limit = null;
+
+    // -----------------------------
+    // SECTION TYPE VALIDATION
+    // -----------------------------
+    if (section.section_type === 'single') {
+        if (section.section_limit !== null)
+                   return cb(null,{
+        header_type: "ERROR",
+        message_visibility: true,
+        status: false,
+        code: 2001,
+        message: "Validation failed",
+        error: `Section ${section.section_key} is single type; section limit must be null`
+    });
+            // throw new Error(`Section ${section.section_key} is single type; section limit must be null`);
+
+        if ((section.items || []).length > 0)
+
+                           return cb(null,{
+        header_type: "ERROR",
+        message_visibility: true,
+        status: false,
+        code: 2001,
+        message: "Validation failed",
+        error: `Section ${section.section_key} is single type; no items allowed`
+    });
+            // throw new Error(`Section ${section.section_key} is single type; no items allowed`);
+
+    } else if (section.section_type === 'multiple') {
+        if (section.section_limit === null || section.section_limit <= 0)
+
+                                     return cb(null,{
+        header_type: "ERROR",
+        message_visibility: true,
+        status: false,
+        code: 2001,
+        message: "Validation failed",
+        error: `Section ${section.section_key} is multiple type; section limit must have a positive value`
+    });
+            // throw new Error(`Section ${section.section_key} is multiple type; section limit must have a positive value`);
+
+        if ((section.items || []).length > section.section_limit)
+
+                                               return cb(null,{
+        header_type: "ERROR",
+        message_visibility: true,
+        status: false,
+        code: 2001,
+        message: "Validation failed",
+        error: `Only ${section.section_limit} items allowed for section ${section.section_key}`
+    });
+            // throw new Error(`Only ${section.section_limit} items allowed for section ${section.section_key}`);
+    } else {
+
+                                                     return cb(null,{
+        header_type: "ERROR",
+        message_visibility: true,
+        status: false,
+        code: 2001,
+        message: "Validation failed",
+        error: `Invalid section type ${section.section_type} for section ${section.section_key}`
+    });
+        // throw new Error(`Invalid section type ${section.section_type} for section ${section.section_key}`);
+    }
+
+    // -----------------------------
+    // DUPLICATE SECTION KEY CHECK
+    // -----------------------------
+    const duplicateSectionRes = await client.query(
+        `
+        SELECT 1
+        FROM page_sections
+        WHERE page_id = $1
+          AND LOWER(section_key) = LOWER($2)
+          AND is_deleted = FALSE
+          AND ($3::uuid IS NULL OR section_uuid != $3)
+        `,
+        [
+            page_id,
+            section.section_key,
+            section.section_uuid || null
+        ]
+    );
+
+    if (duplicateSectionRes.rowCount > 0) {
+            return cb(null,{
+        header_type: "ERROR",
+        message_visibility: true,
+        status: false,
+        code: 2002,
+        message: "Updation failed",
+        error: `Section ${section.section_key} already exists`
+    });
+        //throw new Error(`Section ${section.section_key} already exists`);
+    }
+
+    // =====================================================
+    // UPDATE SECTION
+    // =====================================================
+    if (section.section_uuid) {
+
+        const secRes = await client.query(
+            `
+            SELECT section_id, section_limit, is_active, is_deleted
+            FROM page_sections
+            WHERE section_uuid = $1
+            `,
+            [section.section_uuid]
+        );
+
+        if (
+            secRes.rowCount === 0 ||
+            !secRes.rows[0].is_active ||
+            secRes.rows[0].is_deleted
+        ) {
+                   return {
+        header_type: "ERROR",
+        message_visibility: true,
+        status: false,
+        code: 2001,
+        message: "Validation failed",
+        error: "Invalid or inactive section UUID"
+    };
+            //throw new Error('Invalid or inactive section UUID');
+        }
+
+        section_id = secRes.rows[0].section_id;
+       existing_section_limit = section.section_limit;
+
+        await client.query(
+            `
+            UPDATE page_sections
+            SET section_key = $1,
+                section_type = $2,
+                title = $3,
+                content = $4,
+                image = $5,
+                video = $6,
+                button_label = $7,
+                button_url = $8,
+                section_limit = $9,
+                is_active = $10,
+                sort_order = $11,
+                modified_by = $12,
+                modified_at = NOW()
+            WHERE section_uuid = $13
+            `,
+            [
+                section.section_key,
+                section.section_type,
+                section.title,
+                section.content,
+                section.image,
+                section.video,
+                section.button_label,
+                section.button_url,
+                section.section_limit,
+                section.is_active,
+                section.sort_order,
+                modified_by,
+                section.section_uuid
+            ]
+        );
+
+    } else {
+
+        // =====================================================
+        // INSERT SECTION
+        // =====================================================
+        const insertSectionRes = await client.query(
+            `
+            INSERT INTO page_sections
+            (
+                page_id,
+                section_key,
+                section_type,
+                title,
+                content,
+                image,
+                video,
+                button_label,
+                button_url,
+                section_limit,
+                is_active,
+                sort_order,
+                created_by,
+                created_at
+            )
+            VALUES
+            (
+                $1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,NOW()
+            )
+            RETURNING section_id, section_limit
+            `,
+            [
+                page_id,
+                section.section_key,
+                section.section_type,
+                section.title,
+                section.content,
+                section.image,
+                section.video,
+                section.button_label,
+                section.button_url,
+                section.section_limit,
+                section.is_active,
+                section.sort_order,
+                modified_by
+            ]
+        );
+
+        section_id = insertSectionRes.rows[0].section_id;
+        existing_section_limit = section.section_limit;
+    }
+
+    /* ---------- SECTION LIMIT VALIDATION ---------- */
+    if (existing_section_limit === null && (section.items || []).length > 0) {
+               return cb(null,{
+        header_type: "ERROR",
+        message_visibility: true,
+        status: false,
+        code: 2001,
+        message: "Validation failed",
+        error: `Items not allowed for section ${section.section_key}`
+    });
+
+       // throw new Error(`Items not allowed for section ${section.section_key}`);
+    }
+
+    if (
+        existing_section_limit !== null &&
+        (section.items || []).length > existing_section_limit
+    ) {
+
+                   return cb(null,{
+        header_type: "ERROR",
+        message_visibility: true,
+        status: false,
+        code: 2001,
+        message: "Validation failed",
+        error: `Only ${existing_section_limit} items allowed for section ${section.section_key}`
+    });
+        // throw new Error(`Only ${existing_section_limit} items allowed for section ${section.section_key}`);
+    }
+
+    /* ---------- ITEMS UPDATE / INSERT ---------- */
+    for (const item of section.items || []) {
+
+        // -----------------------------
+        // DUPLICATE ITEM TITLE CHECK
+        // -----------------------------
+        const duplicateItemRes = await client.query(
+            `
+            SELECT 1
+            FROM section_items
+            WHERE section_id = $1
+              AND LOWER(title) = LOWER($2)
+              AND is_deleted = FALSE
+              AND ($3::uuid IS NULL OR item_uuid != $3)
+            `,
+            [
+                section_id,
+                item.title,
+                item.item_uuid || null
+            ]
+        );
+
+        if (duplicateItemRes.rowCount > 0) {
+
+                return cb(null,{
+        header_type: "ERROR",
+        message_visibility: true,
+        status: false,
+        code: 2002,
+        message: "Updation failed",
+        error: `Item ${item.title} already exists for this section`
+    });
+            //throw new Error(`Item ${item.title} already exists for this section`);
+        }
+
+        // =====================================================
+        // UPDATE ITEM
+        // =====================================================
+        if (item.item_uuid) {
+
+            const itemRes = await client.query(
                 `
-                SELECT section_id, section_limit, is_active, is_deleted
-                FROM page_sections
-                WHERE section_uuid = $1
+                SELECT is_active, is_deleted
+                FROM section_items
+                WHERE item_uuid = $1
                 `,
-                [section.section_uuid]
+                [item.item_uuid]
             );
 
             if (
-                secRes.rowCount === 0 ||
-                !secRes.rows[0].is_active ||
-                secRes.rows[0].is_deleted
+                itemRes.rowCount === 0 ||
+                !itemRes.rows[0].is_active ||
+                itemRes.rows[0].is_deleted
             ) {
-                throw new Error('Invalid or inactive section UUID');
+                     return {
+        header_type: "ERROR",
+        message_visibility: true,
+        status: false,
+        code: 2001,
+        message: "Validation failed",
+        error: "Invalid or inactive item UUID"
+    };
+                //throw new Error('Invalid or inactive item UUID');
             }
 
-            const section_id = secRes.rows[0].section_id;
-            const section_limit = secRes.rows[0].section_limit;
-
-            // -----------------------------
-            // SECTION TYPE VALIDATION
-            // -----------------------------
-            if (section.section_type === 'single') {
-                if (section.section_limit !== null)
-                    throw new Error(`Section ${section.section_key} is single type; section limit must be null`);
-                if ((section.items || []).length > 0)
-                    throw new Error(`Section ${section.section_key} is single type; no items allowed`);
-            } else if (section.section_type === 'multiple') {
-                if (section.section_limit === null || section.section_limit <= 0)
-                    throw new Error(`Section ${section.section_key} is multiple type; section limit must have a positive value`);
-                if ((section.items || []).length > section.section_limit)
-                    throw new Error(`Only ${section.section_limit} items allowed for section ${section.section_key}`);
-            } else {
-                throw new Error(`Invalid section type ${section.section_type} for section ${section.section_key}`);
-            }
-
-            // UPDATE SECTION
             await client.query(
                 `
-                UPDATE page_sections
-                SET section_key = $1,
-                    section_type = $2,
-                    title = $3,
-                    content = $4,
-                    image = $5,
-                    video = $6,
-                    button_label = $7,
-                    button_url = $8,
-                    section_limit = $9,
-                    is_active = $10,
-                    sort_order = $11,
-                    modified_by = $12,
+                UPDATE section_items
+                SET title = $1,
+                    content = $2,
+                    image = $3,
+                    icon = $4,
+                    link = $5,
+                    filetype = $6,
+                    sort_order = $7,
+                    is_active = $8,
+                    modified_by = $9,
                     modified_at = NOW()
-                WHERE section_uuid = $13
+                WHERE item_uuid = $10
                 `,
                 [
-                    section.section_key,
-                    section.section_type,
-                    section.title,
-                    section.content,
-                    section.image,
-                    section.video,
-                    section.button_label,
-                    section.button_url,
-                    section.section_limit,
-                    section.is_active,
-                    section.sort_order,
+                    item.title,
+                    item.content,
+                    item.image,
+                    item.icon,
+                    item.link,
+                    item.filetype,
+                    item.sort_order,
+                    item.is_active,
                     modified_by,
-                    section.section_uuid
+                    item.item_uuid
                 ]
             );
 
-            /* ---------- SECTION LIMIT VALIDATION ---------- */
-            if (section_limit === null && section.items?.length > 0) {
-                throw new Error(`Items not allowed for section ${section.section_key}`);
-            }
+        } else {
 
-            if (section_limit !== null && section.items.length > section_limit) {
-                throw new Error(`Only ${section_limit} items allowed for section ${section.section_key}`);
-            }
-
-            /* ---------- ITEMS UPDATE ---------- */
-            for (const item of section.items || []) {
-
-                if (!item.item_uuid) {
-                    throw new Error('item_uuid is required for update');
-                }
-
-                const itemRes = await client.query(
-                    `
-                    SELECT is_active, is_deleted
-                    FROM section_items
-                    WHERE item_uuid = $1
-                    `,
-                    [item.item_uuid]
-                );
-
-                if (
-                    itemRes.rowCount === 0 ||
-                    !itemRes.rows[0].is_active ||
-                    itemRes.rows[0].is_deleted
-                ) {
-                    throw new Error('Invalid or inactive item UUID');
-                }
-
-                await client.query(
-                    `
-                    UPDATE section_items
-                    SET title = $1,
-                        content = $2,
-                        image = $3,
-                        icon = $4,
-                        link = $5,
-                        filetype = $6,
-                        sort_order = $7,
-                        is_active = $8,
-                        modified_by = $9,
-                        modified_at = NOW()
-                    WHERE item_uuid = $10
-                    `,
-                    [
-                        item.title,
-                        item.content,
-                        item.image,
-                        item.icon,
-                        item.link,
-                        item.filetype,
-                        item.sort_order,
-                        item.is_active,
-                        modified_by,
-                        item.item_uuid
-                    ]
-                );
-            }
+            // =====================================================
+            // INSERT ITEM
+            // =====================================================
+            await client.query(
+                `
+                INSERT INTO section_items
+                (
+                    section_id,
+                    title,
+                    content,
+                    image,
+                    icon,
+                    link,
+                    filetype,
+                    sort_order,
+                    is_active,
+                    created_by,
+                    created_at
+                )
+                VALUES
+                (
+                    $1,$2,$3,$4,$5,$6,$7,$8,$9,$10,NOW()
+                )
+                `,
+                [
+                    section_id,
+                    item.title,
+                    item.content,
+                    item.image,
+                    item.icon,
+                    item.link,
+                    item.filetype,
+                    item.sort_order,
+                    item.is_active,
+                    modified_by
+                ]
+            );
         }
+    }
+}
 
         /* ======================================================
            AUTO-UNLOCK AFTER SUCCESS
@@ -6302,7 +6247,7 @@ responder.on('update-buyerhome', async (req, cb) => {
               AND locked_by = $3
               AND is_deleted = FALSE
             `,
-            [modified_by, page.page_uuid, modified_by]
+            [modified_by,page.page_uuid,modified_by]
         );
 
         await client.query('COMMIT');
@@ -6335,8 +6280,8 @@ responder.on('update-buyerhome', async (req, cb) => {
 
 responder.on('listbyidwithlock-buyerhome', async (req, cb) => {
 
-    const client = await pool.connect();
-
+      const client = await pool.connect();
+      
 
     try {
 
@@ -6356,7 +6301,7 @@ responder.on('listbyidwithlock-buyerhome', async (req, cb) => {
                 error: 'page uuid is required'
             });
         }
-        await client.query('BEGIN');
+ await client.query('BEGIN');
 
         // -----------------------------
         // FETCH PAGE (ACTIVE ONLY)
@@ -6391,7 +6336,7 @@ responder.on('listbyidwithlock-buyerhome', async (req, cb) => {
         );
 
         if (pageRes.rowCount === 0) {
-            await client.query('ROLLBACK');
+             await client.query('ROLLBACK');
             return cb(null, {
                 header_type: "SUCCESS",
                 message_visibility: true,
@@ -6412,9 +6357,13 @@ responder.on('listbyidwithlock-buyerhome', async (req, cb) => {
             if (!user_id) {
                 await client.query('ROLLBACK');
                 return cb(null, {
-                    status: false,
-                    code: 2001,
-                    error: "User ID required for edit"
+            header_type: "ERROR",
+            message_visibility: true,
+            status: false,
+            code: 2001,
+            message: "Validation failed",
+            error: "User ID required for edit"
+
                 });
             }
 
@@ -6445,15 +6394,18 @@ responder.on('listbyidwithlock-buyerhome', async (req, cb) => {
             // Soft-delete expired lock
             if (lockRow && isExpired) {
                 await client.query(
-                    `UPDATE record_locks SET is_deleted = TRUE WHERE lock_id = $1`,
-                    [lockRow.lock_id]
+                    `UPDATE record_locks SET is_deleted = TRUE,
+                                        deleted_by = $1,
+                    deleted_at = NOW() 
+                    WHERE lock_id = $2`,
+                    [user_id,lockRow.lock_id]
                 );
                 lockRow = null;
             }
 
             // Create new lock
             if (!lockRow) {
-
+                
                 const insertLock = await client.query(
                     `INSERT INTO record_locks (
                         table_name,
@@ -6571,7 +6523,7 @@ responder.on('listbyidwithlock-buyerhome', async (req, cb) => {
         });
 
     } catch (err) {
-        await client.query('ROLLBACK');
+         await client.query('ROLLBACK');
         logger.error('CMS buyer home page list Error:', err);
         return cb(null, {
             header_type: "ERROR",
@@ -6582,7 +6534,7 @@ responder.on('listbyidwithlock-buyerhome', async (req, cb) => {
             error: err.message
         });
 
-    } finally {
+          } finally {
         client.release();
     }
 });
@@ -6769,7 +6721,6 @@ responder.on('list-buyerhome', async (req, cb) => {
 // ADMIN - SELLER HOME 
 // --------------------------------------------------
 
-
 responder.on('create-sellerhome', async (req, cb) => {
 
     const client = await pool.connect();
@@ -6798,16 +6749,27 @@ responder.on('create-sellerhome', async (req, cb) => {
         // -----------------------------
         //  PAGE VALIDATION
         // -----------------------------
-        if (!['seller home', 'SELLER HOME'].includes(page_key)) {
-            return cb(null, {
-                header_type: "ERROR",
-                message_visibility: true,
-                status: false,
-                code: 2001,
-                message: "Validation failed",
-                error: "Only Seller Home page is allowed"
-            });
-        }
+
+        
+const pageKeyRes = await client.query(
+    `SELECT page_key_id 
+     FROM page_key 
+     WHERE LOWER(name) = LOWER($1) AND is_active = TRUE AND is_deleted = FALSE`,
+    [page_key]
+);
+
+if (pageKeyRes.rowCount === 0) {
+    return cb(null, {
+        header_type: "ERROR",
+        message_visibility: true,
+        status: false,
+        code: 2001,
+        message: "Validation failed",
+        error: "Invalid page key"
+    });
+}
+
+const page_key_id = pageKeyRes.rows[0].page_key_id;
 
         await client.query('BEGIN');
 
@@ -6866,8 +6828,8 @@ responder.on('create-sellerhome', async (req, cb) => {
                         header_type: "ERROR",
                         message_visibility: true,
                         status: false,
-                        code: 2005,
-                        message: "CMS seller home page creation failed",
+                        code: 2001,
+                        message: "Validation failed",
                         error: "Cannot insert because inactive page has active sections or items"
                     });
                 }
@@ -6899,6 +6861,28 @@ responder.on('create-sellerhome', async (req, cb) => {
         // SECTIONS & ITEMS
         // -----------------------------
         for (const section of sections) {
+
+                        const sectionKeyRes = await client.query(
+    `SELECT section_key_id 
+     FROM section_key 
+     WHERE LOWER(name) = LOWER($1) 
+       AND page_key_id = $2 
+       AND is_active = TRUE
+       AND is_deleted = FALSE`,
+    [section.section_key, page_key_id]
+);
+
+if (sectionKeyRes.rowCount === 0) {
+    return cb(null, {
+        header_type: "ERROR",
+        message_visibility: true,
+        status: false,
+        code: 2001,
+        message: "Validation failed",
+        error: `Invalid section key '${section.section_key}'`
+    });
+}
+
 
             const secCheck = await client.query(
                 `SELECT section_id 
@@ -7057,7 +7041,6 @@ responder.on('create-sellerhome', async (req, cb) => {
     }
 });
 
-
 responder.on('update-sellerhome', async (req, cb) => {
     const client = await pool.connect();
 
@@ -7088,6 +7071,26 @@ responder.on('update-sellerhome', async (req, cb) => {
                 error: "page uuid is required for update"
             });
         }
+
+        const pageKeyRes = await client.query(
+    `SELECT page_key_id 
+     FROM page_key 
+     WHERE LOWER(name) = LOWER($1) AND is_active = TRUE AND is_deleted = FALSE`,
+    [page_key]
+);
+
+if (pageKeyRes.rowCount === 0) {
+    return cb(null, {
+        header_type: "ERROR",
+        message_visibility: true,
+        status: false,
+        code: 2001,
+        message: "Validation failed",
+        error: "Invalid page key"
+    });
+}
+
+const page_key_id = pageKeyRes.rows[0].page_key_id;
 
         await client.query('BEGIN');
 
@@ -7132,15 +7135,39 @@ responder.on('update-sellerhome', async (req, cb) => {
         );
 
         if (pageRes.rowCount === 0) {
-            throw new Error('Invalid page UUID');
+                 return {
+        header_type: "ERROR",
+        message_visibility: true,
+        status: false,
+        code: 2001,
+        message: "Validation failed",
+        error: "Invalid page UUID"
+    };
+            //throw new Error('Invalid page UUID');
         }
 
         if (!pageRes.rows[0].is_active) {
-            throw new Error('Inactive page cannot be updated');
+                 return {
+        header_type: "ERROR",
+        message_visibility: true,
+        status: false,
+        code: 2001,
+        message: "Validation failed",
+        error: "Inactive page cannot be updated"
+    };
+            //throw new Error('Inactive page cannot be updated');
         }
 
         if (pageRes.rows[0].is_deleted) {
-            throw new Error('Deleted page cannot be updated');
+                 return {
+        header_type: "ERROR",
+        message_visibility: true,
+        status: false,
+        code: 2001,
+        message: "Validation failed",
+        error: "Deleted page cannot be updated"
+    };
+            //throw new Error('Deleted page cannot be updated');
         }
 
         const page_id = pageRes.rows[0].page_id;
@@ -7169,154 +7196,426 @@ responder.on('update-sellerhome', async (req, cb) => {
             ]
         );
 
+ /* ======================================================
+   SECTIONS & ITEMS UPDATE / INSERT
+====================================================== */
+for (const section of sections) {
 
-        /* ======================================================
-           SECTIONS & ITEMS UPDATE
-        ====================================================== */
-        for (const section of sections) {
+    const sectionKeyRes = await client.query(
+    `SELECT section_key_id 
+     FROM section_key 
+     WHERE LOWER(name) = LOWER($1) 
+       AND page_key_id = $2 
+       AND is_active = TRUE
+       AND is_deleted = FALSE`,
+    [section.section_key, page_key_id]
+);
 
-            if (!section.section_uuid) {
-                throw new Error('section uuid is required for update');
-            }
+if (sectionKeyRes.rowCount === 0) {
+    return cb(null, {
+        header_type: "ERROR",
+        message_visibility: true,
+        status: false,
+        code: 2001,
+        message: "Validation failed",
+        error: `Invalid section key '${section.section_key}'`
+    });
+}
 
-            const secRes = await client.query(
+    let section_id = null;
+    let section_limit = section.section_limit;
+
+    // -----------------------------
+    // SECTION TYPE VALIDATION
+    // -----------------------------
+    if (section.section_type === 'single') {
+        if (section.section_limit !== null)
+            return cb(null,{
+        header_type: "ERROR",
+        message_visibility: true,
+        status: false,
+        code: 2001,
+        message: "Validation failed",
+        error: `Section ${section.section_key} is single type; section limit must be null`
+    });
+            // throw new Error(`Section ${section.section_key} is single type; section limit must be null`);
+
+        if ((section.items || []).length > 0)
+
+        return cb(null,{
+        header_type: "ERROR",
+        message_visibility: true,
+        status: false,
+        code: 2001,
+        message: "Validation failed",
+        error: `Section ${section.section_key} is single type; no items allowed`
+    });
+            // throw new Error(`Section ${section.section_key} is single type; no items allowed`);
+
+    } else if (section.section_type === 'multiple') {
+        if (section.section_limit === null || section.section_limit <= 0)
+
+              return cb(null,{
+        header_type: "ERROR",
+        message_visibility: true,
+        status: false,
+        code: 2001,
+        message: "Validation failed",
+        error: `Section ${section.section_key} is multiple type; section limit must have a positive value`
+    });
+            // throw new Error(`Section ${section.section_key} is multiple type; section limit must have a positive value`);
+
+        if ((section.items || []).length > section.section_limit)
+
+            return cb(null,{
+        header_type: "ERROR",
+        message_visibility: true,
+        status: false,
+        code: 2001,
+        message: "Validation failed",
+        error: `Only ${section.section_limit} items allowed for section ${section.section_key}`
+    });
+
+            // throw new Error(`Only ${section.section_limit} items allowed for section ${section.section_key}`);
+    } else {
+
+        return cb(null,{
+        header_type: "ERROR",
+        message_visibility: true,
+        status: false,
+        code: 2001,
+        message: "Validation failed",
+        error: `Invalid section type ${section.section_type} for section ${section.section_key}`
+    });
+
+        // throw new Error(`Invalid section type ${section.section_type} for section ${section.section_key}`);
+    }
+
+    // -----------------------------
+    // DUPLICATE SECTION KEY CHECK
+    // -----------------------------
+    const duplicateSectionRes = await client.query(
+        `
+        SELECT 1
+        FROM page_sections
+        WHERE page_id = $1
+          AND LOWER(section_key) = LOWER($2)
+          AND is_deleted = FALSE
+          AND ($3::uuid IS NULL OR section_uuid != $3)
+        `,
+        [
+            page_id,
+            section.section_key,
+            section.section_uuid || null
+        ]
+    );
+
+    if (duplicateSectionRes.rowCount > 0) {
+   return {
+        header_type: "ERROR",
+        message_visibility: true,
+        status: false,
+        code: 2002,
+        message: "Updation failed",
+        error: `Section ${section.section_key} already exists`
+    };
+
+        //throw new Error(`Section ${section.section_key} already exists`);
+    }
+
+    // =====================================================
+    // UPDATE SECTION
+    // =====================================================
+    if (section.section_uuid) {
+
+        const secRes = await client.query(
+            `
+            SELECT section_id, section_limit, is_active, is_deleted
+            FROM page_sections
+            WHERE section_uuid = $1
+            `,
+            [section.section_uuid]
+        );
+
+        if (
+            secRes.rowCount === 0 ||
+            !secRes.rows[0].is_active ||
+            secRes.rows[0].is_deleted
+        ) {
+
+  return cb(null,{
+        header_type: "ERROR",
+        message_visibility: true,
+        status: false,
+        code: 2001,
+        message: "Validation failed",
+        error: "Invalid or inactive section UUID"
+    });
+            //throw new Error('Invalid or inactive section UUID');
+        }
+
+        section_id = secRes.rows[0].section_id;
+        section_limit = section.section_limit;
+
+        await client.query(
+            `
+            UPDATE page_sections
+            SET section_key = $1,
+                section_type = $2,
+                title = $3,
+                content = $4,
+                image = $5,
+                video = $6,
+                button_label = $7,
+                button_url = $8,
+                section_limit = $9,
+                is_active = $10,
+                sort_order = $11,
+                modified_by = $12,
+                modified_at = NOW()
+            WHERE section_uuid = $13
+            `,
+            [
+                section.section_key,
+                section.section_type,
+                section.title,
+                section.content,
+                section.image,
+                section.video,
+                section.button_label,
+                section.button_url,
+                section.section_limit,
+                section.is_active,
+                section.sort_order,
+                modified_by,
+                section.section_uuid
+            ]
+        );
+
+    } 
+    
+    else {
+
+        // =====================================================
+        // INSERT SECTION
+        // =====================================================
+        const insertSectionRes = await client.query(
+            `
+            INSERT INTO page_sections
+            (
+                page_id,
+                section_key,
+                section_type,
+                title,
+                content,
+                image,
+                video,
+                button_label,
+                button_url,
+                section_limit,
+                is_active,
+                sort_order,
+                created_by,
+                created_at
+            )
+            VALUES
+            (
+                $1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,NOW()
+            )
+            RETURNING section_id, section_limit
+            `,
+            [
+                page_id,
+                section.section_key,
+                section.section_type,
+                section.title,
+                section.content,
+                section.image,
+                section.video,
+                section.button_label,
+                section.button_url,
+                section.section_limit,
+                section.is_active,
+                section.sort_order,
+                modified_by
+            ]
+        );
+
+        section_id = insertSectionRes.rows[0].section_id;
+        section_limit = section.section_limit;
+    }
+
+    /* ---------- SECTION LIMIT VALIDATION ---------- */
+    if (section_limit === null && (section.items || []).length > 0) {
+
+        return cb(null,{
+        header_type: "ERROR",
+        message_visibility: true,
+        status: false,
+        code: 2001,
+        message: "Validation failed",
+        error: `Items not allowed for section ${section.section_key}`
+    });
+
+       // throw new Error(`Items not allowed for section ${section.section_key}`);
+    }
+
+    if (
+        section_limit !== null &&
+        (section.items || []).length > section_limit
+    ) {
+
+        return cb(null,{
+        header_type: "ERROR",
+        message_visibility: true,
+        status: false,
+        code: 2001,
+        message: "Validation failed",
+        error: `Only ${section_limit} items allowed for section ${section.section_key}`
+    });
+        // throw new Error(`Only ${section_limit} items allowed for section ${section.section_key}`);
+    }
+
+    /* ---------- ITEMS UPDATE / INSERT ---------- */
+    for (const item of section.items || []) {
+
+        // -----------------------------
+        // DUPLICATE ITEM TITLE CHECK
+        // -----------------------------
+        const duplicateItemRes = await client.query(
+            `
+            SELECT 1
+            FROM section_items
+            WHERE section_id = $1
+              AND LOWER(title) = LOWER($2)
+              AND is_deleted = FALSE
+              AND ($3::uuid IS NULL OR item_uuid != $3)
+            `,
+            [
+                section_id,
+                item.title,
+                item.item_uuid || null
+            ]
+        );
+
+        if (duplicateItemRes.rowCount > 0) {
+
+             return cb(null,{
+        header_type: "ERROR",
+        message_visibility: true,
+        status: false,
+        code: 2002,
+        message: "Updation failed",
+        error: `Item ${item.title} already exists for this section`
+    });
+            //throw new Error(`Item ${item.title} already exists for this section`);
+        }
+
+        // =====================================================
+        // UPDATE ITEM
+        // =====================================================
+        if (item.item_uuid) {
+
+            const itemRes = await client.query(
                 `
-                SELECT section_id, section_limit, is_active, is_deleted
-                FROM page_sections
-                WHERE section_uuid = $1
+                SELECT is_active, is_deleted
+                FROM section_items
+                WHERE item_uuid = $1
                 `,
-                [section.section_uuid]
+                [item.item_uuid]
             );
 
             if (
-                secRes.rowCount === 0 ||
-                !secRes.rows[0].is_active ||
-                secRes.rows[0].is_deleted
+                itemRes.rowCount === 0 ||
+                !itemRes.rows[0].is_active ||
+                itemRes.rows[0].is_deleted
             ) {
-                throw new Error('Invalid or inactive section UUID');
+                  return cb(null,{
+        header_type: "ERROR",
+        message_visibility: true,
+        status: false,
+        code: 2001,
+        message: "Validation failed",
+        error: "Invalid or inactive item UUID"
+    });
+                //throw new Error('Invalid or inactive item UUID');
             }
 
-            const section_id = secRes.rows[0].section_id;
-            const section_limit = secRes.rows[0].section_limit;
-
-            // -----------------------------
-            // SECTION TYPE VALIDATION
-            // -----------------------------
-            if (section.section_type === 'single') {
-                if (section.section_limit !== null)
-                    throw new Error(`Section ${section.section_key} is single type; section limit must be null`);
-                if ((section.items || []).length > 0)
-                    throw new Error(`Section ${section.section_key} is single type; no items allowed`);
-            } else if (section.section_type === 'multiple') {
-                if (section.section_limit === null || section.section_limit <= 0)
-                    throw new Error(`Section ${section.section_key} is multiple type; section limit must have a positive value`);
-                if ((section.items || []).length > section.section_limit)
-                    throw new Error(`Only ${section.section_limit} items allowed for section ${section.section_key}`);
-            } else {
-                throw new Error(`Invalid section type ${section.section_type} for section ${section.section_key}`);
-            }
-
-            // UPDATE SECTION
             await client.query(
                 `
-                UPDATE page_sections
-                SET section_key = $1,
-                    section_type = $2,
-                    title = $3,
-                    content = $4,
-                    image = $5,
-                    video = $6,
-                    button_label = $7,
-                    button_url = $8,
-                    section_limit = $9,
-                    is_active = $10,
-                    sort_order = $11,
-                    modified_by = $12,
+                UPDATE section_items
+                SET title = $1,
+                    content = $2,
+                    image = $3,
+                    icon = $4,
+                    link = $5,
+                    filetype = $6,
+                    sort_order = $7,
+                    is_active = $8,
+                    modified_by = $9,
+                    address = $10,
                     modified_at = NOW()
-                WHERE section_uuid = $13
+                WHERE item_uuid = $11
                 `,
                 [
-                    section.section_key,
-                    section.section_type,
-                    section.title,
-                    section.content,
-                    section.image,
-                    section.video,
-                    section.button_label,
-                    section.button_url,
-                    section.section_limit,
-                    section.is_active,
-                    section.sort_order,
+                    item.title,
+                    item.content,
+                    item.image,
+                    item.icon,
+                    item.link,
+                    item.filetype,
+                    item.sort_order,
+                    item.is_active,
                     modified_by,
-                    section.section_uuid
+                    item.address,
+                    item.item_uuid
                 ]
             );
 
-            /* ---------- SECTION LIMIT VALIDATION ---------- */
-            if (section_limit === null && section.items?.length > 0) {
-                throw new Error(`Items not allowed for section ${section.section_key}`);
-            }
+        } else {
 
-            if (section_limit !== null && section.items.length > section_limit) {
-                throw new Error(`Only ${section_limit} items allowed for section ${section.section_key}`);
-            }
-
-            /* ---------- ITEMS UPDATE ---------- */
-            for (const item of section.items || []) {
-
-                if (!item.item_uuid) {
-                    throw new Error('item_uuid is required for update');
-                }
-
-                const itemRes = await client.query(
-                    `
-                    SELECT is_active, is_deleted
-                    FROM section_items
-                    WHERE item_uuid = $1
-                    `,
-                    [item.item_uuid]
-                );
-
-                if (
-                    itemRes.rowCount === 0 ||
-                    !itemRes.rows[0].is_active ||
-                    itemRes.rows[0].is_deleted
-                ) {
-                    throw new Error('Invalid or inactive item UUID');
-                }
-
-                await client.query(
-                    `
-                    UPDATE section_items
-                    SET title = $1,
-                        content = $2,
-                        image = $3,
-                        icon = $4,
-                        link = $5,
-                        filetype = $6,
-                        sort_order = $7,
-                        is_active = $8,
-                        modified_by = $9,
-                        address = $10,
-                        modified_at = NOW()
-                    WHERE item_uuid = $11
-                    `,
-                    [
-                        item.title,
-                        item.content,
-                        item.image,
-                        item.icon,
-                        item.link,
-                        item.filetype,
-                        item.sort_order,
-                        item.is_active,
-                        modified_by,
-                        item.address,
-                        item.item_uuid
-                    ]
-                );
-            }
+            // =====================================================
+            // INSERT ITEM
+            // =====================================================
+            await client.query(
+                `
+                INSERT INTO section_items
+                (
+                    section_id,
+                    title,
+                    content,
+                    image,
+                    icon,
+                    link,
+                    filetype,
+                    sort_order,
+                    is_active,
+                    address,
+                    created_by,
+                    created_at
+                )
+                VALUES
+                (
+                    $1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,NOW()
+                )
+                `,
+                [
+                    section_id,
+                    item.title,
+                    item.content,
+                    item.image,
+                    item.icon,
+                    item.link,
+                    item.filetype,
+                    item.sort_order,
+                    item.is_active,
+                    item.address,
+                    modified_by
+                ]
+            );
         }
+    }
+}
 
         /* ======================================================
            AUTO-UNLOCK AFTER SUCCESS
@@ -7332,7 +7631,7 @@ responder.on('update-sellerhome', async (req, cb) => {
               AND locked_by = $3
               AND is_deleted = FALSE
             `,
-            [modified_by, page.page_uuid, modified_by]
+            [modified_by,page.page_uuid,modified_by]
         );
 
         await client.query('COMMIT');
@@ -7362,11 +7661,10 @@ responder.on('update-sellerhome', async (req, cb) => {
     }
 });
 
-
 responder.on('listbyidwithlock-sellerhome', async (req, cb) => {
 
-    const client = await pool.connect();
-
+      const client = await pool.connect();
+      
 
     try {
 
@@ -7386,7 +7684,7 @@ responder.on('listbyidwithlock-sellerhome', async (req, cb) => {
                 error: 'page uuid is required'
             });
         }
-        await client.query('BEGIN');
+ await client.query('BEGIN');
 
         // -----------------------------
         // FETCH PAGE (ACTIVE ONLY)
@@ -7421,7 +7719,7 @@ responder.on('listbyidwithlock-sellerhome', async (req, cb) => {
         );
 
         if (pageRes.rowCount === 0) {
-            await client.query('ROLLBACK');
+             await client.query('ROLLBACK');
             return cb(null, {
                 header_type: "SUCCESS",
                 message_visibility: true,
@@ -7442,9 +7740,13 @@ responder.on('listbyidwithlock-sellerhome', async (req, cb) => {
             if (!user_id) {
                 await client.query('ROLLBACK');
                 return cb(null, {
-                    status: false,
-                    code: 2001,
-                    error: "User ID required for edit"
+            header_type: "ERROR",
+            message_visibility: true,
+            status: false,
+            code: 2001,
+            message: "Validation failed",
+            error: "User ID required for edit"
+
                 });
             }
 
@@ -7475,15 +7777,18 @@ responder.on('listbyidwithlock-sellerhome', async (req, cb) => {
             // Soft-delete expired lock
             if (lockRow && isExpired) {
                 await client.query(
-                    `UPDATE record_locks SET is_deleted = TRUE WHERE lock_id = $1`,
-                    [lockRow.lock_id]
+                    `UPDATE record_locks SET is_deleted = TRUE,
+                                        deleted_by = $1,
+                    deleted_at = NOW() 
+                    WHERE lock_id = $2`,
+                    [user_id,lockRow.lock_id]
                 );
                 lockRow = null;
             }
 
             // Create new lock
             if (!lockRow) {
-
+                
                 const insertLock = await client.query(
                     `INSERT INTO record_locks (
                         table_name,
@@ -7601,7 +7906,7 @@ responder.on('listbyidwithlock-sellerhome', async (req, cb) => {
         });
 
     } catch (err) {
-        await client.query('ROLLBACK');
+         await client.query('ROLLBACK');
         logger.error('CMS seller home page list Error:', err);
         return cb(null, {
             header_type: "ERROR",
@@ -7612,7 +7917,7 @@ responder.on('listbyidwithlock-sellerhome', async (req, cb) => {
             error: err.message
         });
 
-    } finally {
+          } finally {
         client.release();
     }
 });
@@ -7795,10 +8100,8 @@ responder.on('list-sellerhome', async (req, cb) => {
     }
 });
 
-
-
 // --------------------------------------------------
-// UPDATE SECTION LIMIT
+// UPDATE SECTION LIMIT 
 // --------------------------------------------------
 
 responder.on('update-section-limit', async (req, cb) => {
@@ -7887,7 +8190,7 @@ responder.on('update-section-limit', async (req, cb) => {
         ====================================================== */
         const sectionRes = await client.query(
             `
-            SELECT
+            SELECT 
                 section_id,
                 section_type,
                 section_limit,
@@ -7900,19 +8203,44 @@ responder.on('update-section-limit', async (req, cb) => {
         );
 
         if (sectionRes.rowCount === 0) {
-            throw new Error('Invalid section UUID');
+              return cb(null,{
+        header_type: "ERROR",
+        message_visibility: true,
+        status: false,
+        code: 2001,
+        message: "Validation failed",
+        error: "Invalid section UUID"
+    });
+            //throw new Error('Invalid section UUID');
         }
 
         const sectionData = sectionRes.rows[0];
 
         if (!sectionData.is_active || sectionData.is_deleted) {
-            throw new Error('Inactive or deleted section cannot be updated');
+
+              return cb(null,{
+        header_type: "ERROR",
+        message_visibility: true,
+        status: false,
+        code: 2001,
+        message: "Validation failed",
+        error: "Inactive or deleted section cannot be updated"
+    });
+            //throw new Error('Inactive or deleted section cannot be updated');
         }
 
         if (sectionData.section_type !== 'multiple') {
-            throw new Error(
-                'Section limit can be updated only for multiple type sections'
-            );
+                      return cb(null,{
+        header_type: "ERROR",
+        message_visibility: true,
+        status: false,
+        code: 2001,
+        message: "Validation failed",
+        error: "Section limit can be updated only for multiple type sections"
+    });
+            // throw new Error(
+            //     'Section limit can be updated only for multiple type sections'
+            // );
         }
 
         /* ======================================================
@@ -7932,9 +8260,18 @@ responder.on('update-section-limit', async (req, cb) => {
         const item_count = itemCountRes.rows[0].item_count;
 
         if (Number(section_limit) < item_count) {
-            throw new Error(
-                `Section limit cannot be less than existing item count (${item_count})`
-            );
+
+        return cb(null,{
+        header_type: "ERROR",
+        message_visibility: true,
+        status: false,
+        code: 2001,
+        message: "Validation failed",
+        error: `Section limit cannot be less than existing item count (${item_count})`
+    });
+            // throw new Error(
+            //     `Section limit cannot be less than existing item count (${item_count})`
+            // );
         }
 
         /* ======================================================
@@ -7998,7 +8335,6 @@ responder.on('update-section-limit', async (req, cb) => {
         client.release();
     }
 });
-
 
 // --------------------------------------------------
 // RECORD AVAILABILITY CHECK

@@ -2,7 +2,7 @@ require('module-alias/register');
 
 const express = require('express');
 const router = express.Router();
-const cmsRequester = require('@libs/requesters/admin-requesters/cms-requester');
+const cmsRequester = require('@libs/requesters/admin/cms-requesters/cms-requesters');
 const logger = require('@libs/logger/logger');
 const { saveErrorLog } = require('@libs/common/common-util');
 const multipart = require("connect-multiparty");

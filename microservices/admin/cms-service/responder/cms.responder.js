@@ -45,37 +45,37 @@ responder.on("cms-filesave", async (req, cb) => {
 
     try {
 
-        let { section_key, filetype_name, page_key } = req.body;
+let { section_key, filetype_name, page_key } = req.body;
 
-        section_key = section_key?.toLowerCase();
-        filetype_name = filetype_name?.toLowerCase();
-        page_key = page_key?.toLowerCase();
+section_key = section_key?.toLowerCase();
+filetype_name = filetype_name?.toLowerCase();
+page_key = page_key?.toLowerCase();
         const file = req.files?.file;
 
         /* ======================================================
            VALIDATION
         ====================================================== */
-        const pageKeyRes = await client.query(
-            `SELECT page_key_id
+const pageKeyRes = await client.query(
+    `SELECT page_key_id
      FROM page_key
      WHERE LOWER(name) = LOWER($1)
        AND is_active = TRUE
        AND is_deleted = FALSE`,
-            [page_key]
-        );
+    [page_key]
+);
 
-        if (pageKeyRes.rowCount === 0) {
-            return cb(null, {
-                header_type: "ERROR",
-                message_visibility: true,
-                status: false,
-                code: 2001,
-                message: "Validation failed",
-                error: `Invalid page key`
-            });
-        }
+if (pageKeyRes.rowCount === 0) {
+    return cb(null, {
+        header_type: "ERROR",
+        message_visibility: true,
+        status: false,
+        code: 2001,
+        message: "Validation failed",
+        error: `Invalid page key`
+    });
+}
 
-        const page_key_id = pageKeyRes.rows[0].page_key_id;
+const page_key_id = pageKeyRes.rows[0].page_key_id;
 
         if (!section_key) {
             return cb(null, {
@@ -87,29 +87,29 @@ responder.on("cms-filesave", async (req, cb) => {
                 error: "section key is required"
             });
         }
-        if (section_key !== "company profile") {
+if (section_key !== "company profile") {
 
-            const sectionKeyRes = await client.query(
-                `SELECT section_key_id
+    const sectionKeyRes = await client.query(
+        `SELECT section_key_id
          FROM section_key
          WHERE LOWER(name) = LOWER($1)
            AND page_key_id = $2
            AND is_active = TRUE
            AND is_deleted = FALSE`,
-                [section_key, page_key_id]
-            );
+        [section_key, page_key_id]
+    );
 
-            if (sectionKeyRes.rowCount === 0) {
-                return cb(null, {
-                    header_type: "ERROR",
-                    message_visibility: true,
-                    status: false,
-                    code: 2001,
-                    message: "Validation failed",
-                    error: `Invalid section key '${section_key}'`
-                });
-            }
-        }
+    if (sectionKeyRes.rowCount === 0) {
+        return cb(null, {
+            header_type: "ERROR",
+            message_visibility: true,
+            status: false,
+            code: 2001,
+            message: "Validation failed",
+            error: `Invalid section key '${section_key}'`
+        });
+    }
+}
         if (!file) {
             return cb(null, {
                 header_type: "ERROR",
@@ -193,7 +193,7 @@ responder.on("cms-filesave", async (req, cb) => {
         ====================================================== */
 
         const newFileName = generateFileName(file, section_key, filetype_name);
-        const finalPath = path.join(uploadDir, newFileName);
+        const finalPath = path.join(uploadDir, newFileName).replace(/\\/g, '/');
 
         // Move file
         fs.renameSync(file.path, finalPath);
@@ -209,7 +209,7 @@ responder.on("cms-filesave", async (req, cb) => {
             code: 1000,
             message: "File uploaded successfully",
             data: {
-                file_path: newFileName
+                file_path: finalPath
             }
         });
 
@@ -230,6 +230,7 @@ responder.on("cms-filesave", async (req, cb) => {
         client.release();
     }
 });
+
 
 
 // --------------------------------------------------
@@ -8203,40 +8204,11 @@ responder.on('update-section-limit', async (req, cb) => {
         await client.query('BEGIN');
 
         /* ======================================================
-           CHECK EDIT LOCK
-        ====================================================== */
-        const lockCheck = await client.query(
-            `
-            SELECT 1
-            FROM record_locks
-            WHERE table_name = 'pages'
-              AND record_id = $1
-              AND locked_by = $2
-              AND is_deleted = FALSE
-              AND expires_at > NOW()
-            `,
-            [page_uuid, modified_by]
-        );
-
-        if (lockCheck.rowCount === 0) {
-            await client.query('ROLLBACK');
-
-            return cb(null, {
-                header_type: "ERROR",
-                message_visibility: true,
-                status: false,
-                code: 2005,
-                message: "You must lock the section before updating",
-                error: "Edit lock missing or expired"
-            });
-        }
-
-        /* ======================================================
            SECTION VALIDATION
         ====================================================== */
         const sectionRes = await client.query(
             `
-            SELECT 
+            SELECT
                 section_id,
                 section_type,
                 section_limit,
@@ -8272,7 +8244,6 @@ responder.on('update-section-limit', async (req, cb) => {
                 message: "Validation failed",
                 error: "Inactive or deleted section cannot be updated"
             });
-            //throw new Error('Inactive or deleted section cannot be updated');
         }
 
         if (sectionData.section_type !== 'multiple') {
@@ -8284,9 +8255,6 @@ responder.on('update-section-limit', async (req, cb) => {
                 message: "Validation failed",
                 error: "Section limit can be updated only for multiple type sections"
             });
-            // throw new Error(
-            //     'Section limit can be updated only for multiple type sections'
-            // );
         }
 
         /* ======================================================
@@ -8315,9 +8283,6 @@ responder.on('update-section-limit', async (req, cb) => {
                 message: "Validation failed",
                 error: `Section limit cannot be less than existing item count (${item_count})`
             });
-            // throw new Error(
-            //     `Section limit cannot be less than existing item count (${item_count})`
-            // );
         }
 
         /* ======================================================
@@ -8336,23 +8301,6 @@ responder.on('update-section-limit', async (req, cb) => {
                 modified_by,
                 section_uuid
             ]
-        );
-
-        /* ======================================================
-           AUTO UNLOCK
-        ====================================================== */
-        await client.query(
-            `
-            UPDATE record_locks
-            SET is_deleted = TRUE,
-                deleted_by = $1,
-                deleted_at = NOW()
-            WHERE table_name = 'pages'
-              AND record_id = $2
-              AND locked_by = $1
-              AND is_deleted = FALSE
-            `,
-            [modified_by, page_uuid]
         );
 
         await client.query('COMMIT');

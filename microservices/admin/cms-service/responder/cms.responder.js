@@ -3,7 +3,7 @@ const cote = require('cote');
 const pool = require('@libs/db/postgresql_index');
 const logger = require('@libs/logger/logger');
 const path = require("path");
-const uploadDir = path.join('/app/assets', 'admin-buyer');
+const uploadDir = path.join('/app/assets', 'cms');
 const fs = require("fs");
 
 // REDIS CONNECTION & COTE RESPONDER SETUP
@@ -30,7 +30,7 @@ function generateFileName(file, section_key, filetype_name) {
         .toLowerCase()
         .replace(/\s+/g, "")              // spaces → _
         .replace(/[^a-z0-9_-]/g, "");      // remove special chars
- const safeFileTypeName = filetype_name
+    const safeFileTypeName = filetype_name
         .trim()
         .toLowerCase()
         .replace(/\s+/g, "")              // spaces → _
@@ -44,15 +44,38 @@ responder.on("cms-filesave", async (req, cb) => {
     const client = await pool.connect();
 
     try {
-        let { section_key, filetype_name } = req.body;
-        const file = req.files?.file;
+
+        let { section_key, filetype_name, page_key } = req.body;
+
         section_key = section_key?.toLowerCase();
         filetype_name = filetype_name?.toLowerCase();
-
+        page_key = page_key?.toLowerCase();
+        const file = req.files?.file;
 
         /* ======================================================
            VALIDATION
         ====================================================== */
+        const pageKeyRes = await client.query(
+            `SELECT page_key_id
+     FROM page_key
+     WHERE LOWER(name) = LOWER($1)
+       AND is_active = TRUE
+       AND is_deleted = FALSE`,
+            [page_key]
+        );
+
+        if (pageKeyRes.rowCount === 0) {
+            return cb(null, {
+                header_type: "ERROR",
+                message_visibility: true,
+                status: false,
+                code: 2001,
+                message: "Validation failed",
+                error: `Invalid page key`
+            });
+        }
+
+        const page_key_id = pageKeyRes.rows[0].page_key_id;
 
         if (!section_key) {
             return cb(null, {
@@ -64,7 +87,29 @@ responder.on("cms-filesave", async (req, cb) => {
                 error: "section key is required"
             });
         }
+        if (section_key !== "company profile") {
 
+            const sectionKeyRes = await client.query(
+                `SELECT section_key_id
+         FROM section_key
+         WHERE LOWER(name) = LOWER($1)
+           AND page_key_id = $2
+           AND is_active = TRUE
+           AND is_deleted = FALSE`,
+                [section_key, page_key_id]
+            );
+
+            if (sectionKeyRes.rowCount === 0) {
+                return cb(null, {
+                    header_type: "ERROR",
+                    message_visibility: true,
+                    status: false,
+                    code: 2001,
+                    message: "Validation failed",
+                    error: `Invalid section key '${section_key}'`
+                });
+            }
+        }
         if (!file) {
             return cb(null, {
                 header_type: "ERROR",
@@ -186,6 +231,7 @@ responder.on("cms-filesave", async (req, cb) => {
     }
 });
 
+
 // --------------------------------------------------
 // DELETE CMS 
 // --------------------------------------------------
@@ -254,7 +300,7 @@ responder.on('delete-cms', async (req, cb) => {
               AND expires_at > NOW()
               AND locked_by <> $2
             `,
-            [page_uuid,deleted_by]
+            [page_uuid, deleted_by]
         );
 
         if (lockCheck.rowCount > 0) {
@@ -269,8 +315,8 @@ responder.on('delete-cms', async (req, cb) => {
             });
         }
 
-    const selfLockCheck = await client.query(
-    `
+        const selfLockCheck = await client.query(
+            `
     SELECT 1
     FROM record_locks
     WHERE table_name = 'pages'
@@ -279,20 +325,20 @@ responder.on('delete-cms', async (req, cb) => {
       AND expires_at > NOW()
       AND locked_by = $2
     `,
-    [page_uuid, deleted_by]
-);
+            [page_uuid, deleted_by]
+        );
 
-if (selfLockCheck.rowCount === 0) {
-    await client.query('ROLLBACK');
-    return cb(null, {
-        header_type: "ERROR",
-        message_visibility: true,
-        status: false,
-        code: 2005,
-        message: "You must lock the page before deleting",
-        error: "Lock missing or expired"
-    });
-}
+        if (selfLockCheck.rowCount === 0) {
+            await client.query('ROLLBACK');
+            return cb(null, {
+                header_type: "ERROR",
+                message_visibility: true,
+                status: false,
+                code: 2005,
+                message: "You must lock the page before deleting",
+                error: "Lock missing or expired"
+            });
+        }
 
         /* ======================================================
            SOFT DELETE ITEM
@@ -365,25 +411,25 @@ responder.on('create-home', async (req, cb) => {
             });
         }
 
-const pageKeyRes = await client.query(
-    `SELECT page_key_id 
+        const pageKeyRes = await client.query(
+            `SELECT page_key_id 
      FROM page_key 
      WHERE LOWER(name) = LOWER($1) AND is_active = TRUE AND is_deleted = FALSE`,
-    [page_key]
-);
+            [page_key]
+        );
 
-if (pageKeyRes.rowCount === 0) {
-    return cb(null, {
-        header_type: "ERROR",
-        message_visibility: true,
-        status: false,
-        code: 2001,
-        message: "Validation failed",
-        error: "Invalid page key"
-    });
-}
+        if (pageKeyRes.rowCount === 0) {
+            return cb(null, {
+                header_type: "ERROR",
+                message_visibility: true,
+                status: false,
+                code: 2001,
+                message: "Validation failed",
+                error: "Invalid page key"
+            });
+        }
 
-const page_key_id = pageKeyRes.rows[0].page_key_id;
+        const page_key_id = pageKeyRes.rows[0].page_key_id;
 
         await client.query('BEGIN');
 
@@ -522,25 +568,25 @@ const page_key_id = pageKeyRes.rows[0].page_key_id;
         for (const section of sections) {
 
             const sectionKeyRes = await client.query(
-    `SELECT section_key_id 
+                `SELECT section_key_id 
      FROM section_key 
      WHERE LOWER(name) = LOWER($1) 
        AND page_key_id = $2 
        AND is_active = TRUE
        AND is_deleted = FALSE`,
-    [section.section_key, page_key_id]
-);
+                [section.section_key, page_key_id]
+            );
 
-if (sectionKeyRes.rowCount === 0) {
-    return cb(null, {
-        header_type: "ERROR",
-        message_visibility: true,
-        status: false,
-        code: 2001,
-        message: "Validation failed",
-        error: `Invalid section key '${section.section_key}'`
-    });
-}
+            if (sectionKeyRes.rowCount === 0) {
+                return cb(null, {
+                    header_type: "ERROR",
+                    message_visibility: true,
+                    status: false,
+                    code: 2001,
+                    message: "Validation failed",
+                    error: `Invalid section key '${section.section_key}'`
+                });
+            }
 
             const secCheck = await client.query(
                 `SELECT section_id 
@@ -734,24 +780,24 @@ responder.on('update-home', async (req, cb) => {
         }
 
         const pageKeyRes = await client.query(
-    `SELECT page_key_id 
+            `SELECT page_key_id 
      FROM page_key 
      WHERE LOWER(name) = LOWER($1) AND is_active = TRUE AND is_deleted = FALSE`,
-    [page_key]
-);
+            [page_key]
+        );
 
-if (pageKeyRes.rowCount === 0) {
-    return cb(null, {
-        header_type: "ERROR",
-        message_visibility: true,
-        status: false,
-        code: 2001,
-        message: "Validation failed",
-        error: "Invalid page key"
-    });
-}
+        if (pageKeyRes.rowCount === 0) {
+            return cb(null, {
+                header_type: "ERROR",
+                message_visibility: true,
+                status: false,
+                code: 2001,
+                message: "Validation failed",
+                error: "Invalid page key"
+            });
+        }
 
-const page_key_id = pageKeyRes.rows[0].page_key_id;
+        const page_key_id = pageKeyRes.rows[0].page_key_id;
 
         await client.query('BEGIN');
 
@@ -797,38 +843,38 @@ const page_key_id = pageKeyRes.rows[0].page_key_id;
 
         if (pageRes.rowCount === 0) {
 
-             return {
-        header_type: "ERROR",
-        message_visibility: true,
-        status: false,
-        code: 2001,
-        message: "Validation failed",
-        error: "Invalid page UUID"
-    };
+            return {
+                header_type: "ERROR",
+                message_visibility: true,
+                status: false,
+                code: 2001,
+                message: "Validation failed",
+                error: "Invalid page UUID"
+            };
             //throw new Error('Invalid page UUID');
         }
 
         if (!pageRes.rows[0].is_active) {
-                 return {
-        header_type: "ERROR",
-        message_visibility: true,
-        status: false,
-        code: 2001,
-        message: "Validation failed",
-        error: "Inactive page cannot be updated"
-    };
+            return {
+                header_type: "ERROR",
+                message_visibility: true,
+                status: false,
+                code: 2001,
+                message: "Validation failed",
+                error: "Inactive page cannot be updated"
+            };
             //throw new Error('Inactive page cannot be updated');
         }
 
         if (pageRes.rows[0].is_deleted) {
-                 return {
-        header_type: "ERROR",
-        message_visibility: true,
-        status: false,
-        code: 2001,
-        message: "Validation failed",
-        error: "Deleted page cannot be updated"
-    };
+            return {
+                header_type: "ERROR",
+                message_visibility: true,
+                status: false,
+                code: 2001,
+                message: "Validation failed",
+                error: "Deleted page cannot be updated"
+            };
             //throw new Error('Deleted page cannot be updated');
         }
 
@@ -877,14 +923,14 @@ const page_key_id = pageKeyRes.rows[0].page_key_id;
                 !companyRes.rows[0].is_active ||
                 companyRes.rows[0].is_deleted
             ) {
-                     return {
-        header_type: "ERROR",
-        message_visibility: true,
-        status: false,
-        code: 2001,
-        message: "Validation failed",
-        error: "Cannot update inactive or invalid company info"
-    };
+                return {
+                    header_type: "ERROR",
+                    message_visibility: true,
+                    status: false,
+                    code: 2001,
+                    message: "Validation failed",
+                    error: "Cannot update inactive or invalid company info"
+                };
                 //throw new Error('Cannot update inactive or invalid company info');
             }
 
@@ -926,140 +972,140 @@ const page_key_id = pageKeyRes.rows[0].page_key_id;
             );
         }
 
-/* ======================================================
-   SECTIONS & ITEMS UPDATE / INSERT
-====================================================== */
-for (const section of sections) {
+        /* ======================================================
+           SECTIONS & ITEMS UPDATE / INSERT
+        ====================================================== */
+        for (const section of sections) {
 
-    
-    const sectionKeyRes = await client.query(
-    `SELECT section_key_id 
+
+            const sectionKeyRes = await client.query(
+                `SELECT section_key_id 
      FROM section_key 
      WHERE LOWER(name) = LOWER($1) 
        AND page_key_id = $2 
        AND is_active = TRUE
        AND is_deleted = FALSE`,
-    [section.section_key, page_key_id]
-);
+                [section.section_key, page_key_id]
+            );
 
-if (sectionKeyRes.rowCount === 0) {
-    return cb(null, {
-        header_type: "ERROR",
-        message_visibility: true,
-        status: false,
-        code: 2001,
-        message: "Validation failed",
-        error: `Invalid section key '${section.section_key}'`
-    });
-}
+            if (sectionKeyRes.rowCount === 0) {
+                return cb(null, {
+                    header_type: "ERROR",
+                    message_visibility: true,
+                    status: false,
+                    code: 2001,
+                    message: "Validation failed",
+                    error: `Invalid section key '${section.section_key}'`
+                });
+            }
 
 
-    let section_id;
-    let section_limit;
+            let section_id;
+            let section_limit;
 
-    if (section.section_uuid) {
+            if (section.section_uuid) {
 
-        const secRes = await client.query(
-            `
+                const secRes = await client.query(
+                    `
             SELECT section_id, section_limit, is_active, is_deleted
             FROM page_sections
             WHERE section_uuid = $1
             `,
-            [section.section_uuid]
-        );
+                    [section.section_uuid]
+                );
 
-        if (
-            secRes.rowCount === 0 ||
-            !secRes.rows[0].is_active ||
-            secRes.rows[0].is_deleted
-        ) {
-                 return {
-        header_type: "ERROR",
-        message_visibility: true,
-        status: false,
-        code: 2001,
-        message: "Validation failed",
-        error: "Invalid or inactive section UUID"
-    };
-            //throw new Error('Invalid or inactive section UUID');
-        }
+                if (
+                    secRes.rowCount === 0 ||
+                    !secRes.rows[0].is_active ||
+                    secRes.rows[0].is_deleted
+                ) {
+                    return {
+                        header_type: "ERROR",
+                        message_visibility: true,
+                        status: false,
+                        code: 2001,
+                        message: "Validation failed",
+                        error: "Invalid or inactive section UUID"
+                    };
+                    //throw new Error('Invalid or inactive section UUID');
+                }
 
-        section_id = secRes.rows[0].section_id;
-        //section_limit = secRes.rows[0].section_limit;
+                section_id = secRes.rows[0].section_id;
+                //section_limit = secRes.rows[0].section_limit;
 
-    } 
-    //else {
-       // section_limit = section.section_limit;
-    //}
+            }
+            //else {
+            // section_limit = section.section_limit;
+            //}
 
-    // -----------------------------
-    // SECTION TYPE VALIDATION
-    // -----------------------------
-    if (section.section_type === 'single') {
-        if (section.section_limit !== null)
-            return cb(null,{
-        header_type: "ERROR",
-        message_visibility: true,
-        status: false,
-        code: 2001,
-        message: "Validation failed",
-        error: `Section ${section.section_key} is single type; section limit must be null`
-    });
-            // throw new Error(`Section ${section.section_key} is single type; section limit must be null`);
+            // -----------------------------
+            // SECTION TYPE VALIDATION
+            // -----------------------------
+            if (section.section_type === 'single') {
+                if (section.section_limit !== null)
+                    return cb(null, {
+                        header_type: "ERROR",
+                        message_visibility: true,
+                        status: false,
+                        code: 2001,
+                        message: "Validation failed",
+                        error: `Section ${section.section_key} is single type; section limit must be null`
+                    });
+                // throw new Error(`Section ${section.section_key} is single type; section limit must be null`);
 
-        if ((section.items || []).length > 0)
-             return cb(null,{
-        header_type: "ERROR",
-        message_visibility: true,
-        status: false,
-        code: 2001,
-        message: "Validation failed",
-        error: `Section ${section.section_key} is single type; no items allowed`
-    });
-            // throw new Error(`Section ${section.section_key} is single type; no items allowed`);
+                if ((section.items || []).length > 0)
+                    return cb(null, {
+                        header_type: "ERROR",
+                        message_visibility: true,
+                        status: false,
+                        code: 2001,
+                        message: "Validation failed",
+                        error: `Section ${section.section_key} is single type; no items allowed`
+                    });
+                // throw new Error(`Section ${section.section_key} is single type; no items allowed`);
 
-    } else if (section.section_type === 'multiple') {
+            } else if (section.section_type === 'multiple') {
 
-        if (section.section_limit === null || section.section_limit <= 0)
-             return cb(null,{
-        header_type: "ERROR",
-        message_visibility: true,
-        status: false,
-        code: 2001,
-        message: "Validation failed",
-        error: `Section ${section.section_key} is multiple type; section limit must have a positive value`
-    });
-            // throw new Error(`Section ${section.section_key} is multiple type; section limit must have a positive value`);
+                if (section.section_limit === null || section.section_limit <= 0)
+                    return cb(null, {
+                        header_type: "ERROR",
+                        message_visibility: true,
+                        status: false,
+                        code: 2001,
+                        message: "Validation failed",
+                        error: `Section ${section.section_key} is multiple type; section limit must have a positive value`
+                    });
+                // throw new Error(`Section ${section.section_key} is multiple type; section limit must have a positive value`);
 
-        if ((section.items || []).length > section.section_limit)
-             return cb(null,{
-        header_type: "ERROR",
-        message_visibility: true,
-        status: false,
-        code: 2001,
-        message: "Validation failed",
-        error: `Only ${section.section_limit} items allowed for section ${section.section_key}`
-    });
-            // throw new Error(`Only ${section.section_limit} items allowed for section ${section.section_key}`);
+                if ((section.items || []).length > section.section_limit)
+                    return cb(null, {
+                        header_type: "ERROR",
+                        message_visibility: true,
+                        status: false,
+                        code: 2001,
+                        message: "Validation failed",
+                        error: `Only ${section.section_limit} items allowed for section ${section.section_key}`
+                    });
+                // throw new Error(`Only ${section.section_limit} items allowed for section ${section.section_key}`);
 
-    } else {
-         return cb(null,{
-        header_type: "ERROR",
-        message_visibility: true,
-        status: false,
-        code: 2001,
-        message: "Validation failed",
-        error: `Invalid section type ${section.section_type} for section ${section.section_key}`
-    });
-        // throw new Error(`Invalid section type ${section.section_type} for section ${section.section_key}`);
-    }
+            } else {
+                return cb(null, {
+                    header_type: "ERROR",
+                    message_visibility: true,
+                    status: false,
+                    code: 2001,
+                    message: "Validation failed",
+                    error: `Invalid section type ${section.section_type} for section ${section.section_key}`
+                });
+                // throw new Error(`Invalid section type ${section.section_type} for section ${section.section_key}`);
+            }
 
 
-     // -----------------------------
-    // DUPLICATE SECTION CHECK
-    // -----------------------------
-    const duplicateSectionRes = await client.query(
-        `
+            // -----------------------------
+            // DUPLICATE SECTION CHECK
+            // -----------------------------
+            const duplicateSectionRes = await client.query(
+                `
         SELECT 1
         FROM page_sections
         WHERE page_id = $1
@@ -1068,30 +1114,30 @@ if (sectionKeyRes.rowCount === 0) {
         AND is_active = TRUE
           AND ($3::uuid IS NULL OR section_uuid != $3)
         `,
-        [
-            page_id,
-            section.section_key,
-            section.section_uuid || null
-        ]
-    );
- if (duplicateSectionRes.rowCount > 0) {
-      return cb(null,{
-        header_type: "ERROR",
-        message_visibility: true,
-        status: false,
-        code: 2002,
-        message: "Updation failed",
-        error: `Section ${section.section_key} already exists`
-    });
-    }
+                [
+                    page_id,
+                    section.section_key,
+                    section.section_uuid || null
+                ]
+            );
+            if (duplicateSectionRes.rowCount > 0) {
+                return cb(null, {
+                    header_type: "ERROR",
+                    message_visibility: true,
+                    status: false,
+                    code: 2002,
+                    message: "Updation failed",
+                    error: `Section ${section.section_key} already exists`
+                });
+            }
 
-    // -----------------------------
-    // UPDATE / INSERT SECTION
-    // -----------------------------
-    if (section.section_uuid) {
+            // -----------------------------
+            // UPDATE / INSERT SECTION
+            // -----------------------------
+            if (section.section_uuid) {
 
-        await client.query(
-            `
+                await client.query(
+                    `
             UPDATE page_sections
             SET section_key = $1,
                 section_type = $2,
@@ -1112,34 +1158,34 @@ if (sectionKeyRes.rowCount === 0) {
                 modified_at = NOW()
             WHERE section_uuid = $17
             `,
-            [
-                section.section_key,
-                section.section_type,
-                section.title,
-                section.content,
-                section.image,
-                section.video,
-                section.button_label,
-                section.button_url,
-                section.section_limit,
-                section.is_active,
-                section.sort_order,
-                section.playstore_link,
-                section.playstore_image,
-                section.appstore_link,
-                section.appstore_image,
-                modified_by,
-                section.section_uuid
-            ]
-        );
-        section_limit = section.section_limit;
+                    [
+                        section.section_key,
+                        section.section_type,
+                        section.title,
+                        section.content,
+                        section.image,
+                        section.video,
+                        section.button_label,
+                        section.button_url,
+                        section.section_limit,
+                        section.is_active,
+                        section.sort_order,
+                        section.playstore_link,
+                        section.playstore_image,
+                        section.appstore_link,
+                        section.appstore_image,
+                        modified_by,
+                        section.section_uuid
+                    ]
+                );
+                section_limit = section.section_limit;
 
-    } 
-    
-    else {
+            }
 
-        const insertSectionRes = await client.query(
-            `
+            else {
+
+                const insertSectionRes = await client.query(
+                    `
             INSERT INTO page_sections (
                 section_uuid,
                 page_id,
@@ -1186,63 +1232,63 @@ if (sectionKeyRes.rowCount === 0) {
             )
             RETURNING section_id
             `,
-            [
-                page_id,
-                section.section_key,
-                section.section_type,
-                section.title,
-                section.content,
-                section.image,
-                section.video,
-                section.button_label,
-                section.button_url,
-                section.section_limit,
-                section.is_active,
-                section.sort_order,
-                section.playstore_link,
-                section.playstore_image,
-                section.appstore_link,
-                section.appstore_image,
-                modified_by,
-                modified_by
+                    [
+                        page_id,
+                        section.section_key,
+                        section.section_type,
+                        section.title,
+                        section.content,
+                        section.image,
+                        section.video,
+                        section.button_label,
+                        section.button_url,
+                        section.section_limit,
+                        section.is_active,
+                        section.sort_order,
+                        section.playstore_link,
+                        section.playstore_image,
+                        section.appstore_link,
+                        section.appstore_image,
+                        modified_by,
+                        modified_by
 
-            ]
-        );
+                    ]
+                );
 
-        section_id = insertSectionRes.rows[0].section_id;
-        section_limit = section.section_limit;
-    }
+                section_id = insertSectionRes.rows[0].section_id;
+                section_limit = section.section_limit;
+            }
 
-    /* ---------- SECTION LIMIT VALIDATION ---------- */
-    if (section_limit === null && section.items?.length > 0) {
+            /* ---------- SECTION LIMIT VALIDATION ---------- */
+            if (section_limit === null && section.items?.length > 0) {
 
-           return cb(null,{
-        header_type: "ERROR",
-        message_visibility: true,
-        status: false,
-        code: 2002,
-        message: "updation failed",
-        error: `Items not allowed for section ${section.section_key}`
-    });
-    }
+                return cb(null, {
+                    header_type: "ERROR",
+                    message_visibility: true,
+                    status: false,
+                    code: 2002,
+                    message: "updation failed",
+                    error: `Items not allowed for section ${section.section_key}`
+                });
+            }
 
-    if (section_limit !== null && (section.items || []).length > section_limit) {
-        return cb(null,{
-        header_type: "ERROR",
-        message_visibility: true,
-        status: false,
-        code: 2001,
-        message: "Validation failed",
-        error: `Only ${section_limit} items are allowed for section ${section.section_key}`
-    });
-        // throw new Error(`Only ${section_limit} items allowed for section ${section.section_key}`);
-    }
+            if (section_limit !== null && (section.items || []).length > section_limit) {
+                return cb(null, {
+                    header_type: "ERROR",
+                    message_visibility: true,
+                    status: false,
+                    code: 2001,
+                    message: "Validation failed",
+                    error: `Only ${section_limit} items are allowed for section ${section.section_key}`
+                });
+                // throw new Error(`Only ${section_limit} items allowed for section ${section.section_key}`);
+            }
 
-    /* ---------- ITEMS UPDATE / INSERT ---------- */
-    for (const item of section.items || []) {
+            /* ---------- ITEMS UPDATE / INSERT ---------- */
+            for (const item of section.items || []) {
 
-        const duplicateItemRes = await client.query(
-            `
+                const duplicateItemRes = await client.query(
+                    `
             SELECT 1
             FROM section_items
             WHERE section_id = $1
@@ -1251,54 +1297,54 @@ if (sectionKeyRes.rowCount === 0) {
               AND is_active = TRUE
               AND ($3::uuid IS NULL OR item_uuid != $3)
             `,
-            [
-                section_id,
-                item.title,
-                item.item_uuid || null
-            ]
-        );
+                    [
+                        section_id,
+                        item.title,
+                        item.item_uuid || null
+                    ]
+                );
 
-        if (duplicateItemRes.rowCount > 0) {
-               return cb(null,{
-        header_type: "ERROR",
-        message_visibility: true,
-        status: false,
-        code: 2002,
-        message: "Updation failed",
-        error: `Item ${item.title} already exists for this section`
-    });
-           // throw new Error(`Item ${item.title} already exists for this section`);
-        }
+                if (duplicateItemRes.rowCount > 0) {
+                    return cb(null, {
+                        header_type: "ERROR",
+                        message_visibility: true,
+                        status: false,
+                        code: 2002,
+                        message: "Updation failed",
+                        error: `Item ${item.title} already exists for this section`
+                    });
+                    // throw new Error(`Item ${item.title} already exists for this section`);
+                }
 
-        if (item.item_uuid) {
+                if (item.item_uuid) {
 
-            const itemRes = await client.query(
-                `
+                    const itemRes = await client.query(
+                        `
                 SELECT is_active, is_deleted
                 FROM section_items
                 WHERE item_uuid = $1
                 `,
-                [item.item_uuid]
-            );
+                        [item.item_uuid]
+                    );
 
-            if (
-                itemRes.rowCount === 0 ||
-                !itemRes.rows[0].is_active ||
-                itemRes.rows[0].is_deleted
-            ) {
-                return {
-        header_type: "ERROR",
-        message_visibility: true,
-        status: false,
-        code: 2001,
-        message: "Validation failed",
-        error: "Invalid or inactive item UUID"
-    };
-               // throw new Error('Invalid or inactive item UUID');
-            }
+                    if (
+                        itemRes.rowCount === 0 ||
+                        !itemRes.rows[0].is_active ||
+                        itemRes.rows[0].is_deleted
+                    ) {
+                        return {
+                            header_type: "ERROR",
+                            message_visibility: true,
+                            status: false,
+                            code: 2001,
+                            message: "Validation failed",
+                            error: "Invalid or inactive item UUID"
+                        };
+                        // throw new Error('Invalid or inactive item UUID');
+                    }
 
-            await client.query(
-                `
+                    await client.query(
+                        `
                 UPDATE section_items
                 SET title = $1,
                     content = $2,
@@ -1311,23 +1357,23 @@ if (sectionKeyRes.rowCount === 0) {
                     modified_at = NOW()
                 WHERE item_uuid = $9
                 `,
-                [
-                    item.title,
-                    item.content,
-                    item.image,
-                    item.icon,
-                    item.filetype,
-                    item.sort_order,
-                    item.is_active,
-                    modified_by,
-                    item.item_uuid
-                ]
-            );
+                        [
+                            item.title,
+                            item.content,
+                            item.image,
+                            item.icon,
+                            item.filetype,
+                            item.sort_order,
+                            item.is_active,
+                            modified_by,
+                            item.item_uuid
+                        ]
+                    );
 
-        } else {
+                } else {
 
-            await client.query(
-                `
+                    await client.query(
+                        `
                 INSERT INTO section_items (
                     item_uuid,
                     section_id,
@@ -1357,22 +1403,22 @@ if (sectionKeyRes.rowCount === 0) {
                     NOW()
                 )
                 `,
-                [
-                    section_id,
-                    item.title,
-                    item.content,
-                    item.image,
-                    item.icon,
-                    item.filetype,
-                    item.sort_order,
-                    item.is_active,
-                    modified_by,
-                    modified_by
-                ]
-            );
+                        [
+                            section_id,
+                            item.title,
+                            item.content,
+                            item.image,
+                            item.icon,
+                            item.filetype,
+                            item.sort_order,
+                            item.is_active,
+                            modified_by,
+                            modified_by
+                        ]
+                    );
+                }
+            }
         }
-    }
-}
 
 
         /* ======================================================
@@ -1389,7 +1435,7 @@ if (sectionKeyRes.rowCount === 0) {
               AND locked_by = $3
               AND is_deleted = FALSE
             `,
-            [modified_by,page.page_uuid,modified_by]
+            [modified_by, page.page_uuid, modified_by]
         );
 
         await client.query('COMMIT');
@@ -1603,8 +1649,8 @@ responder.on('listbypagekey-home', async (req, cb) => {
 
 responder.on('listbyidwithlock-home', async (req, cb) => {
 
-      const client = await pool.connect();
-      
+    const client = await pool.connect();
+
 
     try {
 
@@ -1624,7 +1670,7 @@ responder.on('listbyidwithlock-home', async (req, cb) => {
                 error: 'page uuid is required'
             });
         }
- await client.query('BEGIN');
+        await client.query('BEGIN');
 
         // -----------------------------
         // FETCH PAGE (ACTIVE ONLY)
@@ -1659,7 +1705,7 @@ responder.on('listbyidwithlock-home', async (req, cb) => {
         );
 
         if (pageRes.rowCount === 0) {
-             await client.query('ROLLBACK');
+            await client.query('ROLLBACK');
             return cb(null, {
                 header_type: "SUCCESS",
                 message_visibility: true,
@@ -1717,14 +1763,14 @@ responder.on('listbyidwithlock-home', async (req, cb) => {
                     deleted_by = $1,
                     deleted_at = NOW() 
                     WHERE lock_id = $2`,
-                    [user_id,lockRow.lock_id]
+                    [user_id, lockRow.lock_id]
                 );
                 lockRow = null;
             }
 
             // Create new lock
             if (!lockRow) {
-                
+
                 const insertLock = await client.query(
                     `INSERT INTO record_locks (
                         table_name,
@@ -1874,7 +1920,7 @@ responder.on('listbyidwithlock-home', async (req, cb) => {
         });
 
     } catch (err) {
-         await client.query('ROLLBACK');
+        await client.query('ROLLBACK');
         logger.error('CMS home page list Error:', err);
         return cb(null, {
             header_type: "ERROR",
@@ -1885,7 +1931,7 @@ responder.on('listbyidwithlock-home', async (req, cb) => {
             error: err.message
         });
 
-          } finally {
+    } finally {
         client.release();
     }
 });
@@ -1922,26 +1968,26 @@ responder.on('create-aboutus', async (req, cb) => {
             });
         }
 
-     
-const pageKeyRes = await client.query(
-    `SELECT page_key_id 
+
+        const pageKeyRes = await client.query(
+            `SELECT page_key_id 
      FROM page_key 
      WHERE LOWER(name) = LOWER($1) AND is_active = TRUE AND is_deleted = FALSE`,
-    [page_key]
-);
+            [page_key]
+        );
 
-if (pageKeyRes.rowCount === 0) {
-    return cb(null, {
-        header_type: "ERROR",
-        message_visibility: true,
-        status: false,
-        code: 2001,
-        message: "Validation failed",
-        error: "Invalid page key"
-    });
-}
+        if (pageKeyRes.rowCount === 0) {
+            return cb(null, {
+                header_type: "ERROR",
+                message_visibility: true,
+                status: false,
+                code: 2001,
+                message: "Validation failed",
+                error: "Invalid page key"
+            });
+        }
 
-const page_key_id = pageKeyRes.rows[0].page_key_id;
+        const page_key_id = pageKeyRes.rows[0].page_key_id;
 
 
         await client.query('BEGIN');
@@ -2036,25 +2082,25 @@ const page_key_id = pageKeyRes.rows[0].page_key_id;
         for (const section of sections) {
 
             const sectionKeyRes = await client.query(
-    `SELECT section_key_id 
+                `SELECT section_key_id 
      FROM section_key 
      WHERE LOWER(name) = LOWER($1) 
        AND page_key_id = $2 
        AND is_active = TRUE
        AND is_deleted = FALSE`,
-    [section.section_key, page_key_id]
-);
+                [section.section_key, page_key_id]
+            );
 
-if (sectionKeyRes.rowCount === 0) {
-    return cb(null, {
-        header_type: "ERROR",
-        message_visibility: true,
-        status: false,
-        code: 2001,
-        message: "Validation failed",
-        error: `Invalid section key '${section.section_key}'`
-    });
-}
+            if (sectionKeyRes.rowCount === 0) {
+                return cb(null, {
+                    header_type: "ERROR",
+                    message_visibility: true,
+                    status: false,
+                    code: 2001,
+                    message: "Validation failed",
+                    error: `Invalid section key '${section.section_key}'`
+                });
+            }
 
             const secCheck = await client.query(
                 `SELECT section_id 
@@ -2243,24 +2289,24 @@ responder.on('update-aboutus', async (req, cb) => {
         }
 
         const pageKeyRes = await client.query(
-    `SELECT page_key_id 
+            `SELECT page_key_id 
      FROM page_key 
      WHERE LOWER(name) = LOWER($1) AND is_active = TRUE AND is_deleted = FALSE`,
-    [page_key]
-);
+            [page_key]
+        );
 
-if (pageKeyRes.rowCount === 0) {
-    return cb(null, {
-        header_type: "ERROR",
-        message_visibility: true,
-        status: false,
-        code: 2001,
-        message: "Validation failed",
-        error: "Invalid page key"
-    });
-}
+        if (pageKeyRes.rowCount === 0) {
+            return cb(null, {
+                header_type: "ERROR",
+                message_visibility: true,
+                status: false,
+                code: 2001,
+                message: "Validation failed",
+                error: "Invalid page key"
+            });
+        }
 
-const page_key_id = pageKeyRes.rows[0].page_key_id;
+        const page_key_id = pageKeyRes.rows[0].page_key_id;
 
 
         await client.query('BEGIN');
@@ -2302,29 +2348,29 @@ const page_key_id = pageKeyRes.rows[0].page_key_id;
              WHERE page_uuid = $1`,
             [page.page_uuid]
         );
-const page_id = pageRes.rows[0].page_id;
+        const page_id = pageRes.rows[0].page_id;
         if (pageRes.rowCount === 0) {
-                return cb(null,{
-         header_type: "ERROR",
-            message_visibility: true,
-            status: false,
-            code: 2001,
-            message: "Validation failed",
-            error: "Invalid page UUID"
-    });
+            return cb(null, {
+                header_type: "ERROR",
+                message_visibility: true,
+                status: false,
+                code: 2001,
+                message: "Validation failed",
+                error: "Invalid page UUID"
+            });
 
             //throw new Error('Invalid page UUID');
         }
 
         if (!pageRes.rows[0].is_active || pageRes.rows[0].is_deleted) {
             return {
-        header_type: "ERROR",
-        message_visibility: true,
-        status: false,
-        code: 2001,
-        message: "Validation failed",
-        error: "Inactive or deleted page cannot be updated"
-    };
+                header_type: "ERROR",
+                message_visibility: true,
+                status: false,
+                code: 2001,
+                message: "Validation failed",
+                error: "Inactive or deleted page cannot be updated"
+            };
             //throw new Error('Inactive or deleted page cannot be updated');
         }
 
@@ -2347,41 +2393,41 @@ const page_id = pageRes.rows[0].page_id;
             ]
         );
 
-/* ======================================================
-   SECTIONS & ITEMS UPDATE / INSERT
-====================================================== */
-for (const section of sections) {
+        /* ======================================================
+           SECTIONS & ITEMS UPDATE / INSERT
+        ====================================================== */
+        for (const section of sections) {
 
-    
-    const sectionKeyRes = await client.query(
-    `SELECT section_key_id 
+
+            const sectionKeyRes = await client.query(
+                `SELECT section_key_id 
      FROM section_key 
      WHERE LOWER(name) = LOWER($1) 
        AND page_key_id = $2 
        AND is_active = TRUE
        AND is_deleted = FALSE`,
-    [section.section_key, page_key_id]
-);
+                [section.section_key, page_key_id]
+            );
 
-if (sectionKeyRes.rowCount === 0) {
-    return cb(null, {
-        header_type: "ERROR",
-        message_visibility: true,
-        status: false,
-        code: 2001,
-        message: "Validation failed",
-        error: `Invalid section key '${section.section_key}'`
-    });
-}
+            if (sectionKeyRes.rowCount === 0) {
+                return cb(null, {
+                    header_type: "ERROR",
+                    message_visibility: true,
+                    status: false,
+                    code: 2001,
+                    message: "Validation failed",
+                    error: `Invalid section key '${section.section_key}'`
+                });
+            }
 
 
-    let section_id;
+            let section_id;
 
-    /* ======================================================
-       DUPLICATE SECTION CHECK
-    ====================================================== */
-    const duplicateSectionRes = await client.query(
-        `
+            /* ======================================================
+               DUPLICATE SECTION CHECK
+            ====================================================== */
+            const duplicateSectionRes = await client.query(
+                `
         SELECT 1
         FROM page_sections
         WHERE page_id = $1
@@ -2389,136 +2435,136 @@ if (sectionKeyRes.rowCount === 0) {
           AND is_deleted = FALSE
           AND ($3::uuid IS NULL OR section_uuid != $3)
         `,
-        [
-            page_id,
-            section.section_key,
-            section.section_uuid || null
-        ]
-    );
+                [
+                    page_id,
+                    section.section_key,
+                    section.section_uuid || null
+                ]
+            );
 
-    if (duplicateSectionRes.rowCount > 0) {
-          return cb(null,{
-        header_type: "ERROR",
-        message_visibility: true,
-        status: false,
-        code: 2002,
-        message: "Updation failed",
-        error: `Section ${section.section_key} already exists`
-    });
-        // throw new Error(
+            if (duplicateSectionRes.rowCount > 0) {
+                return cb(null, {
+                    header_type: "ERROR",
+                    message_visibility: true,
+                    status: false,
+                    code: 2002,
+                    message: "Updation failed",
+                    error: `Section ${section.section_key} already exists`
+                });
+                // throw new Error(
 
-        //     `Section ${section.section_key} already exists`
-        // );
-    }
+                //     `Section ${section.section_key} already exists`
+                // );
+            }
 
-    /* ======================================================
-       SECTION VALIDATION
-    ====================================================== */
-    const items = section.items || [];
+            /* ======================================================
+               SECTION VALIDATION
+            ====================================================== */
+            const items = section.items || [];
 
-    if (section.section_type === 'single') {
+            if (section.section_type === 'single') {
 
-        if (section.section_limit !== null) {
-            return {
-        header_type: "ERROR",
-        message_visibility: true,
-        status: false,
-        code: 2001,
-        message: "Validation failed",
-        error: `Section limit must be null for single section ${section.section_key}`
-    };
-            // throw new Error(
-            //     `section limit must be null for single section ${section.section_key}`
-            // );
-        }
+                if (section.section_limit !== null) {
+                    return {
+                        header_type: "ERROR",
+                        message_visibility: true,
+                        status: false,
+                        code: 2001,
+                        message: "Validation failed",
+                        error: `Section limit must be null for single section ${section.section_key}`
+                    };
+                    // throw new Error(
+                    //     `section limit must be null for single section ${section.section_key}`
+                    // );
+                }
 
-        if (items.length > 0) {
+                if (items.length > 0) {
 
-        return cb(null,{
-        header_type: "ERROR",
-        message_visibility: true,
-        status: false,
-        code: 2001,
-        message: "Validation failed",
-        error: `Items are not allowed for single section ${section.section_key}`
-    });
-            // throw new Error(
-            //     `Items are not allowed for single section ${section.section_key}`
-            // );
-        }
-    }
+                    return cb(null, {
+                        header_type: "ERROR",
+                        message_visibility: true,
+                        status: false,
+                        code: 2001,
+                        message: "Validation failed",
+                        error: `Items are not allowed for single section ${section.section_key}`
+                    });
+                    // throw new Error(
+                    //     `Items are not allowed for single section ${section.section_key}`
+                    // );
+                }
+            }
 
-    if (section.section_type === 'multiple') {
+            if (section.section_type === 'multiple') {
 
-        if (
-            section.section_limit === null ||
-            isNaN(section.section_limit) ||
-            section.section_limit <= 0
-        ) {
-            return {
-        header_type: "ERROR",
-        message_visibility: true,
-        status: false,
-        code: 2001,
-        message: "Validation failed",
-        error: `Section limit must be greater than 0 for multiple section ${section.section_key}`
-    };
+                if (
+                    section.section_limit === null ||
+                    isNaN(section.section_limit) ||
+                    section.section_limit <= 0
+                ) {
+                    return {
+                        header_type: "ERROR",
+                        message_visibility: true,
+                        status: false,
+                        code: 2001,
+                        message: "Validation failed",
+                        error: `Section limit must be greater than 0 for multiple section ${section.section_key}`
+                    };
 
-            // throw new Error(
-            //     `section limit must be greater than 0 for multiple section ${section.section_key}`
-            // );
-        }
+                    // throw new Error(
+                    //     `section limit must be greater than 0 for multiple section ${section.section_key}`
+                    // );
+                }
 
-        if (items.length > section.section_limit) {
-            return {
-        header_type: "ERROR",
-        message_visibility: true,
-        status: false,
-        code: 2001,
-        message: "Section validation failed",
-        error: `Only ${section.section_limit} items allowed for section ${section.section_key}`
-    };
-            // throw new Error(
-            //     `Only ${section.section_limit} items allowed for section ${section.section_key}`
-            // );
-        }
-    }
+                if (items.length > section.section_limit) {
+                    return {
+                        header_type: "ERROR",
+                        message_visibility: true,
+                        status: false,
+                        code: 2001,
+                        message: "Section validation failed",
+                        error: `Only ${section.section_limit} items allowed for section ${section.section_key}`
+                    };
+                    // throw new Error(
+                    //     `Only ${section.section_limit} items allowed for section ${section.section_key}`
+                    // );
+                }
+            }
 
-    /* ======================================================
-       UPDATE EXISTING SECTION
-    ====================================================== */
-    if (section.section_uuid) {
+            /* ======================================================
+               UPDATE EXISTING SECTION
+            ====================================================== */
+            if (section.section_uuid) {
 
-        const secRes = await client.query(
-            `
+                const secRes = await client.query(
+                    `
             SELECT section_id, is_active, is_deleted
             FROM page_sections
             WHERE section_uuid = $1
             `,
-            [section.section_uuid]
-        );
+                    [section.section_uuid]
+                );
 
-        if (
-            secRes.rowCount === 0 ||
-            !secRes.rows[0].is_active ||
-            secRes.rows[0].is_deleted
-        ) {
+                if (
+                    secRes.rowCount === 0 ||
+                    !secRes.rows[0].is_active ||
+                    secRes.rows[0].is_deleted
+                ) {
 
-              return cb(null,{
-        header_type: "ERROR",
-        message_visibility: true,
-        status: false,
-        code: 2001,
-        message: "Validation failed",
-        error: "Invalid or inactive section"
-    });
-            //throw new Error(`Invalid or inactive section`);
-        }
+                    return cb(null, {
+                        header_type: "ERROR",
+                        message_visibility: true,
+                        status: false,
+                        code: 2001,
+                        message: "Validation failed",
+                        error: "Invalid or inactive section"
+                    });
+                    //throw new Error(`Invalid or inactive section`);
+                }
 
-        section_id = secRes.rows[0].section_id;
+                section_id = secRes.rows[0].section_id;
 
-        await client.query(
-            `
+                await client.query(
+                    `
             UPDATE page_sections
             SET section_key = $1,
                 section_type = $2,
@@ -2535,32 +2581,32 @@ if (sectionKeyRes.rowCount === 0) {
                 modified_at = NOW()
             WHERE section_uuid = $13
             `,
-            [
-                section.section_key,
-                section.section_type,
-                section.title,
-                section.content,
-                section.image,
-                section.video,
-                section.button_label,
-                section.button_url,
-                section.section_limit,
-                section.is_active,
-                section.sort_order,
-                modified_by,
-                section.section_uuid
-            ]
-        );
-        section_limit = section.section_limit;
+                    [
+                        section.section_key,
+                        section.section_type,
+                        section.title,
+                        section.content,
+                        section.image,
+                        section.video,
+                        section.button_label,
+                        section.button_url,
+                        section.section_limit,
+                        section.is_active,
+                        section.sort_order,
+                        modified_by,
+                        section.section_uuid
+                    ]
+                );
+                section_limit = section.section_limit;
 
-    } 
-    else {
+            }
+            else {
 
-        /* ======================================================
-           INSERT NEW SECTION
-        ====================================================== */
-        const insertSectionRes = await client.query(
-            `
+                /* ======================================================
+                   INSERT NEW SECTION
+                ====================================================== */
+                const insertSectionRes = await client.query(
+                    `
             INSERT INTO page_sections (
                 section_uuid,
                 page_id,
@@ -2599,68 +2645,68 @@ if (sectionKeyRes.rowCount === 0) {
             )
             RETURNING section_id
             `,
-            [
-                page_id,
-                section.section_key,
-                section.section_type,
-                section.title,
-                section.content,
-                section.image,
-                section.video,
-                section.button_label,
-                section.button_url,
-                section.section_limit,
-                section.is_active,
-                section.sort_order,
-                modified_by,
-                modified_by
-            ]
-        );
+                    [
+                        page_id,
+                        section.section_key,
+                        section.section_type,
+                        section.title,
+                        section.content,
+                        section.image,
+                        section.video,
+                        section.button_label,
+                        section.button_url,
+                        section.section_limit,
+                        section.is_active,
+                        section.sort_order,
+                        modified_by,
+                        modified_by
+                    ]
+                );
 
-        section_id = insertSectionRes.rows[0].section_id;
-        section_limit = section.section_limit;
-    }
+                section_id = insertSectionRes.rows[0].section_id;
+                section_limit = section.section_limit;
+            }
 
 
-     /* ---------- SECTION LIMIT VALIDATION ---------- */
-    if (section_limit === null && section.items?.length > 0) {
+            /* ---------- SECTION LIMIT VALIDATION ---------- */
+            if (section_limit === null && section.items?.length > 0) {
 
-         return cb(null,{
-        header_type: "ERROR",
-        message_visibility: true,
-        status: false,
-        code: 2001,
-        message: "Validation failed",
-        error: `Items not allowed for section ${section.section_key}`
-    });
-        //throw new Error(`Items not allowed for section ${section.section_key}`);
-    }
+                return cb(null, {
+                    header_type: "ERROR",
+                    message_visibility: true,
+                    status: false,
+                    code: 2001,
+                    message: "Validation failed",
+                    error: `Items not allowed for section ${section.section_key}`
+                });
+                //throw new Error(`Items not allowed for section ${section.section_key}`);
+            }
 
-    if (section_limit !== null && (section.items || []).length > section_limit) {
+            if (section_limit !== null && (section.items || []).length > section_limit) {
 
-         return {
-        header_type: "ERROR",
-        message_visibility: true,
-        status: false,
-        code: 2001,
-        message: "Validation failed",
-        error: `Only ${section_limit} items are allowed for section ${section.section_key}`
-    };
-        // throw new Error(`Only ${section_limit} items allowed for section ${section.section_key}`);
-    }
-
-    /* ======================================================
-       ITEMS UPDATE / INSERT (MULTIPLE ONLY)
-    ====================================================== */
-    //if (section.section_type === 'multiple') {
-     
-    for (const item of items) {
+                return {
+                    header_type: "ERROR",
+                    message_visibility: true,
+                    status: false,
+                    code: 2001,
+                    message: "Validation failed",
+                    error: `Only ${section_limit} items are allowed for section ${section.section_key}`
+                };
+                // throw new Error(`Only ${section_limit} items allowed for section ${section.section_key}`);
+            }
 
             /* ======================================================
-               DUPLICATE ITEM CHECK
+               ITEMS UPDATE / INSERT (MULTIPLE ONLY)
             ====================================================== */
-            const duplicateItemRes = await client.query(
-                `
+            //if (section.section_type === 'multiple') {
+
+            for (const item of items) {
+
+                /* ======================================================
+                   DUPLICATE ITEM CHECK
+                ====================================================== */
+                const duplicateItemRes = await client.query(
+                    `
                 SELECT 1
                 FROM section_items
                 WHERE section_id = $1
@@ -2668,61 +2714,61 @@ if (sectionKeyRes.rowCount === 0) {
                   AND is_deleted = FALSE
                   AND ($3::uuid IS NULL OR item_uuid != $3)
                 `,
-                [
-                    section_id,
-                    item.title,
-                    item.item_uuid || null
-                ]
-            );
+                    [
+                        section_id,
+                        item.title,
+                        item.item_uuid || null
+                    ]
+                );
 
-            if (duplicateItemRes.rowCount > 0) {
+                if (duplicateItemRes.rowCount > 0) {
 
-                   return cb(null,{
-        header_type: "ERROR",
-        message_visibility: true,
-        status: false,
-        code: 2002,
-        message: "Updation failed",
-        error: `Item ${item.title} already exists for this section`
-    });
+                    return cb(null, {
+                        header_type: "ERROR",
+                        message_visibility: true,
+                        status: false,
+                        code: 2002,
+                        message: "Updation failed",
+                        error: `Item ${item.title} already exists for this section`
+                    });
 
-                // throw new Error(
-                //     `Item ${item.title} already exists for this section`
-                // );
-            }
+                    // throw new Error(
+                    //     `Item ${item.title} already exists for this section`
+                    // );
+                }
 
-            /* ======================================================
-               UPDATE EXISTING ITEM
-            ====================================================== */
-            if (item.item_uuid) {
+                /* ======================================================
+                   UPDATE EXISTING ITEM
+                ====================================================== */
+                if (item.item_uuid) {
 
-                const itemRes = await client.query(
-                    `
+                    const itemRes = await client.query(
+                        `
                     SELECT is_active, is_deleted
                     FROM section_items
                     WHERE item_uuid = $1
                     `,
-                    [item.item_uuid]
-                );
+                        [item.item_uuid]
+                    );
 
-                if (
-                    itemRes.rowCount === 0 ||
-                    !itemRes.rows[0].is_active ||
-                    itemRes.rows[0].is_deleted
-                ) {
-                    return {
-        header_type: "ERROR",
-        message_visibility: true,
-        status: false,
-        code: 2001,
-        message: "Validation failed",
-        error: "Invalid or inactive item"
-    };
-                   // throw new Error(`Invalid or inactive item`);
-                }
+                    if (
+                        itemRes.rowCount === 0 ||
+                        !itemRes.rows[0].is_active ||
+                        itemRes.rows[0].is_deleted
+                    ) {
+                        return {
+                            header_type: "ERROR",
+                            message_visibility: true,
+                            status: false,
+                            code: 2001,
+                            message: "Validation failed",
+                            error: "Invalid or inactive item"
+                        };
+                        // throw new Error(`Invalid or inactive item`);
+                    }
 
-                await client.query(
-                    `
+                    await client.query(
+                        `
                     UPDATE section_items
                     SET title = $1,
                         content = $2,
@@ -2735,26 +2781,26 @@ if (sectionKeyRes.rowCount === 0) {
                         modified_at = NOW()
                     WHERE item_uuid = $9
                     `,
-                    [
-                        item.title,
-                        item.description,
-                        item.image,
-                        item.icon,
-                        item.filetype,
-                        item.sort_order,
-                        item.is_active,
-                        modified_by,
-                        item.item_uuid
-                    ]
-                );
+                        [
+                            item.title,
+                            item.description,
+                            item.image,
+                            item.icon,
+                            item.filetype,
+                            item.sort_order,
+                            item.is_active,
+                            modified_by,
+                            item.item_uuid
+                        ]
+                    );
 
-            } else {
+                } else {
 
-                /* ======================================================
-                   INSERT NEW ITEM
-                ====================================================== */
-                await client.query(
-                    `
+                    /* ======================================================
+                       INSERT NEW ITEM
+                    ====================================================== */
+                    await client.query(
+                        `
                     INSERT INTO section_items (
                         item_uuid,
                         section_id,
@@ -2784,23 +2830,23 @@ if (sectionKeyRes.rowCount === 0) {
                         NOW()
                     )
                     `,
-                    [
-                        section_id,
-                        item.title,
-                        item.description,
-                        item.image,
-                        item.icon,
-                        item.filetype,
-                        item.sort_order,
-                        item.is_active,
-                        modified_by,
-                        modified_by
-                    ]
-                );
+                        [
+                            section_id,
+                            item.title,
+                            item.description,
+                            item.image,
+                            item.icon,
+                            item.filetype,
+                            item.sort_order,
+                            item.is_active,
+                            modified_by,
+                            modified_by
+                        ]
+                    );
+                }
             }
+            //}
         }
-    //}
-}
 
         /* ======================================================
            AUTO UNLOCK
@@ -3008,8 +3054,8 @@ responder.on('listbypagekey-aboutus', async (req, cb) => {
 
 responder.on('listbyidwithlock-aboutus', async (req, cb) => {
 
-      const client = await pool.connect();
-      
+    const client = await pool.connect();
+
 
     try {
 
@@ -3030,7 +3076,7 @@ responder.on('listbyidwithlock-aboutus', async (req, cb) => {
                 error: 'page uuid is required'
             });
         }
- await client.query('BEGIN');
+        await client.query('BEGIN');
 
         // -----------------------------
         // FETCH PAGE (ACTIVE ONLY)
@@ -3065,7 +3111,7 @@ responder.on('listbyidwithlock-aboutus', async (req, cb) => {
         );
 
         if (pageRes.rowCount === 0) {
-             await client.query('ROLLBACK');
+            await client.query('ROLLBACK');
             return cb(null, {
                 header_type: "SUCCESS",
                 message_visibility: true,
@@ -3104,7 +3150,7 @@ responder.on('listbyidwithlock-aboutus', async (req, cb) => {
             );
 
             lockRow = lockResult.rows[0];
-            
+
             const isExpired = lockRow && new Date(lockRow.expires_at).getTime() < Date.now();
 
             // Locked by another active user
@@ -3124,14 +3170,14 @@ responder.on('listbyidwithlock-aboutus', async (req, cb) => {
                                         deleted_by = $1,
                     deleted_at = NOW() 
                     WHERE lock_id = $2`,
-                    [user_id,lockRow.lock_id]
+                    [user_id, lockRow.lock_id]
                 );
                 lockRow = null;
             }
 
             // Create new lock
             if (!lockRow) {
-                
+
                 const insertLock = await client.query(
                     `INSERT INTO record_locks (
                         table_name,
@@ -3237,7 +3283,7 @@ responder.on('listbyidwithlock-aboutus', async (req, cb) => {
             }));
         }
 
-          await client.query('COMMIT');
+        await client.query('COMMIT');
 
         // Attach lock status to page
         page.lock_status = lockRow && new Date(lockRow.expires_at).getTime() >= Date.now();
@@ -3258,7 +3304,7 @@ responder.on('listbyidwithlock-aboutus', async (req, cb) => {
         });
 
     } catch (err) {
-         await client.query('ROLLBACK');
+        await client.query('ROLLBACK');
         logger.error('CMS about us page list Error:', err);
         return cb(null, {
             header_type: "ERROR",
@@ -3269,7 +3315,7 @@ responder.on('listbyidwithlock-aboutus', async (req, cb) => {
             error: err.message
         });
 
-          } finally {
+    } finally {
         client.release();
     }
 });
@@ -3306,27 +3352,27 @@ responder.on('create-contactus', async (req, cb) => {
         // -----------------------------
         // CONTACT US PAGE VALIDATION
         // -----------------------------
-      
-        
-const pageKeyRes = await client.query(
-    `SELECT page_key_id 
+
+
+        const pageKeyRes = await client.query(
+            `SELECT page_key_id 
      FROM page_key 
      WHERE LOWER(name) = LOWER($1) AND is_active = TRUE AND is_deleted = FALSE`,
-    [page_key]
-);
+            [page_key]
+        );
 
-if (pageKeyRes.rowCount === 0) {
-    return cb(null, {
-        header_type: "ERROR",
-        message_visibility: true,
-        status: false,
-        code: 2001,
-        message: "Validation failed",
-        error: "Invalid page key"
-    });
-}
+        if (pageKeyRes.rowCount === 0) {
+            return cb(null, {
+                header_type: "ERROR",
+                message_visibility: true,
+                status: false,
+                code: 2001,
+                message: "Validation failed",
+                error: "Invalid page key"
+            });
+        }
 
-const page_key_id = pageKeyRes.rows[0].page_key_id;
+        const page_key_id = pageKeyRes.rows[0].page_key_id;
 
 
         await client.query('BEGIN');
@@ -3419,26 +3465,26 @@ const page_key_id = pageKeyRes.rows[0].page_key_id;
         // -----------------------------
         for (const section of sections) {
 
-                        const sectionKeyRes = await client.query(
-    `SELECT section_key_id 
+            const sectionKeyRes = await client.query(
+                `SELECT section_key_id 
      FROM section_key 
      WHERE LOWER(name) = LOWER($1) 
        AND page_key_id = $2 
        AND is_active = TRUE
        AND is_deleted = FALSE`,
-    [section.section_key, page_key_id]
-);
+                [section.section_key, page_key_id]
+            );
 
-if (sectionKeyRes.rowCount === 0) {
-    return cb(null, {
-        header_type: "ERROR",
-        message_visibility: true,
-        status: false,
-        code: 2001,
-        message: "Validation failed",
-        error: `Invalid section key '${section.section_key}'`
-    });
-}
+            if (sectionKeyRes.rowCount === 0) {
+                return cb(null, {
+                    header_type: "ERROR",
+                    message_visibility: true,
+                    status: false,
+                    code: 2001,
+                    message: "Validation failed",
+                    error: `Invalid section key '${section.section_key}'`
+                });
+            }
 
 
             const secCheck = await client.query(
@@ -3633,24 +3679,24 @@ responder.on('update-contactus', async (req, cb) => {
         }
 
         const pageKeyRes = await client.query(
-    `SELECT page_key_id 
+            `SELECT page_key_id 
      FROM page_key 
      WHERE LOWER(name) = LOWER($1) AND is_active = TRUE AND is_deleted = FALSE`,
-    [page_key]
-);
+            [page_key]
+        );
 
-if (pageKeyRes.rowCount === 0) {
-    return cb(null, {
-        header_type: "ERROR",
-        message_visibility: true,
-        status: false,
-        code: 2001,
-        message: "Validation failed",
-        error: "Invalid page key"
-    });
-}
+        if (pageKeyRes.rowCount === 0) {
+            return cb(null, {
+                header_type: "ERROR",
+                message_visibility: true,
+                status: false,
+                code: 2001,
+                message: "Validation failed",
+                error: "Invalid page key"
+            });
+        }
 
-const page_key_id = pageKeyRes.rows[0].page_key_id;
+        const page_key_id = pageKeyRes.rows[0].page_key_id;
 
         await client.query('BEGIN');
 
@@ -3693,39 +3739,39 @@ const page_key_id = pageKeyRes.rows[0].page_key_id;
         );
 
         if (pageRes.rowCount === 0) {
-             return {
-        header_type: "ERROR",
-        message_visibility: true,
-        status: false,
-        code: 2001,
-        message: "Validation failed",
-        error: "Invalid page UUID"
-    };
+            return {
+                header_type: "ERROR",
+                message_visibility: true,
+                status: false,
+                code: 2001,
+                message: "Validation failed",
+                error: "Invalid page UUID"
+            };
             //throw new Error('Invalid page UUID');
         }
 
         if (!pageRes.rows[0].is_active) {
-             return cb(null,{
-        header_type: "ERROR",
-        message_visibility: true,
-        status: false,
-        code: 2001,
-        message: "Validation failed",
-        error: "Inactive page cannot be updated"
-    });
-           // throw new Error('Inactive page cannot be updated');
+            return cb(null, {
+                header_type: "ERROR",
+                message_visibility: true,
+                status: false,
+                code: 2001,
+                message: "Validation failed",
+                error: "Inactive page cannot be updated"
+            });
+            // throw new Error('Inactive page cannot be updated');
         }
 
 
         if (pageRes.rows[0].is_deleted === true) {
-                         return cb(null,{
-        header_type: "ERROR",
-        message_visibility: true,
-        status: false,
-        code: 2001,
-        message: "Validation failed",
-        error: "Deleted page cannot be updated"
-    });
+            return cb(null, {
+                header_type: "ERROR",
+                message_visibility: true,
+                status: false,
+                code: 2001,
+                message: "Validation failed",
+                error: "Deleted page cannot be updated"
+            });
 
             //throw new Error('Deleted page cannot be updated');
         }
@@ -3751,108 +3797,108 @@ const page_key_id = pageKeyRes.rows[0].page_key_id;
             ]
         );
 
-// -----------------------------
-// SECTIONS & ITEMS UPDATE / INSERT
-// -----------------------------
-for (const section of sections) {
+        // -----------------------------
+        // SECTIONS & ITEMS UPDATE / INSERT
+        // -----------------------------
+        for (const section of sections) {
 
-    
-    const sectionKeyRes = await client.query(
-    `SELECT section_key_id 
+
+            const sectionKeyRes = await client.query(
+                `SELECT section_key_id 
      FROM section_key 
      WHERE LOWER(name) = LOWER($1) 
        AND page_key_id = $2 
        AND is_active = TRUE
        AND is_deleted = FALSE`,
-    [section.section_key, page_key_id]
-);
+                [section.section_key, page_key_id]
+            );
 
-if (sectionKeyRes.rowCount === 0) {
-    return cb(null, {
-        header_type: "ERROR",
-        message_visibility: true,
-        status: false,
-        code: 2001,
-        message: "Validation failed",
-        error: `Invalid section key '${section.section_key}'`
-    });
-}
+            if (sectionKeyRes.rowCount === 0) {
+                return cb(null, {
+                    header_type: "ERROR",
+                    message_visibility: true,
+                    status: false,
+                    code: 2001,
+                    message: "Validation failed",
+                    error: `Invalid section key '${section.section_key}'`
+                });
+            }
 
-    let section_id = null;
+            let section_id = null;
 
-    // -----------------------------
-    // SECTION TYPE VALIDATION
-    // -----------------------------
-    if (section.section_type === 'single') {
-        if (section.section_limit !== null)
-                                     return cb(null,{
-        header_type: "ERROR",
-        message_visibility: true,
-        status: false,
-        code: 2001,
-        message: "Validation failed",
-        error: `Section ${section.section_key} is single type; section limit must be null`
-    });
-            // throw new Error(`Section ${section.section_key} is single type; section limit must be null`);
+            // -----------------------------
+            // SECTION TYPE VALIDATION
+            // -----------------------------
+            if (section.section_type === 'single') {
+                if (section.section_limit !== null)
+                    return cb(null, {
+                        header_type: "ERROR",
+                        message_visibility: true,
+                        status: false,
+                        code: 2001,
+                        message: "Validation failed",
+                        error: `Section ${section.section_key} is single type; section limit must be null`
+                    });
+                // throw new Error(`Section ${section.section_key} is single type; section limit must be null`);
 
-        if ((section.items || []).length > 0)
+                if ((section.items || []).length > 0)
 
-        return cb(null,{
-        header_type: "ERROR",
-        message_visibility: true,
-        status: false,
-        code: 2001,
-        message: "Validation failed",
-        error: `Section ${section.section_key} is single type; no items allowed`
-    });
-            // throw new Error(`Section ${section.section_key} is single type; no items allowed`);
+                    return cb(null, {
+                        header_type: "ERROR",
+                        message_visibility: true,
+                        status: false,
+                        code: 2001,
+                        message: "Validation failed",
+                        error: `Section ${section.section_key} is single type; no items allowed`
+                    });
+                // throw new Error(`Section ${section.section_key} is single type; no items allowed`);
 
-    } else if (section.section_type === 'multiple') {
-        if (section.section_limit === null || section.section_limit <= 0)
-            
-        return cb(null,{
-        header_type: "ERROR",
-        message_visibility: true,
-        status: false,
-        code: 2001,
-        message: "Validation failed",
-        error: `Section ${section.section_key} is multiple type; section limit must have a positive value`
-    });
+            } else if (section.section_type === 'multiple') {
+                if (section.section_limit === null || section.section_limit <= 0)
 
-            // throw new Error(`Section ${section.section_key} is multiple type; section limit must have a positive value`);
+                    return cb(null, {
+                        header_type: "ERROR",
+                        message_visibility: true,
+                        status: false,
+                        code: 2001,
+                        message: "Validation failed",
+                        error: `Section ${section.section_key} is multiple type; section limit must have a positive value`
+                    });
 
-        if ((section.items || []).length > section.section_limit)
+                // throw new Error(`Section ${section.section_key} is multiple type; section limit must have a positive value`);
 
-                    return cb(null,{
-        header_type: "ERROR",
-        message_visibility: true,
-        status: false,
-        code: 2001,
-        message: "Validation failed",
-        error: `Section ${section.section_key} is multiple type; section limit must have a positive value`
-    });
+                if ((section.items || []).length > section.section_limit)
+
+                    return cb(null, {
+                        header_type: "ERROR",
+                        message_visibility: true,
+                        status: false,
+                        code: 2001,
+                        message: "Validation failed",
+                        error: `Section ${section.section_key} is multiple type; section limit must have a positive value`
+                    });
 
 
 
-            // throw new Error(`Only ${section.section_limit} items allowed for section ${section.section_key}`);
-    } else {
+                // throw new Error(`Only ${section.section_limit} items allowed for section ${section.section_key}`);
+            } else {
 
-                            return cb(null,{
-        header_type: "ERROR",
-        message_visibility: true,
-        status: false,
-        code: 2001,
-        message: "Validation failed",
-        error: `Invalid section type ${section.section_type} for section ${section.section_key}`
-    });
-        // throw new Error(`Invalid section type ${section.section_type} for section ${section.section_key}`);
-    }
+                return cb(null, {
+                    header_type: "ERROR",
+                    message_visibility: true,
+                    status: false,
+                    code: 2001,
+                    message: "Validation failed",
+                    error: `Invalid section type ${section.section_type} for section ${section.section_key}`
+                });
+                // throw new Error(`Invalid section type ${section.section_type} for section ${section.section_key}`);
+            }
 
-    // -----------------------------
-    // DUPLICATE SECTION KEY CHECK
-    // -----------------------------
-    const duplicateSectionRes = await client.query(
-        `
+            // -----------------------------
+            // DUPLICATE SECTION KEY CHECK
+            // -----------------------------
+            const duplicateSectionRes = await client.query(
+                `
         SELECT 1
         FROM page_sections
         WHERE page_id = $1
@@ -3860,59 +3906,59 @@ if (sectionKeyRes.rowCount === 0) {
           AND is_deleted = FALSE
           AND ($3::uuid IS NULL OR section_uuid != $3)
         `,
-        [
-            page_id,
-            section.section_key,
-            section.section_uuid || null
-        ]
-    );
+                [
+                    page_id,
+                    section.section_key,
+                    section.section_uuid || null
+                ]
+            );
 
-    if (duplicateSectionRes.rowCount > 0) {
+            if (duplicateSectionRes.rowCount > 0) {
 
-          return {
-        header_type: "ERROR",
-        message_visibility: true,
-        status: false,
-        code: 2002,
-        message: "Updation failed",
-        error: `Section ${section.section_key} already exists`
-    };
-       // throw new Error(`Section ${section.section_key} already exists`);
-    }
+                return {
+                    header_type: "ERROR",
+                    message_visibility: true,
+                    status: false,
+                    code: 2002,
+                    message: "Updation failed",
+                    error: `Section ${section.section_key} already exists`
+                };
+                // throw new Error(`Section ${section.section_key} already exists`);
+            }
 
-    // -----------------------------
-    // UPDATE SECTION
-    // -----------------------------
-    if (section.section_uuid) {
+            // -----------------------------
+            // UPDATE SECTION
+            // -----------------------------
+            if (section.section_uuid) {
 
-        const secRes = await client.query(
-            `SELECT section_id, is_active, is_deleted
+                const secRes = await client.query(
+                    `SELECT section_id, is_active, is_deleted
              FROM page_sections
              WHERE section_uuid = $1`,
-            [section.section_uuid]
-        );
+                    [section.section_uuid]
+                );
 
-        if (
-            secRes.rowCount === 0 ||
-            !secRes.rows[0].is_active ||
-            secRes.rows[0].is_deleted === true
-        ) {
-                return {
-        header_type: "ERROR",
-        message_visibility: true,
-        status: false,
-        code: 2001,
-        message: "Validation failed",
-        error: "Invalid or inactive section UUID"
-    };
+                if (
+                    secRes.rowCount === 0 ||
+                    !secRes.rows[0].is_active ||
+                    secRes.rows[0].is_deleted === true
+                ) {
+                    return {
+                        header_type: "ERROR",
+                        message_visibility: true,
+                        status: false,
+                        code: 2001,
+                        message: "Validation failed",
+                        error: "Invalid or inactive section UUID"
+                    };
 
-            //throw new Error('Invalid or inactive section UUID');
-        }
+                    //throw new Error('Invalid or inactive section UUID');
+                }
 
-        section_id = secRes.rows[0].section_id;
+                section_id = secRes.rows[0].section_id;
 
-        await client.query(
-            `UPDATE page_sections
+                await client.query(
+                    `UPDATE page_sections
              SET section_key = $1,
                  section_type = $2,
                  title = $3,
@@ -3927,31 +3973,31 @@ if (sectionKeyRes.rowCount === 0) {
                  modified_by = $12,
                  modified_at = NOW()
              WHERE section_uuid = $13`,
-            [
-                section.section_key,
-                section.section_type,
-                section.title,
-                section.content,
-                section.image,
-                section.video,
-                section.button_label,
-                section.button_url,
-                section.section_limit,
-                section.is_active,
-                section.sort_order,
-                modified_by,
-                section.section_uuid
-            ]
-        );
-         section_limit = section.section_limit;
-    } 
-    else {
+                    [
+                        section.section_key,
+                        section.section_type,
+                        section.title,
+                        section.content,
+                        section.image,
+                        section.video,
+                        section.button_label,
+                        section.button_url,
+                        section.section_limit,
+                        section.is_active,
+                        section.sort_order,
+                        modified_by,
+                        section.section_uuid
+                    ]
+                );
+                section_limit = section.section_limit;
+            }
+            else {
 
-        // -----------------------------
-        // INSERT SECTION
-        // -----------------------------
-        const insertSectionRes = await client.query(
-            `INSERT INTO page_sections
+                // -----------------------------
+                // INSERT SECTION
+                // -----------------------------
+                const insertSectionRes = await client.query(
+                    `INSERT INTO page_sections
             (
                 page_id,
                 section_key,
@@ -3973,65 +4019,65 @@ if (sectionKeyRes.rowCount === 0) {
                 $1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,NOW()
             )
             RETURNING section_id`,
-            [
-                page_id,
-                section.section_key,
-                section.section_type,
-                section.title,
-                section.content,
-                section.image,
-                section.video,
-                section.button_label,
-                section.button_url,
-                section.section_limit,
-                section.is_active,
-                section.sort_order,
-                modified_by
-            ]
-        );
+                    [
+                        page_id,
+                        section.section_key,
+                        section.section_type,
+                        section.title,
+                        section.content,
+                        section.image,
+                        section.video,
+                        section.button_label,
+                        section.button_url,
+                        section.section_limit,
+                        section.is_active,
+                        section.sort_order,
+                        modified_by
+                    ]
+                );
 
-        section_id = insertSectionRes.rows[0].section_id;
-         section_limit = section.section_limit;
-    }
+                section_id = insertSectionRes.rows[0].section_id;
+                section_limit = section.section_limit;
+            }
 
-     /* ---------- SECTION LIMIT VALIDATION ---------- */
-    if (section_limit === null && section.items?.length > 0) {
+            /* ---------- SECTION LIMIT VALIDATION ---------- */
+            if (section_limit === null && section.items?.length > 0) {
 
-          return cb(null,{
-        header_type: "ERROR",
-        message_visibility: true,
-        status: false,
-        code: 2001,
-        message: "Validation failed",
-        error: `Items not allowed for section ${section.section_key}`
-    });
-        //throw new Error(`Items not allowed for section ${section.section_key}`);
-    }
+                return cb(null, {
+                    header_type: "ERROR",
+                    message_visibility: true,
+                    status: false,
+                    code: 2001,
+                    message: "Validation failed",
+                    error: `Items not allowed for section ${section.section_key}`
+                });
+                //throw new Error(`Items not allowed for section ${section.section_key}`);
+            }
 
-    if (section_limit !== null && (section.items || []).length > section_limit) {
+            if (section_limit !== null && (section.items || []).length > section_limit) {
 
-        return cb(null,{
-        header_type: "ERROR",
-        message_visibility: true,
-        status: false,
-        code: 2001,
-        message: "Validation failed",
-        error: `Only ${section_limit} items allowed for section ${section.section_key}`
-    });
+                return cb(null, {
+                    header_type: "ERROR",
+                    message_visibility: true,
+                    status: false,
+                    code: 2001,
+                    message: "Validation failed",
+                    error: `Only ${section_limit} items allowed for section ${section.section_key}`
+                });
 
-        // throw new Error(`Only ${section_limit} items allowed for section ${section.section_key}`);
-    }
+                // throw new Error(`Only ${section_limit} items allowed for section ${section.section_key}`);
+            }
 
-    // -----------------------------
-    // ITEMS UPDATE / INSERT
-    // -----------------------------
-    for (const item of section.items || []) {
+            // -----------------------------
+            // ITEMS UPDATE / INSERT
+            // -----------------------------
+            for (const item of section.items || []) {
 
-        // -----------------------------
-        // DUPLICATE ITEM TITLE CHECK
-        // -----------------------------
-        const duplicateItemRes = await client.query(
-            `
+                // -----------------------------
+                // DUPLICATE ITEM TITLE CHECK
+                // -----------------------------
+                const duplicateItemRes = await client.query(
+                    `
             SELECT 1
             FROM section_items
             WHERE section_id = $1
@@ -4039,56 +4085,56 @@ if (sectionKeyRes.rowCount === 0) {
               AND is_deleted = FALSE
               AND ($3::uuid IS NULL OR item_uuid != $3)
             `,
-            [
-                section_id,
-                item.label_for_name,
-                item.item_uuid || null
-            ]
-        );
+                    [
+                        section_id,
+                        item.label_for_name,
+                        item.item_uuid || null
+                    ]
+                );
 
-        if (duplicateItemRes.rowCount > 0) {
+                if (duplicateItemRes.rowCount > 0) {
 
-            return cb(null,{
-        header_type: "ERROR",
-        message_visibility: true,
-        status: false,
-        code: 2002,
-        message: "Updation failed",
-        error: `Item ${item.label_for_name} already exists for this section`
-    });
-            // throw new Error(`Item ${item.label_for_name} already exists for this section`);
-        }
+                    return cb(null, {
+                        header_type: "ERROR",
+                        message_visibility: true,
+                        status: false,
+                        code: 2002,
+                        message: "Updation failed",
+                        error: `Item ${item.label_for_name} already exists for this section`
+                    });
+                    // throw new Error(`Item ${item.label_for_name} already exists for this section`);
+                }
 
-        // -----------------------------
-        // UPDATE ITEM
-        // -----------------------------
-        if (item.item_uuid) {
+                // -----------------------------
+                // UPDATE ITEM
+                // -----------------------------
+                if (item.item_uuid) {
 
-            const itemRes = await client.query(
-                `SELECT is_active, is_deleted
+                    const itemRes = await client.query(
+                        `SELECT is_active, is_deleted
                  FROM section_items
                  WHERE item_uuid = $1`,
-                [item.item_uuid]
-            );
+                        [item.item_uuid]
+                    );
 
-            if (
-                itemRes.rowCount === 0 ||
-                !itemRes.rows[0].is_active ||
-                itemRes.rows[0].is_deleted === true
-            ) {
-                      return {
-        header_type: "ERROR",
-        message_visibility: true,
-        status: false,
-        code: 2001,
-        message: "Validation failed",
-        error: "Invalid or inactive item"
-    };
-               // throw new Error('Invalid or inactive item');
-            }
+                    if (
+                        itemRes.rowCount === 0 ||
+                        !itemRes.rows[0].is_active ||
+                        itemRes.rows[0].is_deleted === true
+                    ) {
+                        return {
+                            header_type: "ERROR",
+                            message_visibility: true,
+                            status: false,
+                            code: 2001,
+                            message: "Validation failed",
+                            error: "Invalid or inactive item"
+                        };
+                        // throw new Error('Invalid or inactive item');
+                    }
 
-            await client.query(
-                `UPDATE section_items
+                    await client.query(
+                        `UPDATE section_items
                  SET title = $1,
                      content = $2,
                      image = $3,
@@ -4103,30 +4149,30 @@ if (sectionKeyRes.rowCount === 0) {
                      modified_by = $12,
                      modified_at = NOW()
                  WHERE item_uuid = $13`,
-                [
-                    item.label_for_name,
-                    item.label_for_message,
-                    item.image,
-                    item.label_for_email,
-                    item.name,
-                    item.sort_order,
-                    item.is_active,
-                    item.address,
-                    item.link,
-                    item.day,
-                    item.time,
-                    modified_by,
-                    item.item_uuid
-                ]
-            );
+                        [
+                            item.label_for_name,
+                            item.label_for_message,
+                            item.image,
+                            item.label_for_email,
+                            item.name,
+                            item.sort_order,
+                            item.is_active,
+                            item.address,
+                            item.link,
+                            item.day,
+                            item.time,
+                            modified_by,
+                            item.item_uuid
+                        ]
+                    );
 
-        } else {
+                } else {
 
-            // -----------------------------
-            // INSERT ITEM
-            // -----------------------------
-            await client.query(
-                `INSERT INTO section_items
+                    // -----------------------------
+                    // INSERT ITEM
+                    // -----------------------------
+                    await client.query(
+                        `INSERT INTO section_items
                 (
                     section_id,
                     title,
@@ -4147,25 +4193,25 @@ if (sectionKeyRes.rowCount === 0) {
                 (
                     $1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,NOW()
                 )`,
-                [
-                    section_id,
-                    item.label_for_name,
-                    item.label_for_message,
-                    item.image,
-                    item.label_for_email,
-                    item.name,
-                    item.sort_order,
-                    item.is_active,
-                    item.address,
-                    item.link,
-                    item.day,
-                    item.time,
-                    modified_by
-                ]
-            );
+                        [
+                            section_id,
+                            item.label_for_name,
+                            item.label_for_message,
+                            item.image,
+                            item.label_for_email,
+                            item.name,
+                            item.sort_order,
+                            item.is_active,
+                            item.address,
+                            item.link,
+                            item.day,
+                            item.time,
+                            modified_by
+                        ]
+                    );
+                }
+            }
         }
-    }
-}
 
 
         /* ======================================================
@@ -4182,7 +4228,7 @@ if (sectionKeyRes.rowCount === 0) {
               AND locked_by = $3
               AND is_deleted = FALSE
             `,
-            [modified_by,page.page_uuid,modified_by]
+            [modified_by, page.page_uuid, modified_by]
         );
 
         await client.query('COMMIT');
@@ -4380,8 +4426,8 @@ responder.on('listbypagekey-contactus', async (req, cb) => {
 
 responder.on('listbyidwithlock-contactus', async (req, cb) => {
 
-      const client = await pool.connect();
-      
+    const client = await pool.connect();
+
 
     try {
 
@@ -4401,7 +4447,7 @@ responder.on('listbyidwithlock-contactus', async (req, cb) => {
                 error: 'page uuid is required'
             });
         }
- await client.query('BEGIN');
+        await client.query('BEGIN');
 
         // -----------------------------
         // FETCH PAGE (ACTIVE ONLY)
@@ -4436,7 +4482,7 @@ responder.on('listbyidwithlock-contactus', async (req, cb) => {
         );
 
         if (pageRes.rowCount === 0) {
-             await client.query('ROLLBACK');
+            await client.query('ROLLBACK');
             return cb(null, {
                 header_type: "SUCCESS",
                 message_visibility: true,
@@ -4494,14 +4540,14 @@ responder.on('listbyidwithlock-contactus', async (req, cb) => {
                                         deleted_by = $1,
                     deleted_at = NOW() 
                     WHERE lock_id = $2`,
-                    [user_id,lockRow.lock_id]
+                    [user_id, lockRow.lock_id]
                 );
                 lockRow = null;
             }
 
             // Create new lock
             if (!lockRow) {
-                
+
                 const insertLock = await client.query(
                     `INSERT INTO record_locks (
                         table_name,
@@ -4534,7 +4580,7 @@ responder.on('listbyidwithlock-contactus', async (req, cb) => {
                 );
                 lockRow = refresh.rows[0];
             }
-             await client.query('COMMIT');
+            await client.query('COMMIT');
         }
 
 
@@ -4614,7 +4660,7 @@ responder.on('listbyidwithlock-contactus', async (req, cb) => {
             }));
         }
 
-        
+
 
         // -----------------------------
         // FINAL RESPONSE
@@ -4632,7 +4678,7 @@ responder.on('listbyidwithlock-contactus', async (req, cb) => {
         });
 
     } catch (err) {
-         await client.query('ROLLBACK');
+        await client.query('ROLLBACK');
         logger.error('CMS contact us page list Error:', err);
         return cb(null, {
             header_type: "ERROR",
@@ -4643,7 +4689,7 @@ responder.on('listbyidwithlock-contactus', async (req, cb) => {
             error: err.message
         });
 
-          } finally {
+    } finally {
         client.release();
     }
 });
@@ -5374,26 +5420,26 @@ responder.on('create-buyerhome', async (req, cb) => {
         //  PAGE VALIDATION
         // -----------------------------
 
-        
-const pageKeyRes = await client.query(
-    `SELECT page_key_id 
+
+        const pageKeyRes = await client.query(
+            `SELECT page_key_id 
      FROM page_key 
      WHERE LOWER(name) = LOWER($1) AND is_active = TRUE AND is_deleted = FALSE`,
-    [page_key]
-);
+            [page_key]
+        );
 
-if (pageKeyRes.rowCount === 0) {
-    return cb(null, {
-        header_type: "ERROR",
-        message_visibility: true,
-        status: false,
-        code: 2001,
-        message: "Validation failed",
-        error: "Invalid page key"
-    });
-}
+        if (pageKeyRes.rowCount === 0) {
+            return cb(null, {
+                header_type: "ERROR",
+                message_visibility: true,
+                status: false,
+                code: 2001,
+                message: "Validation failed",
+                error: "Invalid page key"
+            });
+        }
 
-const page_key_id = pageKeyRes.rows[0].page_key_id;
+        const page_key_id = pageKeyRes.rows[0].page_key_id;
 
         await client.query('BEGIN');
 
@@ -5486,26 +5532,26 @@ const page_key_id = pageKeyRes.rows[0].page_key_id;
         // -----------------------------
         for (const section of sections) {
 
-                        const sectionKeyRes = await client.query(
-    `SELECT section_key_id 
+            const sectionKeyRes = await client.query(
+                `SELECT section_key_id 
      FROM section_key 
      WHERE LOWER(name) = LOWER($1) 
        AND page_key_id = $2 
        AND is_active = TRUE
        AND is_deleted = FALSE`,
-    [section.section_key, page_key_id]
-);
+                [section.section_key, page_key_id]
+            );
 
-if (sectionKeyRes.rowCount === 0) {
-    return cb(null, {
-        header_type: "ERROR",
-        message_visibility: true,
-        status: false,
-        code: 2001,
-        message: "Validation failed",
-        error: `Invalid section key '${section.section_key}'`
-    });
-}
+            if (sectionKeyRes.rowCount === 0) {
+                return cb(null, {
+                    header_type: "ERROR",
+                    message_visibility: true,
+                    status: false,
+                    code: 2001,
+                    message: "Validation failed",
+                    error: `Invalid section key '${section.section_key}'`
+                });
+            }
 
 
             const secCheck = await client.query(
@@ -5697,24 +5743,24 @@ responder.on('update-buyerhome', async (req, cb) => {
         }
 
         const pageKeyRes = await client.query(
-    `SELECT page_key_id 
+            `SELECT page_key_id 
      FROM page_key 
      WHERE LOWER(name) = LOWER($1) AND is_active = TRUE AND is_deleted = FALSE`,
-    [page_key]
-);
+            [page_key]
+        );
 
-if (pageKeyRes.rowCount === 0) {
-    return cb(null, {
-        header_type: "ERROR",
-        message_visibility: true,
-        status: false,
-        code: 2001,
-        message: "Validation failed",
-        error: "Invalid page key"
-    });
-}
+        if (pageKeyRes.rowCount === 0) {
+            return cb(null, {
+                header_type: "ERROR",
+                message_visibility: true,
+                status: false,
+                code: 2001,
+                message: "Validation failed",
+                error: "Invalid page key"
+            });
+        }
 
-const page_key_id = pageKeyRes.rows[0].page_key_id;
+        const page_key_id = pageKeyRes.rows[0].page_key_id;
 
         await client.query('BEGIN');
 
@@ -5759,39 +5805,39 @@ const page_key_id = pageKeyRes.rows[0].page_key_id;
         );
 
         if (pageRes.rowCount === 0) {
-                  return {
-        header_type: "ERROR",
-        message_visibility: true,
-        status: false,
-        code: 2001,
-        message: "Validation failed",
-        error: "Invalid page UUID"
-    };
-           // throw new Error('Invalid page UUID');
+            return {
+                header_type: "ERROR",
+                message_visibility: true,
+                status: false,
+                code: 2001,
+                message: "Validation failed",
+                error: "Invalid page UUID"
+            };
+            // throw new Error('Invalid page UUID');
         }
 
         if (!pageRes.rows[0].is_active) {
-                  return {
-        header_type: "ERROR",
-        message_visibility: true,
-        status: false,
-        code: 2001,
-        message: "Validation failed",
-        error: "Inactive page cannot be updated"
-    };
+            return {
+                header_type: "ERROR",
+                message_visibility: true,
+                status: false,
+                code: 2001,
+                message: "Validation failed",
+                error: "Inactive page cannot be updated"
+            };
             //throw new Error('Inactive page cannot be updated');
         }
 
         if (pageRes.rows[0].is_deleted) {
 
-                        return {
-        header_type: "ERROR",
-        message_visibility: true,
-        status: false,
-        code: 2001,
-        message: "Validation failed",
-        error: "Deleted page cannot be updated"
-    };
+            return {
+                header_type: "ERROR",
+                message_visibility: true,
+                status: false,
+                code: 2001,
+                message: "Validation failed",
+                error: "Deleted page cannot be updated"
+            };
             //throw new Error('Deleted page cannot be updated');
         }
 
@@ -5822,105 +5868,105 @@ const page_key_id = pageKeyRes.rows[0].page_key_id;
         );
 
 
-      /* ======================================================
-    SECTIONS & ITEMS UPDATE / INSERT
-====================================================== */
-for (const section of sections) {
+        /* ======================================================
+      SECTIONS & ITEMS UPDATE / INSERT
+  ====================================================== */
+        for (const section of sections) {
 
-    
-    const sectionKeyRes = await client.query(
-    `SELECT section_key_id 
+
+            const sectionKeyRes = await client.query(
+                `SELECT section_key_id 
      FROM section_key 
      WHERE LOWER(name) = LOWER($1) 
        AND page_key_id = $2 
        AND is_active = TRUE
        AND is_deleted = FALSE`,
-    [section.section_key, page_key_id]
-);
+                [section.section_key, page_key_id]
+            );
 
-if (sectionKeyRes.rowCount === 0) {
-    return cb(null, {
-        header_type: "ERROR",
-        message_visibility: true,
-        status: false,
-        code: 2001,
-        message: "Validation failed",
-        error: `Invalid section key '${section.section_key}'`
-    });
-}
+            if (sectionKeyRes.rowCount === 0) {
+                return cb(null, {
+                    header_type: "ERROR",
+                    message_visibility: true,
+                    status: false,
+                    code: 2001,
+                    message: "Validation failed",
+                    error: `Invalid section key '${section.section_key}'`
+                });
+            }
 
-    let section_id = null;
-    let existing_section_limit = null;
+            let section_id = null;
+            let existing_section_limit = null;
 
-    // -----------------------------
-    // SECTION TYPE VALIDATION
-    // -----------------------------
-    if (section.section_type === 'single') {
-        if (section.section_limit !== null)
-                   return cb(null,{
-        header_type: "ERROR",
-        message_visibility: true,
-        status: false,
-        code: 2001,
-        message: "Validation failed",
-        error: `Section ${section.section_key} is single type; section limit must be null`
-    });
-            // throw new Error(`Section ${section.section_key} is single type; section limit must be null`);
+            // -----------------------------
+            // SECTION TYPE VALIDATION
+            // -----------------------------
+            if (section.section_type === 'single') {
+                if (section.section_limit !== null)
+                    return cb(null, {
+                        header_type: "ERROR",
+                        message_visibility: true,
+                        status: false,
+                        code: 2001,
+                        message: "Validation failed",
+                        error: `Section ${section.section_key} is single type; section limit must be null`
+                    });
+                // throw new Error(`Section ${section.section_key} is single type; section limit must be null`);
 
-        if ((section.items || []).length > 0)
+                if ((section.items || []).length > 0)
 
-                           return cb(null,{
-        header_type: "ERROR",
-        message_visibility: true,
-        status: false,
-        code: 2001,
-        message: "Validation failed",
-        error: `Section ${section.section_key} is single type; no items allowed`
-    });
-            // throw new Error(`Section ${section.section_key} is single type; no items allowed`);
+                    return cb(null, {
+                        header_type: "ERROR",
+                        message_visibility: true,
+                        status: false,
+                        code: 2001,
+                        message: "Validation failed",
+                        error: `Section ${section.section_key} is single type; no items allowed`
+                    });
+                // throw new Error(`Section ${section.section_key} is single type; no items allowed`);
 
-    } else if (section.section_type === 'multiple') {
-        if (section.section_limit === null || section.section_limit <= 0)
+            } else if (section.section_type === 'multiple') {
+                if (section.section_limit === null || section.section_limit <= 0)
 
-                                     return cb(null,{
-        header_type: "ERROR",
-        message_visibility: true,
-        status: false,
-        code: 2001,
-        message: "Validation failed",
-        error: `Section ${section.section_key} is multiple type; section limit must have a positive value`
-    });
-            // throw new Error(`Section ${section.section_key} is multiple type; section limit must have a positive value`);
+                    return cb(null, {
+                        header_type: "ERROR",
+                        message_visibility: true,
+                        status: false,
+                        code: 2001,
+                        message: "Validation failed",
+                        error: `Section ${section.section_key} is multiple type; section limit must have a positive value`
+                    });
+                // throw new Error(`Section ${section.section_key} is multiple type; section limit must have a positive value`);
 
-        if ((section.items || []).length > section.section_limit)
+                if ((section.items || []).length > section.section_limit)
 
-                                               return cb(null,{
-        header_type: "ERROR",
-        message_visibility: true,
-        status: false,
-        code: 2001,
-        message: "Validation failed",
-        error: `Only ${section.section_limit} items allowed for section ${section.section_key}`
-    });
-            // throw new Error(`Only ${section.section_limit} items allowed for section ${section.section_key}`);
-    } else {
+                    return cb(null, {
+                        header_type: "ERROR",
+                        message_visibility: true,
+                        status: false,
+                        code: 2001,
+                        message: "Validation failed",
+                        error: `Only ${section.section_limit} items allowed for section ${section.section_key}`
+                    });
+                // throw new Error(`Only ${section.section_limit} items allowed for section ${section.section_key}`);
+            } else {
 
-                                                     return cb(null,{
-        header_type: "ERROR",
-        message_visibility: true,
-        status: false,
-        code: 2001,
-        message: "Validation failed",
-        error: `Invalid section type ${section.section_type} for section ${section.section_key}`
-    });
-        // throw new Error(`Invalid section type ${section.section_type} for section ${section.section_key}`);
-    }
+                return cb(null, {
+                    header_type: "ERROR",
+                    message_visibility: true,
+                    status: false,
+                    code: 2001,
+                    message: "Validation failed",
+                    error: `Invalid section type ${section.section_type} for section ${section.section_key}`
+                });
+                // throw new Error(`Invalid section type ${section.section_type} for section ${section.section_key}`);
+            }
 
-    // -----------------------------
-    // DUPLICATE SECTION KEY CHECK
-    // -----------------------------
-    const duplicateSectionRes = await client.query(
-        `
+            // -----------------------------
+            // DUPLICATE SECTION KEY CHECK
+            // -----------------------------
+            const duplicateSectionRes = await client.query(
+                `
         SELECT 1
         FROM page_sections
         WHERE page_id = $1
@@ -5928,60 +5974,60 @@ if (sectionKeyRes.rowCount === 0) {
           AND is_deleted = FALSE
           AND ($3::uuid IS NULL OR section_uuid != $3)
         `,
-        [
-            page_id,
-            section.section_key,
-            section.section_uuid || null
-        ]
-    );
+                [
+                    page_id,
+                    section.section_key,
+                    section.section_uuid || null
+                ]
+            );
 
-    if (duplicateSectionRes.rowCount > 0) {
-            return cb(null,{
-        header_type: "ERROR",
-        message_visibility: true,
-        status: false,
-        code: 2002,
-        message: "Updation failed",
-        error: `Section ${section.section_key} already exists`
-    });
-        //throw new Error(`Section ${section.section_key} already exists`);
-    }
+            if (duplicateSectionRes.rowCount > 0) {
+                return cb(null, {
+                    header_type: "ERROR",
+                    message_visibility: true,
+                    status: false,
+                    code: 2002,
+                    message: "Updation failed",
+                    error: `Section ${section.section_key} already exists`
+                });
+                //throw new Error(`Section ${section.section_key} already exists`);
+            }
 
-    // =====================================================
-    // UPDATE SECTION
-    // =====================================================
-    if (section.section_uuid) {
+            // =====================================================
+            // UPDATE SECTION
+            // =====================================================
+            if (section.section_uuid) {
 
-        const secRes = await client.query(
-            `
+                const secRes = await client.query(
+                    `
             SELECT section_id, section_limit, is_active, is_deleted
             FROM page_sections
             WHERE section_uuid = $1
             `,
-            [section.section_uuid]
-        );
+                    [section.section_uuid]
+                );
 
-        if (
-            secRes.rowCount === 0 ||
-            !secRes.rows[0].is_active ||
-            secRes.rows[0].is_deleted
-        ) {
-                   return {
-        header_type: "ERROR",
-        message_visibility: true,
-        status: false,
-        code: 2001,
-        message: "Validation failed",
-        error: "Invalid or inactive section UUID"
-    };
-            //throw new Error('Invalid or inactive section UUID');
-        }
+                if (
+                    secRes.rowCount === 0 ||
+                    !secRes.rows[0].is_active ||
+                    secRes.rows[0].is_deleted
+                ) {
+                    return {
+                        header_type: "ERROR",
+                        message_visibility: true,
+                        status: false,
+                        code: 2001,
+                        message: "Validation failed",
+                        error: "Invalid or inactive section UUID"
+                    };
+                    //throw new Error('Invalid or inactive section UUID');
+                }
 
-        section_id = secRes.rows[0].section_id;
-       existing_section_limit = section.section_limit;
+                section_id = secRes.rows[0].section_id;
+                existing_section_limit = section.section_limit;
 
-        await client.query(
-            `
+                await client.query(
+                    `
             UPDATE page_sections
             SET section_key = $1,
                 section_type = $2,
@@ -5998,30 +6044,30 @@ if (sectionKeyRes.rowCount === 0) {
                 modified_at = NOW()
             WHERE section_uuid = $13
             `,
-            [
-                section.section_key,
-                section.section_type,
-                section.title,
-                section.content,
-                section.image,
-                section.video,
-                section.button_label,
-                section.button_url,
-                section.section_limit,
-                section.is_active,
-                section.sort_order,
-                modified_by,
-                section.section_uuid
-            ]
-        );
+                    [
+                        section.section_key,
+                        section.section_type,
+                        section.title,
+                        section.content,
+                        section.image,
+                        section.video,
+                        section.button_label,
+                        section.button_url,
+                        section.section_limit,
+                        section.is_active,
+                        section.sort_order,
+                        modified_by,
+                        section.section_uuid
+                    ]
+                );
 
-    } else {
+            } else {
 
-        // =====================================================
-        // INSERT SECTION
-        // =====================================================
-        const insertSectionRes = await client.query(
-            `
+                // =====================================================
+                // INSERT SECTION
+                // =====================================================
+                const insertSectionRes = await client.query(
+                    `
             INSERT INTO page_sections
             (
                 page_id,
@@ -6045,65 +6091,65 @@ if (sectionKeyRes.rowCount === 0) {
             )
             RETURNING section_id, section_limit
             `,
-            [
-                page_id,
-                section.section_key,
-                section.section_type,
-                section.title,
-                section.content,
-                section.image,
-                section.video,
-                section.button_label,
-                section.button_url,
-                section.section_limit,
-                section.is_active,
-                section.sort_order,
-                modified_by
-            ]
-        );
+                    [
+                        page_id,
+                        section.section_key,
+                        section.section_type,
+                        section.title,
+                        section.content,
+                        section.image,
+                        section.video,
+                        section.button_label,
+                        section.button_url,
+                        section.section_limit,
+                        section.is_active,
+                        section.sort_order,
+                        modified_by
+                    ]
+                );
 
-        section_id = insertSectionRes.rows[0].section_id;
-        existing_section_limit = section.section_limit;
-    }
+                section_id = insertSectionRes.rows[0].section_id;
+                existing_section_limit = section.section_limit;
+            }
 
-    /* ---------- SECTION LIMIT VALIDATION ---------- */
-    if (existing_section_limit === null && (section.items || []).length > 0) {
-               return cb(null,{
-        header_type: "ERROR",
-        message_visibility: true,
-        status: false,
-        code: 2001,
-        message: "Validation failed",
-        error: `Items not allowed for section ${section.section_key}`
-    });
+            /* ---------- SECTION LIMIT VALIDATION ---------- */
+            if (existing_section_limit === null && (section.items || []).length > 0) {
+                return cb(null, {
+                    header_type: "ERROR",
+                    message_visibility: true,
+                    status: false,
+                    code: 2001,
+                    message: "Validation failed",
+                    error: `Items not allowed for section ${section.section_key}`
+                });
 
-       // throw new Error(`Items not allowed for section ${section.section_key}`);
-    }
+                // throw new Error(`Items not allowed for section ${section.section_key}`);
+            }
 
-    if (
-        existing_section_limit !== null &&
-        (section.items || []).length > existing_section_limit
-    ) {
+            if (
+                existing_section_limit !== null &&
+                (section.items || []).length > existing_section_limit
+            ) {
 
-                   return cb(null,{
-        header_type: "ERROR",
-        message_visibility: true,
-        status: false,
-        code: 2001,
-        message: "Validation failed",
-        error: `Only ${existing_section_limit} items allowed for section ${section.section_key}`
-    });
-        // throw new Error(`Only ${existing_section_limit} items allowed for section ${section.section_key}`);
-    }
+                return cb(null, {
+                    header_type: "ERROR",
+                    message_visibility: true,
+                    status: false,
+                    code: 2001,
+                    message: "Validation failed",
+                    error: `Only ${existing_section_limit} items allowed for section ${section.section_key}`
+                });
+                // throw new Error(`Only ${existing_section_limit} items allowed for section ${section.section_key}`);
+            }
 
-    /* ---------- ITEMS UPDATE / INSERT ---------- */
-    for (const item of section.items || []) {
+            /* ---------- ITEMS UPDATE / INSERT ---------- */
+            for (const item of section.items || []) {
 
-        // -----------------------------
-        // DUPLICATE ITEM TITLE CHECK
-        // -----------------------------
-        const duplicateItemRes = await client.query(
-            `
+                // -----------------------------
+                // DUPLICATE ITEM TITLE CHECK
+                // -----------------------------
+                const duplicateItemRes = await client.query(
+                    `
             SELECT 1
             FROM section_items
             WHERE section_id = $1
@@ -6111,58 +6157,58 @@ if (sectionKeyRes.rowCount === 0) {
               AND is_deleted = FALSE
               AND ($3::uuid IS NULL OR item_uuid != $3)
             `,
-            [
-                section_id,
-                item.title,
-                item.item_uuid || null
-            ]
-        );
+                    [
+                        section_id,
+                        item.title,
+                        item.item_uuid || null
+                    ]
+                );
 
-        if (duplicateItemRes.rowCount > 0) {
+                if (duplicateItemRes.rowCount > 0) {
 
-                return cb(null,{
-        header_type: "ERROR",
-        message_visibility: true,
-        status: false,
-        code: 2002,
-        message: "Updation failed",
-        error: `Item ${item.title} already exists for this section`
-    });
-            //throw new Error(`Item ${item.title} already exists for this section`);
-        }
+                    return cb(null, {
+                        header_type: "ERROR",
+                        message_visibility: true,
+                        status: false,
+                        code: 2002,
+                        message: "Updation failed",
+                        error: `Item ${item.title} already exists for this section`
+                    });
+                    //throw new Error(`Item ${item.title} already exists for this section`);
+                }
 
-        // =====================================================
-        // UPDATE ITEM
-        // =====================================================
-        if (item.item_uuid) {
+                // =====================================================
+                // UPDATE ITEM
+                // =====================================================
+                if (item.item_uuid) {
 
-            const itemRes = await client.query(
-                `
+                    const itemRes = await client.query(
+                        `
                 SELECT is_active, is_deleted
                 FROM section_items
                 WHERE item_uuid = $1
                 `,
-                [item.item_uuid]
-            );
+                        [item.item_uuid]
+                    );
 
-            if (
-                itemRes.rowCount === 0 ||
-                !itemRes.rows[0].is_active ||
-                itemRes.rows[0].is_deleted
-            ) {
-                     return {
-        header_type: "ERROR",
-        message_visibility: true,
-        status: false,
-        code: 2001,
-        message: "Validation failed",
-        error: "Invalid or inactive item UUID"
-    };
-                //throw new Error('Invalid or inactive item UUID');
-            }
+                    if (
+                        itemRes.rowCount === 0 ||
+                        !itemRes.rows[0].is_active ||
+                        itemRes.rows[0].is_deleted
+                    ) {
+                        return {
+                            header_type: "ERROR",
+                            message_visibility: true,
+                            status: false,
+                            code: 2001,
+                            message: "Validation failed",
+                            error: "Invalid or inactive item UUID"
+                        };
+                        //throw new Error('Invalid or inactive item UUID');
+                    }
 
-            await client.query(
-                `
+                    await client.query(
+                        `
                 UPDATE section_items
                 SET title = $1,
                     content = $2,
@@ -6176,27 +6222,27 @@ if (sectionKeyRes.rowCount === 0) {
                     modified_at = NOW()
                 WHERE item_uuid = $10
                 `,
-                [
-                    item.title,
-                    item.content,
-                    item.image,
-                    item.icon,
-                    item.link,
-                    item.filetype,
-                    item.sort_order,
-                    item.is_active,
-                    modified_by,
-                    item.item_uuid
-                ]
-            );
+                        [
+                            item.title,
+                            item.content,
+                            item.image,
+                            item.icon,
+                            item.link,
+                            item.filetype,
+                            item.sort_order,
+                            item.is_active,
+                            modified_by,
+                            item.item_uuid
+                        ]
+                    );
 
-        } else {
+                } else {
 
-            // =====================================================
-            // INSERT ITEM
-            // =====================================================
-            await client.query(
-                `
+                    // =====================================================
+                    // INSERT ITEM
+                    // =====================================================
+                    await client.query(
+                        `
                 INSERT INTO section_items
                 (
                     section_id,
@@ -6216,22 +6262,22 @@ if (sectionKeyRes.rowCount === 0) {
                     $1,$2,$3,$4,$5,$6,$7,$8,$9,$10,NOW()
                 )
                 `,
-                [
-                    section_id,
-                    item.title,
-                    item.content,
-                    item.image,
-                    item.icon,
-                    item.link,
-                    item.filetype,
-                    item.sort_order,
-                    item.is_active,
-                    modified_by
-                ]
-            );
+                        [
+                            section_id,
+                            item.title,
+                            item.content,
+                            item.image,
+                            item.icon,
+                            item.link,
+                            item.filetype,
+                            item.sort_order,
+                            item.is_active,
+                            modified_by
+                        ]
+                    );
+                }
+            }
         }
-    }
-}
 
         /* ======================================================
            AUTO-UNLOCK AFTER SUCCESS
@@ -6247,7 +6293,7 @@ if (sectionKeyRes.rowCount === 0) {
               AND locked_by = $3
               AND is_deleted = FALSE
             `,
-            [modified_by,page.page_uuid,modified_by]
+            [modified_by, page.page_uuid, modified_by]
         );
 
         await client.query('COMMIT');
@@ -6280,8 +6326,8 @@ if (sectionKeyRes.rowCount === 0) {
 
 responder.on('listbyidwithlock-buyerhome', async (req, cb) => {
 
-      const client = await pool.connect();
-      
+    const client = await pool.connect();
+
 
     try {
 
@@ -6301,7 +6347,7 @@ responder.on('listbyidwithlock-buyerhome', async (req, cb) => {
                 error: 'page uuid is required'
             });
         }
- await client.query('BEGIN');
+        await client.query('BEGIN');
 
         // -----------------------------
         // FETCH PAGE (ACTIVE ONLY)
@@ -6336,7 +6382,7 @@ responder.on('listbyidwithlock-buyerhome', async (req, cb) => {
         );
 
         if (pageRes.rowCount === 0) {
-             await client.query('ROLLBACK');
+            await client.query('ROLLBACK');
             return cb(null, {
                 header_type: "SUCCESS",
                 message_visibility: true,
@@ -6357,12 +6403,12 @@ responder.on('listbyidwithlock-buyerhome', async (req, cb) => {
             if (!user_id) {
                 await client.query('ROLLBACK');
                 return cb(null, {
-            header_type: "ERROR",
-            message_visibility: true,
-            status: false,
-            code: 2001,
-            message: "Validation failed",
-            error: "User ID required for edit"
+                    header_type: "ERROR",
+                    message_visibility: true,
+                    status: false,
+                    code: 2001,
+                    message: "Validation failed",
+                    error: "User ID required for edit"
 
                 });
             }
@@ -6398,14 +6444,14 @@ responder.on('listbyidwithlock-buyerhome', async (req, cb) => {
                                         deleted_by = $1,
                     deleted_at = NOW() 
                     WHERE lock_id = $2`,
-                    [user_id,lockRow.lock_id]
+                    [user_id, lockRow.lock_id]
                 );
                 lockRow = null;
             }
 
             // Create new lock
             if (!lockRow) {
-                
+
                 const insertLock = await client.query(
                     `INSERT INTO record_locks (
                         table_name,
@@ -6523,7 +6569,7 @@ responder.on('listbyidwithlock-buyerhome', async (req, cb) => {
         });
 
     } catch (err) {
-         await client.query('ROLLBACK');
+        await client.query('ROLLBACK');
         logger.error('CMS buyer home page list Error:', err);
         return cb(null, {
             header_type: "ERROR",
@@ -6534,7 +6580,7 @@ responder.on('listbyidwithlock-buyerhome', async (req, cb) => {
             error: err.message
         });
 
-          } finally {
+    } finally {
         client.release();
     }
 });
@@ -6750,26 +6796,26 @@ responder.on('create-sellerhome', async (req, cb) => {
         //  PAGE VALIDATION
         // -----------------------------
 
-        
-const pageKeyRes = await client.query(
-    `SELECT page_key_id 
+
+        const pageKeyRes = await client.query(
+            `SELECT page_key_id 
      FROM page_key 
      WHERE LOWER(name) = LOWER($1) AND is_active = TRUE AND is_deleted = FALSE`,
-    [page_key]
-);
+            [page_key]
+        );
 
-if (pageKeyRes.rowCount === 0) {
-    return cb(null, {
-        header_type: "ERROR",
-        message_visibility: true,
-        status: false,
-        code: 2001,
-        message: "Validation failed",
-        error: "Invalid page key"
-    });
-}
+        if (pageKeyRes.rowCount === 0) {
+            return cb(null, {
+                header_type: "ERROR",
+                message_visibility: true,
+                status: false,
+                code: 2001,
+                message: "Validation failed",
+                error: "Invalid page key"
+            });
+        }
 
-const page_key_id = pageKeyRes.rows[0].page_key_id;
+        const page_key_id = pageKeyRes.rows[0].page_key_id;
 
         await client.query('BEGIN');
 
@@ -6862,26 +6908,26 @@ const page_key_id = pageKeyRes.rows[0].page_key_id;
         // -----------------------------
         for (const section of sections) {
 
-                        const sectionKeyRes = await client.query(
-    `SELECT section_key_id 
+            const sectionKeyRes = await client.query(
+                `SELECT section_key_id 
      FROM section_key 
      WHERE LOWER(name) = LOWER($1) 
        AND page_key_id = $2 
        AND is_active = TRUE
        AND is_deleted = FALSE`,
-    [section.section_key, page_key_id]
-);
+                [section.section_key, page_key_id]
+            );
 
-if (sectionKeyRes.rowCount === 0) {
-    return cb(null, {
-        header_type: "ERROR",
-        message_visibility: true,
-        status: false,
-        code: 2001,
-        message: "Validation failed",
-        error: `Invalid section key '${section.section_key}'`
-    });
-}
+            if (sectionKeyRes.rowCount === 0) {
+                return cb(null, {
+                    header_type: "ERROR",
+                    message_visibility: true,
+                    status: false,
+                    code: 2001,
+                    message: "Validation failed",
+                    error: `Invalid section key '${section.section_key}'`
+                });
+            }
 
 
             const secCheck = await client.query(
@@ -7073,24 +7119,24 @@ responder.on('update-sellerhome', async (req, cb) => {
         }
 
         const pageKeyRes = await client.query(
-    `SELECT page_key_id 
+            `SELECT page_key_id 
      FROM page_key 
      WHERE LOWER(name) = LOWER($1) AND is_active = TRUE AND is_deleted = FALSE`,
-    [page_key]
-);
+            [page_key]
+        );
 
-if (pageKeyRes.rowCount === 0) {
-    return cb(null, {
-        header_type: "ERROR",
-        message_visibility: true,
-        status: false,
-        code: 2001,
-        message: "Validation failed",
-        error: "Invalid page key"
-    });
-}
+        if (pageKeyRes.rowCount === 0) {
+            return cb(null, {
+                header_type: "ERROR",
+                message_visibility: true,
+                status: false,
+                code: 2001,
+                message: "Validation failed",
+                error: "Invalid page key"
+            });
+        }
 
-const page_key_id = pageKeyRes.rows[0].page_key_id;
+        const page_key_id = pageKeyRes.rows[0].page_key_id;
 
         await client.query('BEGIN');
 
@@ -7135,38 +7181,38 @@ const page_key_id = pageKeyRes.rows[0].page_key_id;
         );
 
         if (pageRes.rowCount === 0) {
-                 return {
-        header_type: "ERROR",
-        message_visibility: true,
-        status: false,
-        code: 2001,
-        message: "Validation failed",
-        error: "Invalid page UUID"
-    };
+            return {
+                header_type: "ERROR",
+                message_visibility: true,
+                status: false,
+                code: 2001,
+                message: "Validation failed",
+                error: "Invalid page UUID"
+            };
             //throw new Error('Invalid page UUID');
         }
 
         if (!pageRes.rows[0].is_active) {
-                 return {
-        header_type: "ERROR",
-        message_visibility: true,
-        status: false,
-        code: 2001,
-        message: "Validation failed",
-        error: "Inactive page cannot be updated"
-    };
+            return {
+                header_type: "ERROR",
+                message_visibility: true,
+                status: false,
+                code: 2001,
+                message: "Validation failed",
+                error: "Inactive page cannot be updated"
+            };
             //throw new Error('Inactive page cannot be updated');
         }
 
         if (pageRes.rows[0].is_deleted) {
-                 return {
-        header_type: "ERROR",
-        message_visibility: true,
-        status: false,
-        code: 2001,
-        message: "Validation failed",
-        error: "Deleted page cannot be updated"
-    };
+            return {
+                header_type: "ERROR",
+                message_visibility: true,
+                status: false,
+                code: 2001,
+                message: "Validation failed",
+                error: "Deleted page cannot be updated"
+            };
             //throw new Error('Deleted page cannot be updated');
         }
 
@@ -7196,106 +7242,106 @@ const page_key_id = pageKeyRes.rows[0].page_key_id;
             ]
         );
 
- /* ======================================================
-   SECTIONS & ITEMS UPDATE / INSERT
-====================================================== */
-for (const section of sections) {
+        /* ======================================================
+          SECTIONS & ITEMS UPDATE / INSERT
+       ====================================================== */
+        for (const section of sections) {
 
-    const sectionKeyRes = await client.query(
-    `SELECT section_key_id 
+            const sectionKeyRes = await client.query(
+                `SELECT section_key_id 
      FROM section_key 
      WHERE LOWER(name) = LOWER($1) 
        AND page_key_id = $2 
        AND is_active = TRUE
        AND is_deleted = FALSE`,
-    [section.section_key, page_key_id]
-);
+                [section.section_key, page_key_id]
+            );
 
-if (sectionKeyRes.rowCount === 0) {
-    return cb(null, {
-        header_type: "ERROR",
-        message_visibility: true,
-        status: false,
-        code: 2001,
-        message: "Validation failed",
-        error: `Invalid section key '${section.section_key}'`
-    });
-}
+            if (sectionKeyRes.rowCount === 0) {
+                return cb(null, {
+                    header_type: "ERROR",
+                    message_visibility: true,
+                    status: false,
+                    code: 2001,
+                    message: "Validation failed",
+                    error: `Invalid section key '${section.section_key}'`
+                });
+            }
 
-    let section_id = null;
-    let section_limit = section.section_limit;
+            let section_id = null;
+            let section_limit = section.section_limit;
 
-    // -----------------------------
-    // SECTION TYPE VALIDATION
-    // -----------------------------
-    if (section.section_type === 'single') {
-        if (section.section_limit !== null)
-            return cb(null,{
-        header_type: "ERROR",
-        message_visibility: true,
-        status: false,
-        code: 2001,
-        message: "Validation failed",
-        error: `Section ${section.section_key} is single type; section limit must be null`
-    });
-            // throw new Error(`Section ${section.section_key} is single type; section limit must be null`);
+            // -----------------------------
+            // SECTION TYPE VALIDATION
+            // -----------------------------
+            if (section.section_type === 'single') {
+                if (section.section_limit !== null)
+                    return cb(null, {
+                        header_type: "ERROR",
+                        message_visibility: true,
+                        status: false,
+                        code: 2001,
+                        message: "Validation failed",
+                        error: `Section ${section.section_key} is single type; section limit must be null`
+                    });
+                // throw new Error(`Section ${section.section_key} is single type; section limit must be null`);
 
-        if ((section.items || []).length > 0)
+                if ((section.items || []).length > 0)
 
-        return cb(null,{
-        header_type: "ERROR",
-        message_visibility: true,
-        status: false,
-        code: 2001,
-        message: "Validation failed",
-        error: `Section ${section.section_key} is single type; no items allowed`
-    });
-            // throw new Error(`Section ${section.section_key} is single type; no items allowed`);
+                    return cb(null, {
+                        header_type: "ERROR",
+                        message_visibility: true,
+                        status: false,
+                        code: 2001,
+                        message: "Validation failed",
+                        error: `Section ${section.section_key} is single type; no items allowed`
+                    });
+                // throw new Error(`Section ${section.section_key} is single type; no items allowed`);
 
-    } else if (section.section_type === 'multiple') {
-        if (section.section_limit === null || section.section_limit <= 0)
+            } else if (section.section_type === 'multiple') {
+                if (section.section_limit === null || section.section_limit <= 0)
 
-              return cb(null,{
-        header_type: "ERROR",
-        message_visibility: true,
-        status: false,
-        code: 2001,
-        message: "Validation failed",
-        error: `Section ${section.section_key} is multiple type; section limit must have a positive value`
-    });
-            // throw new Error(`Section ${section.section_key} is multiple type; section limit must have a positive value`);
+                    return cb(null, {
+                        header_type: "ERROR",
+                        message_visibility: true,
+                        status: false,
+                        code: 2001,
+                        message: "Validation failed",
+                        error: `Section ${section.section_key} is multiple type; section limit must have a positive value`
+                    });
+                // throw new Error(`Section ${section.section_key} is multiple type; section limit must have a positive value`);
 
-        if ((section.items || []).length > section.section_limit)
+                if ((section.items || []).length > section.section_limit)
 
-            return cb(null,{
-        header_type: "ERROR",
-        message_visibility: true,
-        status: false,
-        code: 2001,
-        message: "Validation failed",
-        error: `Only ${section.section_limit} items allowed for section ${section.section_key}`
-    });
+                    return cb(null, {
+                        header_type: "ERROR",
+                        message_visibility: true,
+                        status: false,
+                        code: 2001,
+                        message: "Validation failed",
+                        error: `Only ${section.section_limit} items allowed for section ${section.section_key}`
+                    });
 
-            // throw new Error(`Only ${section.section_limit} items allowed for section ${section.section_key}`);
-    } else {
+                // throw new Error(`Only ${section.section_limit} items allowed for section ${section.section_key}`);
+            } else {
 
-        return cb(null,{
-        header_type: "ERROR",
-        message_visibility: true,
-        status: false,
-        code: 2001,
-        message: "Validation failed",
-        error: `Invalid section type ${section.section_type} for section ${section.section_key}`
-    });
+                return cb(null, {
+                    header_type: "ERROR",
+                    message_visibility: true,
+                    status: false,
+                    code: 2001,
+                    message: "Validation failed",
+                    error: `Invalid section type ${section.section_type} for section ${section.section_key}`
+                });
 
-        // throw new Error(`Invalid section type ${section.section_type} for section ${section.section_key}`);
-    }
+                // throw new Error(`Invalid section type ${section.section_type} for section ${section.section_key}`);
+            }
 
-    // -----------------------------
-    // DUPLICATE SECTION KEY CHECK
-    // -----------------------------
-    const duplicateSectionRes = await client.query(
-        `
+            // -----------------------------
+            // DUPLICATE SECTION KEY CHECK
+            // -----------------------------
+            const duplicateSectionRes = await client.query(
+                `
         SELECT 1
         FROM page_sections
         WHERE page_id = $1
@@ -7303,62 +7349,62 @@ if (sectionKeyRes.rowCount === 0) {
           AND is_deleted = FALSE
           AND ($3::uuid IS NULL OR section_uuid != $3)
         `,
-        [
-            page_id,
-            section.section_key,
-            section.section_uuid || null
-        ]
-    );
+                [
+                    page_id,
+                    section.section_key,
+                    section.section_uuid || null
+                ]
+            );
 
-    if (duplicateSectionRes.rowCount > 0) {
-   return {
-        header_type: "ERROR",
-        message_visibility: true,
-        status: false,
-        code: 2002,
-        message: "Updation failed",
-        error: `Section ${section.section_key} already exists`
-    };
+            if (duplicateSectionRes.rowCount > 0) {
+                return {
+                    header_type: "ERROR",
+                    message_visibility: true,
+                    status: false,
+                    code: 2002,
+                    message: "Updation failed",
+                    error: `Section ${section.section_key} already exists`
+                };
 
-        //throw new Error(`Section ${section.section_key} already exists`);
-    }
+                //throw new Error(`Section ${section.section_key} already exists`);
+            }
 
-    // =====================================================
-    // UPDATE SECTION
-    // =====================================================
-    if (section.section_uuid) {
+            // =====================================================
+            // UPDATE SECTION
+            // =====================================================
+            if (section.section_uuid) {
 
-        const secRes = await client.query(
-            `
+                const secRes = await client.query(
+                    `
             SELECT section_id, section_limit, is_active, is_deleted
             FROM page_sections
             WHERE section_uuid = $1
             `,
-            [section.section_uuid]
-        );
+                    [section.section_uuid]
+                );
 
-        if (
-            secRes.rowCount === 0 ||
-            !secRes.rows[0].is_active ||
-            secRes.rows[0].is_deleted
-        ) {
+                if (
+                    secRes.rowCount === 0 ||
+                    !secRes.rows[0].is_active ||
+                    secRes.rows[0].is_deleted
+                ) {
 
-  return cb(null,{
-        header_type: "ERROR",
-        message_visibility: true,
-        status: false,
-        code: 2001,
-        message: "Validation failed",
-        error: "Invalid or inactive section UUID"
-    });
-            //throw new Error('Invalid or inactive section UUID');
-        }
+                    return cb(null, {
+                        header_type: "ERROR",
+                        message_visibility: true,
+                        status: false,
+                        code: 2001,
+                        message: "Validation failed",
+                        error: "Invalid or inactive section UUID"
+                    });
+                    //throw new Error('Invalid or inactive section UUID');
+                }
 
-        section_id = secRes.rows[0].section_id;
-        section_limit = section.section_limit;
+                section_id = secRes.rows[0].section_id;
+                section_limit = section.section_limit;
 
-        await client.query(
-            `
+                await client.query(
+                    `
             UPDATE page_sections
             SET section_key = $1,
                 section_type = $2,
@@ -7375,32 +7421,32 @@ if (sectionKeyRes.rowCount === 0) {
                 modified_at = NOW()
             WHERE section_uuid = $13
             `,
-            [
-                section.section_key,
-                section.section_type,
-                section.title,
-                section.content,
-                section.image,
-                section.video,
-                section.button_label,
-                section.button_url,
-                section.section_limit,
-                section.is_active,
-                section.sort_order,
-                modified_by,
-                section.section_uuid
-            ]
-        );
+                    [
+                        section.section_key,
+                        section.section_type,
+                        section.title,
+                        section.content,
+                        section.image,
+                        section.video,
+                        section.button_label,
+                        section.button_url,
+                        section.section_limit,
+                        section.is_active,
+                        section.sort_order,
+                        modified_by,
+                        section.section_uuid
+                    ]
+                );
 
-    } 
-    
-    else {
+            }
 
-        // =====================================================
-        // INSERT SECTION
-        // =====================================================
-        const insertSectionRes = await client.query(
-            `
+            else {
+
+                // =====================================================
+                // INSERT SECTION
+                // =====================================================
+                const insertSectionRes = await client.query(
+                    `
             INSERT INTO page_sections
             (
                 page_id,
@@ -7424,66 +7470,66 @@ if (sectionKeyRes.rowCount === 0) {
             )
             RETURNING section_id, section_limit
             `,
-            [
-                page_id,
-                section.section_key,
-                section.section_type,
-                section.title,
-                section.content,
-                section.image,
-                section.video,
-                section.button_label,
-                section.button_url,
-                section.section_limit,
-                section.is_active,
-                section.sort_order,
-                modified_by
-            ]
-        );
+                    [
+                        page_id,
+                        section.section_key,
+                        section.section_type,
+                        section.title,
+                        section.content,
+                        section.image,
+                        section.video,
+                        section.button_label,
+                        section.button_url,
+                        section.section_limit,
+                        section.is_active,
+                        section.sort_order,
+                        modified_by
+                    ]
+                );
 
-        section_id = insertSectionRes.rows[0].section_id;
-        section_limit = section.section_limit;
-    }
+                section_id = insertSectionRes.rows[0].section_id;
+                section_limit = section.section_limit;
+            }
 
-    /* ---------- SECTION LIMIT VALIDATION ---------- */
-    if (section_limit === null && (section.items || []).length > 0) {
+            /* ---------- SECTION LIMIT VALIDATION ---------- */
+            if (section_limit === null && (section.items || []).length > 0) {
 
-        return cb(null,{
-        header_type: "ERROR",
-        message_visibility: true,
-        status: false,
-        code: 2001,
-        message: "Validation failed",
-        error: `Items not allowed for section ${section.section_key}`
-    });
+                return cb(null, {
+                    header_type: "ERROR",
+                    message_visibility: true,
+                    status: false,
+                    code: 2001,
+                    message: "Validation failed",
+                    error: `Items not allowed for section ${section.section_key}`
+                });
 
-       // throw new Error(`Items not allowed for section ${section.section_key}`);
-    }
+                // throw new Error(`Items not allowed for section ${section.section_key}`);
+            }
 
-    if (
-        section_limit !== null &&
-        (section.items || []).length > section_limit
-    ) {
+            if (
+                section_limit !== null &&
+                (section.items || []).length > section_limit
+            ) {
 
-        return cb(null,{
-        header_type: "ERROR",
-        message_visibility: true,
-        status: false,
-        code: 2001,
-        message: "Validation failed",
-        error: `Only ${section_limit} items allowed for section ${section.section_key}`
-    });
-        // throw new Error(`Only ${section_limit} items allowed for section ${section.section_key}`);
-    }
+                return cb(null, {
+                    header_type: "ERROR",
+                    message_visibility: true,
+                    status: false,
+                    code: 2001,
+                    message: "Validation failed",
+                    error: `Only ${section_limit} items allowed for section ${section.section_key}`
+                });
+                // throw new Error(`Only ${section_limit} items allowed for section ${section.section_key}`);
+            }
 
-    /* ---------- ITEMS UPDATE / INSERT ---------- */
-    for (const item of section.items || []) {
+            /* ---------- ITEMS UPDATE / INSERT ---------- */
+            for (const item of section.items || []) {
 
-        // -----------------------------
-        // DUPLICATE ITEM TITLE CHECK
-        // -----------------------------
-        const duplicateItemRes = await client.query(
-            `
+                // -----------------------------
+                // DUPLICATE ITEM TITLE CHECK
+                // -----------------------------
+                const duplicateItemRes = await client.query(
+                    `
             SELECT 1
             FROM section_items
             WHERE section_id = $1
@@ -7491,58 +7537,58 @@ if (sectionKeyRes.rowCount === 0) {
               AND is_deleted = FALSE
               AND ($3::uuid IS NULL OR item_uuid != $3)
             `,
-            [
-                section_id,
-                item.title,
-                item.item_uuid || null
-            ]
-        );
+                    [
+                        section_id,
+                        item.title,
+                        item.item_uuid || null
+                    ]
+                );
 
-        if (duplicateItemRes.rowCount > 0) {
+                if (duplicateItemRes.rowCount > 0) {
 
-             return cb(null,{
-        header_type: "ERROR",
-        message_visibility: true,
-        status: false,
-        code: 2002,
-        message: "Updation failed",
-        error: `Item ${item.title} already exists for this section`
-    });
-            //throw new Error(`Item ${item.title} already exists for this section`);
-        }
+                    return cb(null, {
+                        header_type: "ERROR",
+                        message_visibility: true,
+                        status: false,
+                        code: 2002,
+                        message: "Updation failed",
+                        error: `Item ${item.title} already exists for this section`
+                    });
+                    //throw new Error(`Item ${item.title} already exists for this section`);
+                }
 
-        // =====================================================
-        // UPDATE ITEM
-        // =====================================================
-        if (item.item_uuid) {
+                // =====================================================
+                // UPDATE ITEM
+                // =====================================================
+                if (item.item_uuid) {
 
-            const itemRes = await client.query(
-                `
+                    const itemRes = await client.query(
+                        `
                 SELECT is_active, is_deleted
                 FROM section_items
                 WHERE item_uuid = $1
                 `,
-                [item.item_uuid]
-            );
+                        [item.item_uuid]
+                    );
 
-            if (
-                itemRes.rowCount === 0 ||
-                !itemRes.rows[0].is_active ||
-                itemRes.rows[0].is_deleted
-            ) {
-                  return cb(null,{
-        header_type: "ERROR",
-        message_visibility: true,
-        status: false,
-        code: 2001,
-        message: "Validation failed",
-        error: "Invalid or inactive item UUID"
-    });
-                //throw new Error('Invalid or inactive item UUID');
-            }
+                    if (
+                        itemRes.rowCount === 0 ||
+                        !itemRes.rows[0].is_active ||
+                        itemRes.rows[0].is_deleted
+                    ) {
+                        return cb(null, {
+                            header_type: "ERROR",
+                            message_visibility: true,
+                            status: false,
+                            code: 2001,
+                            message: "Validation failed",
+                            error: "Invalid or inactive item UUID"
+                        });
+                        //throw new Error('Invalid or inactive item UUID');
+                    }
 
-            await client.query(
-                `
+                    await client.query(
+                        `
                 UPDATE section_items
                 SET title = $1,
                     content = $2,
@@ -7557,28 +7603,28 @@ if (sectionKeyRes.rowCount === 0) {
                     modified_at = NOW()
                 WHERE item_uuid = $11
                 `,
-                [
-                    item.title,
-                    item.content,
-                    item.image,
-                    item.icon,
-                    item.link,
-                    item.filetype,
-                    item.sort_order,
-                    item.is_active,
-                    modified_by,
-                    item.address,
-                    item.item_uuid
-                ]
-            );
+                        [
+                            item.title,
+                            item.content,
+                            item.image,
+                            item.icon,
+                            item.link,
+                            item.filetype,
+                            item.sort_order,
+                            item.is_active,
+                            modified_by,
+                            item.address,
+                            item.item_uuid
+                        ]
+                    );
 
-        } else {
+                } else {
 
-            // =====================================================
-            // INSERT ITEM
-            // =====================================================
-            await client.query(
-                `
+                    // =====================================================
+                    // INSERT ITEM
+                    // =====================================================
+                    await client.query(
+                        `
                 INSERT INTO section_items
                 (
                     section_id,
@@ -7599,23 +7645,23 @@ if (sectionKeyRes.rowCount === 0) {
                     $1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,NOW()
                 )
                 `,
-                [
-                    section_id,
-                    item.title,
-                    item.content,
-                    item.image,
-                    item.icon,
-                    item.link,
-                    item.filetype,
-                    item.sort_order,
-                    item.is_active,
-                    item.address,
-                    modified_by
-                ]
-            );
+                        [
+                            section_id,
+                            item.title,
+                            item.content,
+                            item.image,
+                            item.icon,
+                            item.link,
+                            item.filetype,
+                            item.sort_order,
+                            item.is_active,
+                            item.address,
+                            modified_by
+                        ]
+                    );
+                }
+            }
         }
-    }
-}
 
         /* ======================================================
            AUTO-UNLOCK AFTER SUCCESS
@@ -7631,7 +7677,7 @@ if (sectionKeyRes.rowCount === 0) {
               AND locked_by = $3
               AND is_deleted = FALSE
             `,
-            [modified_by,page.page_uuid,modified_by]
+            [modified_by, page.page_uuid, modified_by]
         );
 
         await client.query('COMMIT');
@@ -7663,8 +7709,8 @@ if (sectionKeyRes.rowCount === 0) {
 
 responder.on('listbyidwithlock-sellerhome', async (req, cb) => {
 
-      const client = await pool.connect();
-      
+    const client = await pool.connect();
+
 
     try {
 
@@ -7684,7 +7730,7 @@ responder.on('listbyidwithlock-sellerhome', async (req, cb) => {
                 error: 'page uuid is required'
             });
         }
- await client.query('BEGIN');
+        await client.query('BEGIN');
 
         // -----------------------------
         // FETCH PAGE (ACTIVE ONLY)
@@ -7719,7 +7765,7 @@ responder.on('listbyidwithlock-sellerhome', async (req, cb) => {
         );
 
         if (pageRes.rowCount === 0) {
-             await client.query('ROLLBACK');
+            await client.query('ROLLBACK');
             return cb(null, {
                 header_type: "SUCCESS",
                 message_visibility: true,
@@ -7740,12 +7786,12 @@ responder.on('listbyidwithlock-sellerhome', async (req, cb) => {
             if (!user_id) {
                 await client.query('ROLLBACK');
                 return cb(null, {
-            header_type: "ERROR",
-            message_visibility: true,
-            status: false,
-            code: 2001,
-            message: "Validation failed",
-            error: "User ID required for edit"
+                    header_type: "ERROR",
+                    message_visibility: true,
+                    status: false,
+                    code: 2001,
+                    message: "Validation failed",
+                    error: "User ID required for edit"
 
                 });
             }
@@ -7781,14 +7827,14 @@ responder.on('listbyidwithlock-sellerhome', async (req, cb) => {
                                         deleted_by = $1,
                     deleted_at = NOW() 
                     WHERE lock_id = $2`,
-                    [user_id,lockRow.lock_id]
+                    [user_id, lockRow.lock_id]
                 );
                 lockRow = null;
             }
 
             // Create new lock
             if (!lockRow) {
-                
+
                 const insertLock = await client.query(
                     `INSERT INTO record_locks (
                         table_name,
@@ -7906,7 +7952,7 @@ responder.on('listbyidwithlock-sellerhome', async (req, cb) => {
         });
 
     } catch (err) {
-         await client.query('ROLLBACK');
+        await client.query('ROLLBACK');
         logger.error('CMS seller home page list Error:', err);
         return cb(null, {
             header_type: "ERROR",
@@ -7917,7 +7963,7 @@ responder.on('listbyidwithlock-sellerhome', async (req, cb) => {
             error: err.message
         });
 
-          } finally {
+    } finally {
         client.release();
     }
 });
@@ -8203,14 +8249,14 @@ responder.on('update-section-limit', async (req, cb) => {
         );
 
         if (sectionRes.rowCount === 0) {
-              return cb(null,{
-        header_type: "ERROR",
-        message_visibility: true,
-        status: false,
-        code: 2001,
-        message: "Validation failed",
-        error: "Invalid section UUID"
-    });
+            return cb(null, {
+                header_type: "ERROR",
+                message_visibility: true,
+                status: false,
+                code: 2001,
+                message: "Validation failed",
+                error: "Invalid section UUID"
+            });
             //throw new Error('Invalid section UUID');
         }
 
@@ -8218,26 +8264,26 @@ responder.on('update-section-limit', async (req, cb) => {
 
         if (!sectionData.is_active || sectionData.is_deleted) {
 
-              return cb(null,{
-        header_type: "ERROR",
-        message_visibility: true,
-        status: false,
-        code: 2001,
-        message: "Validation failed",
-        error: "Inactive or deleted section cannot be updated"
-    });
+            return cb(null, {
+                header_type: "ERROR",
+                message_visibility: true,
+                status: false,
+                code: 2001,
+                message: "Validation failed",
+                error: "Inactive or deleted section cannot be updated"
+            });
             //throw new Error('Inactive or deleted section cannot be updated');
         }
 
         if (sectionData.section_type !== 'multiple') {
-                      return cb(null,{
-        header_type: "ERROR",
-        message_visibility: true,
-        status: false,
-        code: 2001,
-        message: "Validation failed",
-        error: "Section limit can be updated only for multiple type sections"
-    });
+            return cb(null, {
+                header_type: "ERROR",
+                message_visibility: true,
+                status: false,
+                code: 2001,
+                message: "Validation failed",
+                error: "Section limit can be updated only for multiple type sections"
+            });
             // throw new Error(
             //     'Section limit can be updated only for multiple type sections'
             // );
@@ -8261,14 +8307,14 @@ responder.on('update-section-limit', async (req, cb) => {
 
         if (Number(section_limit) < item_count) {
 
-        return cb(null,{
-        header_type: "ERROR",
-        message_visibility: true,
-        status: false,
-        code: 2001,
-        message: "Validation failed",
-        error: `Section limit cannot be less than existing item count (${item_count})`
-    });
+            return cb(null, {
+                header_type: "ERROR",
+                message_visibility: true,
+                status: false,
+                code: 2001,
+                message: "Validation failed",
+                error: `Section limit cannot be less than existing item count (${item_count})`
+            });
             // throw new Error(
             //     `Section limit cannot be less than existing item count (${item_count})`
             // );

@@ -1180,7 +1180,7 @@ router.post('/update-buyerhome/:page_key', async (req, res) => {
 // ADMIN - BUYER HOME - LIST BY ID WITH EDIT LOCK
 // --------------------------------------------------
 
-router.post('/listbyidwithlock-cmshome/:id', async (req, res) => {
+router.post('/listbyidwithlock-admin-buyerhome/:id', async (req, res) => {
     try {
 
 

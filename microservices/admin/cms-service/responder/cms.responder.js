@@ -1,3 +1,21 @@
+require('module-alias/register');
+const cote = require('cote');
+const pool = require('@libs/db/postgresql_index');
+const logger = require('@libs/logger/logger');
+const path = require("path");
+const uploadDir = path.join('/app/assets', 'cms');
+const fs = require("fs");
+
+// REDIS CONNECTION & COTE RESPONDER SETUP
+const redisHost = process.env.COTE_DISCOVERY_REDIS_HOST || '127.0.0.1';
+const redisPort = process.env.COTE_DISCOVERY_REDIS_PORT || 6379;
+
+const responder = new cote.Responder({
+    name: 'cms responder',
+    key: 'cms',
+    redis: { host: redisHost, port: redisPort }
+});
+
 
 // --------------------------------------
 // UPLOAD FILE (IMAGE / VIDEO)

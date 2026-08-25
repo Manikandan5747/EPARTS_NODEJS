@@ -178,9 +178,6 @@
 #       - ./logs:C:/app/logs
 #       - ./microservices/admin/cms-service:C:/app/src
 
-
-version: "3.3"
-
 services:
 
   admin-iam-service:
@@ -189,6 +186,7 @@ services:
       dockerfile: development.Dockerfile
     image: microservices-workshop/admin-iam-service:dev
     restart: on-failure
+
     environment: &admin-env
       DB_HOST: 10.33.30.5
       DB_PORT: 5432
@@ -197,19 +195,13 @@ services:
       DB_NAME: eparts_core
       COTE_DISCOVERY_REDIS_HOST: 10.33.30.5
       COTE_DISCOVERY_REDIS_PORT: 6379
+
     volumes:
-      - type: bind
-        source: ./microservices/admin/iam-service
-        target: C:/app/src
-      - type: bind
-        source: ./libs
-        target: C:/app/libs
-      - type: bind
-        source: ./assets
-        target: C:/app/assets
-      - type: bind
-        source: ./logs
-        target: C:/app/logs
+      - ./microservices/admin/iam-service:/app/src
+      - ./libs:/app/libs
+      - ./assets:/app/assets
+      - ./logs:/app/logs
+
 
   admin-users-service:
     build:
@@ -217,20 +209,15 @@ services:
       dockerfile: development.Dockerfile
     image: microservices-workshop/admin-users-service:dev
     restart: on-failure
+
     environment: *admin-env
+
     volumes:
-      - type: bind
-        source: ./microservices/admin/users-service
-        target: C:/app/src
-      - type: bind
-        source: ./libs
-        target: C:/app/libs
-      - type: bind
-        source: ./assets
-        target: C:/app/assets
-      - type: bind
-        source: ./logs
-        target: C:/app/logs
+      - ./microservices/admin/users-service:/app/src
+      - ./libs:/app/libs
+      - ./assets:/app/assets
+      - ./logs:/app/logs
+
 
   admin-product-catalog-service:
     build:
@@ -238,20 +225,15 @@ services:
       dockerfile: development.Dockerfile
     image: microservices-workshop/admin-product-catalog-service:dev
     restart: on-failure
+
     environment: *admin-env
+
     volumes:
-      - type: bind
-        source: ./microservices/admin/product-catalog-service
-        target: C:/app/src
-      - type: bind
-        source: ./libs
-        target: C:/app/libs
-      - type: bind
-        source: ./assets
-        target: C:/app/assets
-      - type: bind
-        source: ./logs
-        target: C:/app/logs
+      - ./microservices/admin/product-catalog-service:/app/src
+      - ./libs:/app/libs
+      - ./assets:/app/assets
+      - ./logs:/app/logs
+
 
   admin-order-quote-service:
     build:
@@ -259,20 +241,15 @@ services:
       dockerfile: development.Dockerfile
     image: microservices-workshop/admin-order-quote-service:dev
     restart: on-failure
+
     environment: *admin-env
+
     volumes:
-      - type: bind
-        source: ./microservices/admin/order-quote-service
-        target: C:/app/src
-      - type: bind
-        source: ./libs
-        target: C:/app/libs
-      - type: bind
-        source: ./assets
-        target: C:/app/assets
-      - type: bind
-        source: ./logs
-        target: C:/app/logs
+      - ./microservices/admin/order-quote-service:/app/src
+      - ./libs:/app/libs
+      - ./assets:/app/assets
+      - ./logs:/app/logs
+
 
   admin-payment-finance-service:
     build:
@@ -280,20 +257,15 @@ services:
       dockerfile: development.Dockerfile
     image: microservices-workshop/admin-payment-finance-service:dev
     restart: on-failure
+
     environment: *admin-env
+
     volumes:
-      - type: bind
-        source: ./microservices/admin/payment-finance-service
-        target: C:/app/src
-      - type: bind
-        source: ./libs
-        target: C:/app/libs
-      - type: bind
-        source: ./assets
-        target: C:/app/assets
-      - type: bind
-        source: ./logs
-        target: C:/app/logs
+      - ./microservices/admin/payment-finance-service:/app/src
+      - ./libs:/app/libs
+      - ./assets:/app/assets
+      - ./logs:/app/logs
+
 
   admin-inventory-service:
     build:
@@ -301,20 +273,15 @@ services:
       dockerfile: development.Dockerfile
     image: microservices-workshop/admin-inventory-service:dev
     restart: on-failure
+
     environment: *admin-env
+
     volumes:
-      - type: bind
-        source: ./microservices/admin/inventory-service
-        target: C:/app/src
-      - type: bind
-        source: ./libs
-        target: C:/app/libs
-      - type: bind
-        source: ./assets
-        target: C:/app/assets
-      - type: bind
-        source: ./logs
-        target: C:/app/logs
+      - ./microservices/admin/inventory-service:/app/src
+      - ./libs:/app/libs
+      - ./assets:/app/assets
+      - ./logs:/app/logs
+
 
   admin-notification-service:
     build:
@@ -322,20 +289,15 @@ services:
       dockerfile: development.Dockerfile
     image: microservices-workshop/admin-notification-service:dev
     restart: on-failure
+
     environment: *admin-env
+
     volumes:
-      - type: bind
-        source: ./microservices/admin/notification-service
-        target: C:/app/src
-      - type: bind
-        source: ./libs
-        target: C:/app/libs
-      - type: bind
-        source: ./assets
-        target: C:/app/assets
-      - type: bind
-        source: ./logs
-        target: C:/app/logs
+      - ./microservices/admin/notification-service:/app/src
+      - ./libs:/app/libs
+      - ./assets:/app/assets
+      - ./logs:/app/logs
+
 
   admin-subscription-service:
     build:
@@ -343,20 +305,15 @@ services:
       dockerfile: development.Dockerfile
     image: microservices-workshop/admin-subscription-service:dev
     restart: on-failure
+
     environment: *admin-env
+
     volumes:
-      - type: bind
-        source: ./microservices/admin/subscription-service
-        target: C:/app/src
-      - type: bind
-        source: ./libs
-        target: C:/app/libs
-      - type: bind
-        source: ./assets
-        target: C:/app/assets
-      - type: bind
-        source: ./logs
-        target: C:/app/logs
+      - ./microservices/admin/subscription-service:/app/src
+      - ./libs:/app/libs
+      - ./assets:/app/assets
+      - ./logs:/app/logs
+
 
   admin-reporting-service:
     build:
@@ -364,20 +321,15 @@ services:
       dockerfile: development.Dockerfile
     image: microservices-workshop/admin-reporting-service:dev
     restart: on-failure
+
     environment: *admin-env
+
     volumes:
-      - type: bind
-        source: ./microservices/admin/reporting-service
-        target: C:/app/src
-      - type: bind
-        source: ./libs
-        target: C:/app/libs
-      - type: bind
-        source: ./assets
-        target: C:/app/assets
-      - type: bind
-        source: ./logs
-        target: C:/app/logs
+      - ./microservices/admin/reporting-service:/app/src
+      - ./libs:/app/libs
+      - ./assets:/app/assets
+      - ./logs:/app/logs
+
 
   admin-request-offer-service:
     build:
@@ -385,20 +337,15 @@ services:
       dockerfile: development.Dockerfile
     image: microservices-workshop/admin-request-offer-service:dev
     restart: on-failure
+
     environment: *admin-env
+
     volumes:
-      - type: bind
-        source: ./microservices/admin/request-offer-service
-        target: C:/app/src
-      - type: bind
-        source: ./libs
-        target: C:/app/libs
-      - type: bind
-        source: ./assets
-        target: C:/app/assets
-      - type: bind
-        source: ./logs
-        target: C:/app/logs
+      - ./microservices/admin/request-offer-service:/app/src
+      - ./libs:/app/libs
+      - ./assets:/app/assets
+      - ./logs:/app/logs
+
 
   admin-master-data-service:
     build:
@@ -406,20 +353,15 @@ services:
       dockerfile: development.Dockerfile
     image: microservices-workshop/admin-master-data-service:dev
     restart: on-failure
+
     environment: *admin-env
+
     volumes:
-      - type: bind
-        source: ./microservices/admin/master-data-service
-        target: C:/app/src
-      - type: bind
-        source: ./libs
-        target: C:/app/libs
-      - type: bind
-        source: ./assets
-        target: C:/app/assets
-      - type: bind
-        source: ./logs
-        target: C:/app/logs
+      - ./microservices/admin/master-data-service:/app/src
+      - ./libs:/app/libs
+      - ./assets:/app/assets
+      - ./logs:/app/logs
+
 
   admin-integration-service:
     build:
@@ -427,20 +369,15 @@ services:
       dockerfile: development.Dockerfile
     image: microservices-workshop/admin-integration-service:dev
     restart: on-failure
+
     environment: *admin-env
+
     volumes:
-      - type: bind
-        source: ./microservices/admin/integration-service
-        target: C:/app/src
-      - type: bind
-        source: ./libs
-        target: C:/app/libs
-      - type: bind
-        source: ./assets
-        target: C:/app/assets
-      - type: bind
-        source: ./logs
-        target: C:/app/logs
+      - ./microservices/admin/integration-service:/app/src
+      - ./libs:/app/libs
+      - ./assets:/app/assets
+      - ./logs:/app/logs
+
 
   admin-cms-service:
     build:
@@ -448,17 +385,11 @@ services:
       dockerfile: development.Dockerfile
     image: microservices-workshop/admin-cms-service:dev
     restart: on-failure
+
     environment: *admin-env
+
     volumes:
-      - type: bind
-        source: ./microservices/admin/cms-service
-        target: C:/app/src
-      - type: bind
-        source: ./libs
-        target: C:/app/libs
-      - type: bind
-        source: ./assets
-        target: C:/app/assets
-      - type: bind
-        source: ./logs
-        target: C:/app/logs
+      - ./microservices/admin/cms-service:/app/src
+      - ./libs:/app/libs
+      - ./assets:/app/assets
+      - ./logs:/app/logs

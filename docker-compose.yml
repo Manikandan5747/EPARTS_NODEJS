@@ -75,14 +75,15 @@
 #       - admin-integration-service
 #       - admin-cms-service
 
+
+
 services:
+
   api-gateway:
     build:
       context: .
       dockerfile: development.Dockerfile
-
     image: microservices-workshop/api-gateway:dev
-
     restart: on-failure
 
     environment:
@@ -94,21 +95,10 @@ services:
       - "3000:3000"
 
     volumes:
-      - type: bind
-        source: ./api-gateway
-        target: C:/app/src
-
-      - type: bind
-        source: ./libs
-        target: C:/app/libs
-
-      - type: bind
-        source: ./assets
-        target: C:/app/assets
-
-      - type: bind
-        source: ./logs
-        target: C:/app/logs
+      - ./api-gateway:/app/src
+      - ./libs:/app/libs
+      - ./assets:/app/assets
+      - ./logs:/app/logs
 
     depends_on:
       - admin-iam-service

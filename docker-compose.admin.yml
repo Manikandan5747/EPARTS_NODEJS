@@ -1,3 +1,184 @@
+# version: "3.3"
+
+# services:
+
+#   admin-iam-service:
+#     build:
+#       context: .
+#       dockerfile: development.Dockerfile
+#     image: microservices-workshop/admin-iam-service:dev
+#     restart: on-failure
+#     environment: &admin-env
+#       DB_HOST: 10.33.30.5          
+#       DB_PORT: 5432
+#       DB_USER: postgres
+#       DB_PASSWORD: ExZ3naPw@32!perts
+#       DB_NAME: eparts_core
+#       COTE_DISCOVERY_REDIS_HOST: 10.33.30.5
+#       COTE_DISCOVERY_REDIS_PORT: 6379
+#     volumes:
+#       - ./microservices/admin/iam-service:C:/app/src
+#       - ./libs:C:/app/libs
+#       - ./assets:C:/app/assets
+#       - ./logs:C:/app/logs
+     
+#   admin-users-service:
+#     build:
+#       context: .
+#       dockerfile: development.Dockerfile
+#     image: microservices-workshop/admin-users-service:dev
+#     restart: on-failure
+#     environment: *admin-env
+#     volumes:
+#       - ./microservices/admin/users-service:C:/app/src
+#       - ./libs:C:/app/libs
+#       - ./assets:C:/app/assets
+#       - ./logs:C:/app/logs
+   
+#   admin-product-catalog-service:
+#     build:
+#       context: .
+#       dockerfile: development.Dockerfile
+#     image: microservices-workshop/admin-product-catalog-service:dev
+#     restart: on-failure
+#     environment: *admin-env
+#     volumes:
+#       - ./microservices/admin/product-catalog-service:C:/app/src
+#       - ./libs:C:/app/libs
+#       - ./assets:C:/app/assets
+#       - ./logs:C:/app/logs
+
+#   admin-order-quote-service:
+#     build:
+#       context: .
+#       dockerfile: development.Dockerfile
+#     image: microservices-workshop/admin-order-quote-service:dev
+#     restart: on-failure
+#     environment: *admin-env
+#     volumes:
+#       - ./microservices/admin/order-quote-service:C:/app/src
+#       - ./libs:C:/app/libs
+#       - ./assets:C:/app/assets
+#       - ./logs:C:/app/logs
+
+#   admin-payment-finance-service:
+#     build:
+#       context: .
+#       dockerfile: development.Dockerfile
+#     image: microservices-workshop/admin-payment-finance-service:dev
+#     restart: on-failure
+#     environment: *admin-env
+#     volumes:
+#       - ./microservices/admin/payment-finance-service:C:/app/src
+#       - ./libs:C:/app/libs
+#       - ./assets:C:/app/assets
+#       - ./logs:C:/app/logs
+
+#   admin-inventory-service:
+#     build:
+#       context: .
+#       dockerfile: development.Dockerfile
+#     image: microservices-workshop/admin-inventory-service:dev
+#     restart: on-failure
+#     environment: *admin-env
+#     volumes:
+#       - ./libs:C:/app/libs
+#       - ./assets:C:/app/assets
+#       - ./logs:C:/app/logs
+#       - ./microservices/admin/inventory-service:C:/app/src
+
+#   admin-notification-service:
+#     build:
+#       context: .
+#       dockerfile: development.Dockerfile
+#     image: microservices-workshop/admin-notification-service:dev
+#     restart: on-failure
+#     environment: *admin-env
+#     volumes:
+#       - ./libs:C:/app/libs
+#       - ./assets:C:/app/assets
+#       - ./logs:C:/app/logs
+#       - ./microservices/admin/notification-service:C:/app/src
+
+#   admin-subscription-service:
+#     build:
+#       context: .
+#       dockerfile: development.Dockerfile
+#     image: microservices-workshop/admin-subscription-service:dev
+#     restart: on-failure
+#     environment: *admin-env
+#     volumes:
+#       - ./libs:C:/app/libs
+#       - ./assets:C:/app/assets
+#       - ./logs:C:/app/logs
+#       - ./microservices/admin/subscription-service:C:/app/src
+
+#   admin-reporting-service:
+#     build:
+#       context: .
+#       dockerfile: development.Dockerfile
+#     image: microservices-workshop/admin-reporting-service:dev
+#     restart: on-failure
+#     environment: *admin-env
+#     volumes:
+#       - ./libs:C:/app/libs
+#       - ./assets:C:/app/assets
+#       - ./logs:C:/app/logs
+#       - ./microservices/admin/reporting-service:C:/app/src
+
+#   admin-request-offer-service:
+#     build:
+#       context: .
+#       dockerfile: development.Dockerfile
+#     image: microservices-workshop/admin-request-offer-service:dev
+#     restart: on-failure
+#     environment: *admin-env
+#     volumes:
+#       - ./microservices/admin/request-offer-service:C:/app/src
+#       - ./libs:C:/app/libs
+#       - ./assets:C:/app/assets
+#       - ./logs:C:/app/logs
+
+#   admin-master-data-service:
+#     build:
+#       context: .
+#       dockerfile: development.Dockerfile
+#     image: microservices-workshop/admin-master-data-service:dev
+#     restart: on-failure
+#     environment: *admin-env
+#     volumes:
+#       - ./microservices/admin/master-data-service:C:/app/src
+#       - ./libs:C:/app/libs
+#       - ./assets:C:/app/assets
+#       - ./logs:C:/app/logs
+
+#   admin-integration-service:
+#     build:
+#       context: .
+#       dockerfile: development.Dockerfile
+#     image: microservices-workshop/admin-integration-service:dev
+#     restart: on-failure
+#     environment: *admin-env
+#     volumes:
+#       - ./microservices/admin/integration-service:C:/app/src
+#       - ./libs:C:/app/libs
+#       - ./assets:C:/app/assets
+#       - ./logs:C:/app/logs
+      
+#   admin-cms-service:
+#     build:
+#       context: .
+#       dockerfile: development.Dockerfile
+#     image: microservices-workshop/admin-cms-service:dev
+#     restart: on-failure
+#     environment: *admin-env
+#     volumes:
+#       - ./libs:C:/app/libs
+#       - ./assets:C:/app/assets
+#       - ./logs:C:/app/logs
+#       - ./microservices/admin/cms-service:C:/app/src
+
+
 version: "3.3"
 
 services:
@@ -9,7 +190,7 @@ services:
     image: microservices-workshop/admin-iam-service:dev
     restart: on-failure
     environment: &admin-env
-      DB_HOST: 10.33.30.5          
+      DB_HOST: 10.33.30.5
       DB_PORT: 5432
       DB_USER: postgres
       DB_PASSWORD: ExZ3naPw@32!perts
@@ -17,11 +198,19 @@ services:
       COTE_DISCOVERY_REDIS_HOST: 10.33.30.5
       COTE_DISCOVERY_REDIS_PORT: 6379
     volumes:
-      - ./microservices/admin/iam-service:C:/app/src
-      - ./libs:C:/app/libs
-      - ./assets:C:/app/assets
-      - ./logs:C:/app/logs
-     
+      - type: bind
+        source: ./microservices/admin/iam-service
+        target: C:/app/src
+      - type: bind
+        source: ./libs
+        target: C:/app/libs
+      - type: bind
+        source: ./assets
+        target: C:/app/assets
+      - type: bind
+        source: ./logs
+        target: C:/app/logs
+
   admin-users-service:
     build:
       context: .
@@ -30,11 +219,19 @@ services:
     restart: on-failure
     environment: *admin-env
     volumes:
-      - ./microservices/admin/users-service:C:/app/src
-      - ./libs:C:/app/libs
-      - ./assets:C:/app/assets
-      - ./logs:C:/app/logs
-   
+      - type: bind
+        source: ./microservices/admin/users-service
+        target: C:/app/src
+      - type: bind
+        source: ./libs
+        target: C:/app/libs
+      - type: bind
+        source: ./assets
+        target: C:/app/assets
+      - type: bind
+        source: ./logs
+        target: C:/app/logs
+
   admin-product-catalog-service:
     build:
       context: .
@@ -43,10 +240,18 @@ services:
     restart: on-failure
     environment: *admin-env
     volumes:
-      - ./microservices/admin/product-catalog-service:C:/app/src
-      - ./libs:C:/app/libs
-      - ./assets:C:/app/assets
-      - ./logs:C:/app/logs
+      - type: bind
+        source: ./microservices/admin/product-catalog-service
+        target: C:/app/src
+      - type: bind
+        source: ./libs
+        target: C:/app/libs
+      - type: bind
+        source: ./assets
+        target: C:/app/assets
+      - type: bind
+        source: ./logs
+        target: C:/app/logs
 
   admin-order-quote-service:
     build:
@@ -56,10 +261,18 @@ services:
     restart: on-failure
     environment: *admin-env
     volumes:
-      - ./microservices/admin/order-quote-service:C:/app/src
-      - ./libs:C:/app/libs
-      - ./assets:C:/app/assets
-      - ./logs:C:/app/logs
+      - type: bind
+        source: ./microservices/admin/order-quote-service
+        target: C:/app/src
+      - type: bind
+        source: ./libs
+        target: C:/app/libs
+      - type: bind
+        source: ./assets
+        target: C:/app/assets
+      - type: bind
+        source: ./logs
+        target: C:/app/logs
 
   admin-payment-finance-service:
     build:
@@ -69,10 +282,18 @@ services:
     restart: on-failure
     environment: *admin-env
     volumes:
-      - ./microservices/admin/payment-finance-service:C:/app/src
-      - ./libs:C:/app/libs
-      - ./assets:C:/app/assets
-      - ./logs:C:/app/logs
+      - type: bind
+        source: ./microservices/admin/payment-finance-service
+        target: C:/app/src
+      - type: bind
+        source: ./libs
+        target: C:/app/libs
+      - type: bind
+        source: ./assets
+        target: C:/app/assets
+      - type: bind
+        source: ./logs
+        target: C:/app/logs
 
   admin-inventory-service:
     build:
@@ -82,10 +303,18 @@ services:
     restart: on-failure
     environment: *admin-env
     volumes:
-      - ./libs:C:/app/libs
-      - ./assets:C:/app/assets
-      - ./logs:C:/app/logs
-      - ./microservices/admin/inventory-service:C:/app/src
+      - type: bind
+        source: ./microservices/admin/inventory-service
+        target: C:/app/src
+      - type: bind
+        source: ./libs
+        target: C:/app/libs
+      - type: bind
+        source: ./assets
+        target: C:/app/assets
+      - type: bind
+        source: ./logs
+        target: C:/app/logs
 
   admin-notification-service:
     build:
@@ -95,10 +324,18 @@ services:
     restart: on-failure
     environment: *admin-env
     volumes:
-      - ./libs:C:/app/libs
-      - ./assets:C:/app/assets
-      - ./logs:C:/app/logs
-      - ./microservices/admin/notification-service:C:/app/src
+      - type: bind
+        source: ./microservices/admin/notification-service
+        target: C:/app/src
+      - type: bind
+        source: ./libs
+        target: C:/app/libs
+      - type: bind
+        source: ./assets
+        target: C:/app/assets
+      - type: bind
+        source: ./logs
+        target: C:/app/logs
 
   admin-subscription-service:
     build:
@@ -108,10 +345,18 @@ services:
     restart: on-failure
     environment: *admin-env
     volumes:
-      - ./libs:C:/app/libs
-      - ./assets:C:/app/assets
-      - ./logs:C:/app/logs
-      - ./microservices/admin/subscription-service:C:/app/src
+      - type: bind
+        source: ./microservices/admin/subscription-service
+        target: C:/app/src
+      - type: bind
+        source: ./libs
+        target: C:/app/libs
+      - type: bind
+        source: ./assets
+        target: C:/app/assets
+      - type: bind
+        source: ./logs
+        target: C:/app/logs
 
   admin-reporting-service:
     build:
@@ -121,10 +366,18 @@ services:
     restart: on-failure
     environment: *admin-env
     volumes:
-      - ./libs:C:/app/libs
-      - ./assets:C:/app/assets
-      - ./logs:C:/app/logs
-      - ./microservices/admin/reporting-service:C:/app/src
+      - type: bind
+        source: ./microservices/admin/reporting-service
+        target: C:/app/src
+      - type: bind
+        source: ./libs
+        target: C:/app/libs
+      - type: bind
+        source: ./assets
+        target: C:/app/assets
+      - type: bind
+        source: ./logs
+        target: C:/app/logs
 
   admin-request-offer-service:
     build:
@@ -134,10 +387,18 @@ services:
     restart: on-failure
     environment: *admin-env
     volumes:
-      - ./microservices/admin/request-offer-service:C:/app/src
-      - ./libs:C:/app/libs
-      - ./assets:C:/app/assets
-      - ./logs:C:/app/logs
+      - type: bind
+        source: ./microservices/admin/request-offer-service
+        target: C:/app/src
+      - type: bind
+        source: ./libs
+        target: C:/app/libs
+      - type: bind
+        source: ./assets
+        target: C:/app/assets
+      - type: bind
+        source: ./logs
+        target: C:/app/logs
 
   admin-master-data-service:
     build:
@@ -147,10 +408,18 @@ services:
     restart: on-failure
     environment: *admin-env
     volumes:
-      - ./microservices/admin/master-data-service:C:/app/src
-      - ./libs:C:/app/libs
-      - ./assets:C:/app/assets
-      - ./logs:C:/app/logs
+      - type: bind
+        source: ./microservices/admin/master-data-service
+        target: C:/app/src
+      - type: bind
+        source: ./libs
+        target: C:/app/libs
+      - type: bind
+        source: ./assets
+        target: C:/app/assets
+      - type: bind
+        source: ./logs
+        target: C:/app/logs
 
   admin-integration-service:
     build:
@@ -160,11 +429,19 @@ services:
     restart: on-failure
     environment: *admin-env
     volumes:
-      - ./microservices/admin/integration-service:C:/app/src
-      - ./libs:C:/app/libs
-      - ./assets:C:/app/assets
-      - ./logs:C:/app/logs
-      
+      - type: bind
+        source: ./microservices/admin/integration-service
+        target: C:/app/src
+      - type: bind
+        source: ./libs
+        target: C:/app/libs
+      - type: bind
+        source: ./assets
+        target: C:/app/assets
+      - type: bind
+        source: ./logs
+        target: C:/app/logs
+
   admin-cms-service:
     build:
       context: .
@@ -173,7 +450,15 @@ services:
     restart: on-failure
     environment: *admin-env
     volumes:
-      - ./libs:C:/app/libs
-      - ./assets:C:/app/assets
-      - ./logs:C:/app/logs
-      - ./microservices/admin/cms-service:C:/app/src
+      - type: bind
+        source: ./microservices/admin/cms-service
+        target: C:/app/src
+      - type: bind
+        source: ./libs
+        target: C:/app/libs
+      - type: bind
+        source: ./assets
+        target: C:/app/assets
+      - type: bind
+        source: ./logs
+        target: C:/app/logs

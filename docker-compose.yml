@@ -1,22 +1,115 @@
-version: '3.3'
+# # version: '3.3'
+# # services:
+# #   api-gateway:
+# #     build:
+# #       context: .
+# #       dockerfile: development.Dockerfile
+# #     image: microservices-workshop/api-gateway:dev
+# #     restart: on-failure
+# #     environment:
+# #       - VIRTUAL_HOST=api-gateway.app.com
+# #       - COTE_DISCOVERY_REDIS_HOST=10.33.30.5     
+# #       - COTE_DISCOVERY_REDIS_PORT=6379      
+# #     ports:
+# #       - "3000:3000"
+# #     volumes:
+# #       - ./api-gateway:C:/app/src
+# #       - ./libs:C:/app/libs
+# #       - ./assets:C:/app/assets
+# #       - ./logs:C:/app/logs 
+# #     depends_on:
+# #       - admin-iam-service
+# #       - admin-users-service
+# #       - admin-product-catalog-service
+# #       - admin-order-quote-service
+# #       - admin-payment-finance-service
+# #       - admin-inventory-service
+# #       - admin-notification-service
+# #       - admin-subscription-service
+# #       - admin-reporting-service
+# #       - admin-request-offer-service
+# #       - admin-master-data-service
+# #       - admin-integration-service
+# #       - admin-cms-service
+
+
+
+# version: '3.3'
+
+# services:
+#   api-gateway:
+#     build:
+#       context: .
+#       dockerfile: development.Dockerfile
+
+#     image: microservices-workshop/api-gateway:dev
+
+#     restart: on-failure
+
+#     environment:
+#       - VIRTUAL_HOST=api-gateway.app.com
+#       - COTE_DISCOVERY_REDIS_HOST=10.33.30.5
+#       - COTE_DISCOVERY_REDIS_PORT=6379
+
+#     ports:
+#       - "3000:3000"
+
+#     volumes:
+#       - "./api-gateway:C:/app/src"
+#       - "./libs:C:/app/libs"
+#       - "./assets:C:/app/assets"
+#       - "./logs:C:/app/logs"
+
+#     depends_on:
+#       - admin-iam-service
+#       - admin-users-service
+#       - admin-product-catalog-service
+#       - admin-order-quote-service
+#       - admin-payment-finance-service
+#       - admin-inventory-service
+#       - admin-notification-service
+#       - admin-subscription-service
+#       - admin-reporting-service
+#       - admin-request-offer-service
+#       - admin-master-data-service
+#       - admin-integration-service
+#       - admin-cms-service
+
 services:
   api-gateway:
     build:
       context: .
       dockerfile: development.Dockerfile
+
     image: microservices-workshop/api-gateway:dev
+
     restart: on-failure
+
     environment:
-      - VIRTUAL_HOST=api-gateway.app.com
-      - COTE_DISCOVERY_REDIS_HOST=10.33.30.5     
-      - COTE_DISCOVERY_REDIS_PORT=6379      
+      VIRTUAL_HOST: api-gateway.app.com
+      COTE_DISCOVERY_REDIS_HOST: 10.33.30.5
+      COTE_DISCOVERY_REDIS_PORT: 6379
+
     ports:
       - "3000:3000"
+
     volumes:
-      - ./api-gateway:C:/app/src
-      - ./libs:C:/app/libs
-      - ./assets:C:/app/assets
-      - ./logs:C:/app/logs 
+      - type: bind
+        source: ./api-gateway
+        target: C:/app/src
+
+      - type: bind
+        source: ./libs
+        target: C:/app/libs
+
+      - type: bind
+        source: ./assets
+        target: C:/app/assets
+
+      - type: bind
+        source: ./logs
+        target: C:/app/logs
+
     depends_on:
       - admin-iam-service
       - admin-users-service
@@ -31,4 +124,3 @@ services:
       - admin-master-data-service
       - admin-integration-service
       - admin-cms-service
-

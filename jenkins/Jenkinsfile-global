@@ -75,33 +75,105 @@ pipeline {
 }
 
 
+// stage('Docker Compose Build & Deploy') {
+//     steps {
+//         bat '''
+//         echo ================================================
+//         echo Moving to Docker directory
+//         echo ================================================
+//         cd "%DOCKER_BUILD_DIR%"
+
+//         echo ================================================
+//         echo Stopping old containers...
+//         echo ================================================
+//         docker-compose -f docker-compose.yml -f docker-compose.admin.yml down
+
+//         echo ================================================
+//         echo Building fresh Docker images...
+//         echo ================================================
+//         docker-compose -f docker-compose.yml -f docker-compose.admin.yml build
+
+//         echo ================================================
+//         echo Starting containers in detached mode...
+//         echo ================================================
+//         docker-compose -f docker-compose.yml -f docker-compose.admin.yml up -d
+
+//         echo ================================================
+//         echo Running containers:
+//         echo ================================================
+//         docker ps
+//         '''
+//     }
+// }
+
+
 stage('Docker Compose Build & Deploy') {
     steps {
         bat '''
+        @echo off
+
         echo ================================================
         echo Moving to Docker directory
         echo ================================================
-        cd "%DOCKER_BUILD_DIR%"
+        cd /d "%DOCKER_BUILD_DIR%"
+        if %ERRORLEVEL% NEQ 0 (
+            echo ERROR: Docker directory not found.
+            exit /b 1
+        )
+
+        echo ================================================
+        echo Docker Version
+        echo ================================================
+        docker --version
+        if %ERRORLEVEL% NEQ 0 (
+            echo ERROR: Docker is not available.
+            exit /b 1
+        )
 
         echo ================================================
         echo Stopping old containers...
         echo ================================================
-        docker-compose -f docker-compose.yml -f docker-compose.admin.yml down
+        docker compose -f docker-compose.yml -f docker-compose.admin.yml down
+        if %ERRORLEVEL% NEQ 0 (
+            echo ERROR: Failed to stop old containers.
+            exit /b 1
+        )
+
+        echo ================================================
+        echo Validating Docker Compose configuration...
+        echo ================================================
+        docker compose -f docker-compose.yml -f docker-compose.admin.yml config
+        if %ERRORLEVEL% NEQ 0 (
+            echo ERROR: Docker Compose configuration is invalid.
+            exit /b 1
+        )
 
         echo ================================================
         echo Building fresh Docker images...
         echo ================================================
-        docker-compose -f docker-compose.yml -f docker-compose.admin.yml build
+        docker compose -f docker-compose.yml -f docker-compose.admin.yml build
+        if %ERRORLEVEL% NEQ 0 (
+            echo ERROR: Docker image build failed.
+            exit /b 1
+        )
 
         echo ================================================
         echo Starting containers in detached mode...
         echo ================================================
-        docker-compose -f docker-compose.yml -f docker-compose.admin.yml up -d
+        docker compose -f docker-compose.yml -f docker-compose.admin.yml up -d
+        if %ERRORLEVEL% NEQ 0 (
+            echo ERROR: Failed to start containers.
+            exit /b 1
+        )
 
         echo ================================================
         echo Running containers:
         echo ================================================
         docker ps
+
+        echo ================================================
+        echo Docker deployment completed successfully.
+        echo ================================================
         '''
     }
 }

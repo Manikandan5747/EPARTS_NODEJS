@@ -127,10 +127,15 @@ stage('Docker Compose Build & Deploy') {
         echo ================================================
         docker --version
 
+        if %ERRORLEVEL% NEQ 0 (
+            echo ERROR: Docker is not available.
+            exit /b 1
+        )
+
         echo ================================================
         echo Docker Compose Version
         echo ================================================
-        docker compose version
+        docker-compose version
 
         if %ERRORLEVEL% NEQ 0 (
             echo ERROR: Docker Compose is not available.
@@ -140,7 +145,7 @@ stage('Docker Compose Build & Deploy') {
         echo ================================================
         echo Stopping old containers...
         echo ================================================
-        docker compose -f docker-compose.yml -f docker-compose.admin.yml down
+        docker-compose -f docker-compose.yml -f docker-compose.admin.yml down
 
         if %ERRORLEVEL% NEQ 0 (
             echo ERROR: Failed to stop old containers.
@@ -150,7 +155,7 @@ stage('Docker Compose Build & Deploy') {
         echo ================================================
         echo Validating Docker Compose configuration...
         echo ================================================
-        docker compose -f docker-compose.yml -f docker-compose.admin.yml config
+        docker-compose -f docker-compose.yml -f docker-compose.admin.yml config
 
         if %ERRORLEVEL% NEQ 0 (
             echo ERROR: Docker Compose configuration failed.
@@ -160,7 +165,7 @@ stage('Docker Compose Build & Deploy') {
         echo ================================================
         echo Building fresh Docker images...
         echo ================================================
-        docker compose -f docker-compose.yml -f docker-compose.admin.yml build
+        docker-compose -f docker-compose.yml -f docker-compose.admin.yml build
 
         if %ERRORLEVEL% NEQ 0 (
             echo ERROR: Docker image build failed.
@@ -170,7 +175,7 @@ stage('Docker Compose Build & Deploy') {
         echo ================================================
         echo Starting containers in detached mode...
         echo ================================================
-        docker compose -f docker-compose.yml -f docker-compose.admin.yml up -d
+        docker-compose -f docker-compose.yml -f docker-compose.admin.yml up -d
 
         if %ERRORLEVEL% NEQ 0 (
             echo ERROR: Failed to start containers.

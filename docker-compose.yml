@@ -13,7 +13,7 @@ services:
     volumes:
       - ./api-gateway:/app/src
       - ./libs:/app/libs
-       - C:/docker-builds/eParts_backend/assets::/app/assets
+      - C:/docker-builds/eParts_backend/assets:/app/assets
       - ./logs:/app/logs
     depends_on:
       - admin-iam-service

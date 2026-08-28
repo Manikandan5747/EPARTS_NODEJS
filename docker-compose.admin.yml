@@ -30,7 +30,7 @@ services:
     volumes:
       - ./microservices/admin/users-service:/app/src
       - ./libs:/app/libs
-       - C:/docker-builds/eParts_backend/assets::/app/assets
+      - C:/docker-builds/eParts_backend/assets:/app/assets
       - ./logs:/app/logs
    
   admin-product-catalog-service:
@@ -43,7 +43,7 @@ services:
     volumes:
       - ./microservices/admin/product-catalog-service:/app/src
       - ./libs:/app/libs
-       - C:/docker-builds/eParts_backend/assets::/app/assets
+      - C:/docker-builds/eParts_backend/assets:/app/assets
       - ./logs:/app/logs
 
   admin-order-quote-service:
@@ -56,7 +56,7 @@ services:
     volumes:
       - ./microservices/admin/order-quote-service:/app/src
       - ./libs:/app/libs
-       - C:/docker-builds/eParts_backend/assets::/app/assets
+      - C:/docker-builds/eParts_backend/assets:/app/assets
       - ./logs:/app/logs
 
   admin-payment-finance-service:
@@ -69,7 +69,7 @@ services:
     volumes:
       - ./microservices/admin/payment-finance-service:/app/src
       - ./libs:/app/libs
-       - C:/docker-builds/eParts_backend/assets::/app/assets
+      - C:/docker-builds/eParts_backend/assets:/app/assets
       - ./logs:/app/logs
 
   admin-inventory-service:
@@ -81,7 +81,7 @@ services:
     environment: *admin-env
     volumes:
       - ./libs:/app/libs
-       - C:/docker-builds/eParts_backend/assets::/app/assets
+      - C:/docker-builds/eParts_backend/assets:/app/assets
       - ./logs:/app/logs
       - ./microservices/admin/inventory-service:/app/src
 
@@ -94,7 +94,7 @@ services:
     environment: *admin-env
     volumes:
       - ./libs:/app/libs
-       - C:/docker-builds/eParts_backend/assets::/app/assets
+      - C:/docker-builds/eParts_backend/assets:/app/assets
       - ./logs:/app/logs
       - ./microservices/admin/notification-service:/app/src
 
@@ -107,7 +107,7 @@ services:
     environment: *admin-env
     volumes:
       - ./libs:/app/libs
-       - C:/docker-builds/eParts_backend/assets::/app/assets
+      - C:/docker-builds/eParts_backend/assets:/app/assets
       - ./logs:/app/logs
       - ./microservices/admin/subscription-service:/app/src
 
@@ -120,7 +120,7 @@ services:
     environment: *admin-env
     volumes:
       - ./libs:/app/libs
-       - C:/docker-builds/eParts_backend/assets::/app/assets
+      - C:/docker-builds/eParts_backend/assets:/app/assets
       - ./logs:/app/logs
       - ./microservices/admin/reporting-service:/app/src
 
@@ -134,7 +134,7 @@ services:
     volumes:
       - ./microservices/admin/request-offer-service:/app/src
       - ./libs:/app/libs
-       - C:/docker-builds/eParts_backend/assets::/app/assets
+      - C:/docker-builds/eParts_backend/assets:/app/assets
       - ./logs:/app/logs
 
   admin-master-data-service:
@@ -147,7 +147,7 @@ services:
     volumes:
       - ./microservices/admin/master-data-service:/app/src
       - ./libs:/app/libs
-       - C:/docker-builds/eParts_backend/assets::/app/assets
+      - C:/docker-builds/eParts_backend/assets:/app/assets
       - ./logs:/app/logs
 
   admin-integration-service:
@@ -160,7 +160,7 @@ services:
     volumes:
       - ./microservices/admin/integration-service:/app/src
       - ./libs:/app/libs
-       - C:/docker-builds/eParts_backend/assets::/app/assets
+      - C:/docker-builds/eParts_backend/assets:/app/assets
       - ./logs:/app/logs
       
   admin-cms-service:
@@ -172,6 +172,6 @@ services:
     environment: *admin-env
     volumes:
       - ./libs:/app/libs
-       - C:/docker-builds/eParts_backend/assets::/app/assets
+      - C:/docker-builds/eParts_backend/assets:/app/assets
       - ./logs:/app/logs
       - ./microservices/admin/cms-service:/app/src

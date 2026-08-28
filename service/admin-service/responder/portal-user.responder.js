@@ -21,6 +21,7 @@ const responder = new cote.Responder({
 // --------------------------------------------------
 // CREATE PORTAL USER
 // --------------------------------------------------
+
 responder.on("create-portal-users", async (req, cb) => {
     try {
         const {
@@ -29,30 +30,149 @@ responder.on("create-portal-users", async (req, cb) => {
             email,
             phone_number,
             password,
-            user_type,
-            seller_id,
-            buyer_id,
+            user_type_uuid,
+            seller_uuid,
+            buyer_uuid,
+            profile_icon,
             created_by
         } = req.body;
-        console.log("req.body", req.body);
 
         // -----------------------------
         // VALIDATION
         // -----------------------------
         if (!username?.trim()) {
-            return cb(null, { status: false, code: 2001, error: "Username is required" });
+            return cb(null, {
+                header_type: "ERROR",
+                message_visibility: true,
+                status: false,
+                code: 2001,
+                message: "Validation failed",
+                error: "Username is required"
+            });
         }
         if (!full_name?.trim()) {
-            return cb(null, { status: false, code: 2001, error: "Full Name is required" });
+            return cb(null, {
+                header_type: "ERROR",
+                message_visibility: true,
+                status: false,
+                code: 2001,
+                message: "Validation failed",
+                error: "Full Name is required"
+            });
         }
         if (!password?.trim()) {
-            return cb(null, { status: false, code: 2001, error: "Password is required" });
+            return cb(null, {
+                header_type: "ERROR",
+                message_visibility: true,
+                status: false,
+                code: 2001,
+                message: "Validation failed",
+                error: "Password is required"
+            });
         }
-        if (!user_type?.trim()) {
-            return cb(null, { status: false, code: 2001, error: "User type is required" });
+        if (!user_type_uuid?.trim()) {
+            return cb(null, {
+                header_type: "ERROR",
+                message_visibility: true,
+                status: false,
+                code: 2001,
+                message: "Validation failed",
+                error: "User type is required"
+            });
+        }
+        if (!buyer_uuid?.trim() && !seller_uuid?.trim()) {
+            return cb(null, {
+                header_type: "ERROR",
+                message_visibility: true,
+                status: false,
+                code: 2001,
+                message: "Validation failed",
+                error: "Either Buyer UUID or Seller UUID is required"
+            });
         }
 
         const usernameTrim = username.trim();
+
+        // -----------------------------
+        // FETCH user_type_id
+        // -----------------------------
+        const userTypeQuery = {
+            text: `
+                SELECT user_type_id FROM user_types
+                WHERE user_type_uuid = $1
+                AND is_deleted = FALSE
+                AND is_active = TRUE
+            `,
+            values: [user_type_uuid]
+        };
+        const userTypeResult = await pool.query(userTypeQuery);
+        if (userTypeResult.rowCount === 0) {
+            return cb(null, {
+                header_type: "ERROR",
+                message_visibility: true,
+                status: false,
+                code: 2001,
+                message: "Validation failed",
+                error: "Invalid User Type UUID"
+            });
+        }
+        const user_type_id = userTypeResult.rows[0].user_type_id;
+
+        // -----------------------------
+        // FETCH buyer_id (if buyer_uuid provided)
+        // -----------------------------
+        let buyer_id = null;
+        if (buyer_uuid) {
+            const buyerQuery = {
+                text: `
+                    SELECT buyer_id FROM buyer_accounts
+                    WHERE buyer_uuid = $1
+                    AND is_deleted = FALSE
+                    AND is_active = TRUE
+                `,
+                values: [buyer_uuid]
+            };
+            const buyerResult = await pool.query(buyerQuery);
+            if (buyerResult.rowCount === 0) {
+                return cb(null, {
+                    header_type: "ERROR",
+                    message_visibility: true,
+                    status: false,
+                    code: 2001,
+                    message: "Validation failed",
+                    error: "Invalid Buyer UUID"
+                });
+            }
+            buyer_id = buyerResult.rows[0].buyer_id;
+        }
+
+        // -----------------------------
+        // FETCH seller_id (if seller_uuid provided)
+        // -----------------------------
+        let seller_id = null;
+        if (seller_uuid) {
+            const sellerQuery = {
+                text: `
+                    SELECT seller_id FROM seller_accounts
+                    WHERE seller_uuid = $1
+                    AND is_deleted = FALSE
+                    AND is_active = TRUE
+                `,
+                values: [seller_uuid]
+            };
+            const sellerResult = await pool.query(sellerQuery);
+            if (sellerResult.rowCount === 0) {
+                return cb(null, {
+                    header_type: "ERROR",
+                    message_visibility: true,
+                    status: false,
+                    code: 2001,
+                    message: "Validation failed",
+                    error: "Invalid Seller UUID"
+                });
+            }
+            seller_id = sellerResult.rows[0].seller_id;
+        }
 
         // -----------------------------
         // DUPLICATE CHECK
@@ -70,8 +190,11 @@ responder.on("create-portal-users", async (req, cb) => {
 
         if (duplicateCheck.rowCount > 0) {
             return cb(null, {
+                header_type: "ERROR",
+                message_visibility: true,
                 status: false,
                 code: 2002,
+                message: "Creation failed",
                 error: "User already exists (username/email/phone)"
             });
         }
@@ -88,13 +211,13 @@ responder.on("create-portal-users", async (req, cb) => {
         const insertQuery = {
             text: `
                 INSERT INTO portal_users 
-                    (portal_user_uuid, username, full_name, email, phone_number,
-                     password_hash, user_type, seller_id, buyer_id, created_by)
+                    (username, full_name, email, phone_number,
+                     password_hash, user_type_id, seller_id, buyer_id, created_by, assigned_to)
                 VALUES 
-                    (gen_random_uuid(), $1, $2, $3, $4, $5, $6, $7, $8, $9)
+                    ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
                 RETURNING 
                     portal_user_id, portal_user_uuid, username, full_name, email, 
-                    phone_number, user_type, seller_id, buyer_id, is_active
+                    phone_number, user_type_id, seller_id, buyer_id, is_active
             `,
             values: [
                 usernameTrim,
@@ -102,16 +225,19 @@ responder.on("create-portal-users", async (req, cb) => {
                 email,
                 phone_number,
                 password_hash,
-                user_type,
+                user_type_id,
                 seller_id || null,
                 buyer_id || null,
-                created_by || null
+                created_by,
+                created_by
             ]
         };
 
         const insert = await pool.query(insertQuery);
 
         return cb(null, {
+            header_type: "SUCCESS",
+            message_visibility: true,
             status: true,
             code: 1000,
             message: "User created successfully",
@@ -119,13 +245,13 @@ responder.on("create-portal-users", async (req, cb) => {
         });
 
     } catch (err) {
-        logger.error("Responder Error (create-users):", err);
+        logger.error("Responder Error (create-portal-users):", err);
         return cb(null, {
             header_type: "ERROR",
             message_visibility: true,
             status: false,
             code: 2004,
-            message: err.message,
+            message: "Internal server error",
             error: err.message
         });
     }

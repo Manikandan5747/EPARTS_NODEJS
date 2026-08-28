@@ -109,7 +109,42 @@ module.exports = {
      'cms_homepage_about_section': {
         create: ['title', 'sub_title'],
         update: ['title', 'sub_title']
+    },
+     'cart_item_status': {
+        create: ['code', 'name'],
+        update: ['code', 'name']
+    },
+    'checkout_item_status': {
+        create: ['code', 'name'],
+        update: ['code', 'name']
+    },
+    'checkout_status': {
+        create: ['code', 'name'],
+        update: ['code', 'name']
+    },
+    'warehouse_type': {
+        create: ['code', 'name'],
+        update: ['code', 'name']
+    },
+    'quote_type': {
+        create: ['code', 'name'],
+        update: ['code', 'name']
+    },
+    'reference_type ': {
+        create: ['code', 'name'],
+        update: ['code', 'name']
+    },
+    'payment_method ': {
+        create: ['code', 'name'],
+        update: ['code', 'name']
+    },
+    'checkout_type ': {
+        create: ['code', 'name'],
+        update: ['code', 'name']
+    },
+      'service_charge': {
+        create: ['code', 'name', 'charge_type' , 'default_amount'],
+        update: ['code', 'name',  'charge_type' , 'default_amount']
     }
-
-    
+   
 };

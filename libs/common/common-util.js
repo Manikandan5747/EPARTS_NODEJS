@@ -2,54 +2,126 @@ const pool = require('@libs/db/postgresql_index');
 const logger = require('@libs/logger/logger');
 var nodemailer = require("nodemailer");
 
-module.exports = {
-
-    sendmail: async function (body) {
-        return new Promise(async (resolve, reject) => {
-            try {
-                logger.info("Email Body: %o", body);
-
-                const subject = body?.subject || "";
-                const htmlContent = body?.content || "";
-                const textContent = body?.description || "";
-                const toMail = body?.tomail;
-
-                if (!toMail) {
-                    return reject(new Error("Recipient email (tomail) is required"));
-                }
-
-                const transporter = nodemailer.createTransport({
-                    host: "smtp-mail.outlook.com",
-                    port: 587,
-                    secure: false,
-                    auth: {
-                        user: 'info@germanexperts.ae',
-                        pass: 'Office@151008'
-                    },
-                    tls: {
-                        rejectUnauthorized: false
-                    }
-                });
-
-                const mailOptions = {
-                    from: "info@germanexperts.ae",
-                    to: toMail,
-                    subject: subject,
-                    html: htmlContent,
-                    text: textContent
-                };
-
-                const info = await transporter.sendMail(mailOptions);
-                logger.info("Email sent: %s", info.response);
-
-                resolve(true);
-
-            } catch (error) {
-                logger.error("Email sending error: %o", error);
-                reject(error);
-            }
-        });
+//new code
+const transporter = nodemailer.createTransport({
+    host: "smtp-mail.outlook.com",
+    port: 587,
+    secure: false,
+    auth: {
+        user: 'info@germanexperts.ae',
+        pass: 'Office@151008'
     },
+    tls: {
+        rejectUnauthorized: false
+    },
+    
+    pool: true,
+    maxConnections: 5,
+    connectionTimeout: 10000,  // 10 sec
+    greetingTimeout: 10000,
+    socketTimeout: 10000
+});
+
+//new code
+transporter.verify(function (error, success) {
+    if (error) {
+        console.log("Mail server error:", error);
+    } else {
+        console.log("Mail server ready");
+    }
+});
+
+//new code
+setInterval(() => {
+    transporter.verify(function (error, success) {
+        if (error) {
+            console.log("Mail reconnecting...", error);
+        } else {
+            console.log("Mail connection alive");
+        }
+    });
+}, 2 * 60 * 1000);
+
+module.exports = {
+//old code
+    // sendmail: async function (body) {
+    //     return new Promise(async (resolve, reject) => {
+    //         try {
+    //             logger.info("Email Body: %o", body);
+
+    //             const subject = body?.subject || "";
+    //             const htmlContent = body?.content || "";
+    //             const textContent = body?.description || "";
+    //             const toMail = body?.tomail;
+
+    //             if (!toMail) {
+    //                 return reject(new Error("Recipient email (tomail) is required"));
+    //             }
+
+    //             const transporter = nodemailer.createTransport({
+    //                 host: "smtp-mail.outlook.com",
+    //                 port: 587,
+    //                 secure: false,
+    //                 auth: {
+    //                     user: 'info@germanexperts.ae',
+    //                     pass: 'Office@151008'
+    //                 },
+    //                 tls: {
+    //                     rejectUnauthorized: false
+    //                 }
+    //             });
+
+    //             const mailOptions = {
+    //                 from: "info@germanexperts.ae",
+    //                 to: toMail,
+    //                 subject: subject,
+    //                 html: htmlContent,
+    //                 text: textContent
+    //             };
+
+    //             const info = await transporter.sendMail(mailOptions);
+    //             logger.info("Email sent: %s", info.response);
+
+    //             resolve(true);
+
+    //         } catch (error) {
+    //             logger.error("Email sending error: %o", error);
+    //             reject(error);
+    //         }
+    //     });
+    // },
+
+//new code
+    sendmail: async function (body) {
+    try {
+        logger.info("Email Body: %o", body);
+        const subject = body?.subject || "";
+        const htmlContent = body?.content || "";
+        const textContent = body?.description || "";
+        const toMail = body?.tomail;
+
+        if (!toMail) {
+            throw new Error("Recipient email (tomail) is required");
+        }
+
+        const mailOptions = {
+            from: "info@germanexperts.ae",
+            to: toMail,
+            subject: subject,
+            html: htmlContent,
+            text: textContent
+        };
+
+        const info = await transporter.sendMail(mailOptions);
+        logger.info("Email sent: %s", info.response);
+        return true;
+
+    } catch (error) {
+        logger.error("Email sending error: %o", error);
+        throw error;
+    }
+},
+    
 
     saveErrorLog: async function ({
         api_name,

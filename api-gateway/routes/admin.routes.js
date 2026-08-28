@@ -21,7 +21,7 @@ router.use('/currency', (req, res, next) => require('../admin-routes/currency.ro
 
 router.use('/setting', (req, res, next) => require('../admin-routes/settings.routes.js')(req, res, next));
 
-router.use('/trading-type', apiAccess(), (req, res, next) => require('../admin-routes/trading-types.routes.js')(req, res, next));
+router.use('/trading-type', (req, res, next) => require('../admin-routes/trading-types.routes.js')(req, res, next));
 
 router.use('/product-type', (req, res, next) => require('../admin-routes/product-types.routes.js')(req, res, next));
 
@@ -88,6 +88,58 @@ router.use('/prefix-refno', (req, res, next) => require('../admin-routes/prefix_
 router.use('/profile', (req, res, next) => require('../admin-routes/profile.routes.js')(req, res, next));
 
 router.use('/role-data-access', (req, res, next) => require('../admin-routes/role-data-access.routes.js')(req, res, next));
+
+router.use('/cms', (req, res, next) => require('../admin-routes/cms.routes.js')(req, res, next));
+
+router.use('/buyer', (req, res, next) => require('../admin-routes/buyer.routes.js')(req, res, next));
+
+router.use('/seller', (req, res, next) => require('../admin-routes/seller.routes.js')(req, res, next));
+
+router.use('/warehouse', (req, res, next) => require('../admin-routes/warehouse.routes.js')(req, res, next));
+
+router.use('/warehousebin', (req, res, next) => require('../admin-routes/warehouse_bin.routes.js')(req, res, next));
+
+router.use('/buyer-portal-user', (req, res, next) => require('../admin-routes/buyer-portal-user.routes.js')(req, res, next));
+
+router.use('/seller-portal-user', (req, res, next) => require('../admin-routes/seller-portal-user.routes.js')(req, res, next));
+
+router.use('/product', (req, res, next) => require('../admin-routes/product.routes.js')(req, res, next));
+
+router.use('/part', (req, res, next) => require('../admin-routes/parts.routes.js')(req, res, next));
+
+router.use('/parameter', (req, res, next) => require('../admin-routes/parameters.routes.js')(req, res, next));
+
+router.use('/group', (req, res, next) => require('../admin-routes/group.routes.js')(req, res, next));
+
+router.use('/subgroup', (req, res, next) => require('../admin-routes/subgroup.routes.js')(req, res, next));
+
+router.use('/subnode', (req, res, next) => require('../admin-routes/subnode.routes.js')(req, res, next));
+
+router.use('/group-part', (req, res, next) => require('../admin-routes/group-parts.routes.js')(req, res, next));
+
+router.use('/subgroup-part', (req, res, next) => require('../admin-routes/subgroup-parts.routes.js')(req, res, next));
+
+router.use('/subnode-part', (req, res, next) => require('../admin-routes/subnode-parts.routes.js')(req, res, next));
+
+router.use('/buyer-product', (req, res, next) => require('../admin-routes/buyer-product.routes.js')(req, res, next));
+
+router.use('/cart-item-status', (req, res, next) => require('../admin-routes/cart_item_status.routes.js')(req, res, next));
+
+router.use('/checkout-item-status', (req, res, next) => require('../admin-routes/checkout_item_status.routes.js')(req, res, next));
+
+router.use('/checkout-status', (req, res, next) => require('../admin-routes/checkout_status.routes.js')(req, res, next));
+
+router.use('/warehouse-type', (req, res, next) => require('../admin-routes/warehouse_type.routes.js')(req, res, next));
+
+router.use('/quote-type', (req, res, next) => require('../admin-routes/quote_type.routes.js')(req, res, next));
+
+router.use('/reference-type', (req, res, next) => require('../admin-routes/reference_type.routes.js')(req, res, next));
+
+router.use('/payment-method', (req, res, next) => require('../admin-routes/payment_method.routes.js')(req, res, next));
+
+router.use('/checkout-type', (req, res, next) => require('../admin-routes/checkout_type.routes.js')(req, res, next));
+
+router.use('/service-charge', (req, res, next) => require('../admin-routes/service_charge.routes.js')(req, res, next));
 
 
 

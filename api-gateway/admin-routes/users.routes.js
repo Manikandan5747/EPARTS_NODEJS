@@ -7,7 +7,6 @@ const logger = require('@libs/logger/logger');
 const { saveErrorLog } = require('@libs/common/common-util');
 const multipart = require("connect-multiparty");
 const path = require('path');
-//test
 const uploadDir = path.join('/app/assets', 'users_icon');
 const multipartMiddleware = multipart({ uploadDir });
 
@@ -21,7 +20,7 @@ router.post('/create', multipartMiddleware, async (req, res) => {
         // FILE
         const profileIconPath = req.files?.profile_icon_path?.path || null;
 
-        const result = await countryRequester.send({
+        const result = await usersRequester.send({
             type: 'create-users',
             body: {
                 ...req.body,
@@ -109,11 +108,10 @@ router.get('/list', async (req, res) => {
 });
 
 
-
 // --------------------------------------
 // UPDATE USERS
 // --------------------------------------
-router.post('/update/:id', async (req, res) => {
+router.post('/update/:id', multipartMiddleware, async (req, res) => {
     try {
         // FILE
         const profileIconPath = req.files?.profile_icon_path?.path || null;
@@ -124,6 +122,7 @@ router.post('/update/:id', async (req, res) => {
                 ...req.body,
                 profile_icon: profileIconPath
             }
+
         });
 
         if (!result.status) {
@@ -523,31 +522,24 @@ router.get('/getprefixrefno/:name', async (req, res) => {
 });
 
 
-
-
-
 // --------------------------------------
 // FIND USER BY ID
 // --------------------------------------
-router.get('/findbyid/:id', async (req, res) => {
+
+
+router.post('/findbyid/:id', async (req, res) => {
     try {
-
-        const mode = req.query.mode || 'view';
-        const user_id = req.query.user_id;
-
         const result = await usersRequester.send({
             type: 'getById-user',
             user_uuid: req.params.id,
-            mode,
-            body: { user_id }
+            body: { user_id: req.body.user_id, mode: req.body.mode }
+
         });
-        // If responder returned  server error → return HTTP 500
         if (!result.status) {
             // SAVE ERROR LOG
             await saveErrorLog({
                 api_name: 'getById-user',
-                method: 'GET',
-                payload: { user_uuid: req.params.id },
+                method: 'POST',
                 message: result.error,
                 stack: result.stack || '',
                 error_code: result.code || 2004
@@ -556,11 +548,28 @@ router.get('/findbyid/:id', async (req, res) => {
         }
         res.json(result);
     } catch (err) {
-        logger.error("Error in user/findbyid:", err.message);
-        res.status(500).json({ error: err.message });
+        logger.error("Error in user/listbyidwithlock", err.message);
+
+        // SAVE ERROR LOG for unexpected exception
+        await saveErrorLog({
+            api_name: 'getById-user',
+            method: 'POST',
+            payload: { user_uuid: req.params.id },
+            message: err.message,
+            stack: err.stack,
+            error_code: 2004
+        });
+
+        res.status(500).json({
+            header_type: "ERROR",
+            message_visibility: true,
+            status: false,
+            code: 2004,
+            message: err.message,
+            error: err.message
+        });
     }
 });
-
 
 // --------------------------------------
 // UNLOCK RECORD (SAVE / CANCEL)
@@ -606,6 +615,104 @@ router.post('/unlock/:id', async (req, res) => {
 });
 
 
+// --------------------------------------
+// LIST SUPER ADMIN
+// --------------------------------------
+router.get('/list-super-admin', async (req, res) => {
+    try {
+        const result = await usersRequester.send({ type: 'list-super-admin' });
+
+        if (!result.status) {
+            // SAVE ERROR LOG
+            await saveErrorLog({
+                api_name: 'list-super-admin',
+                method: 'GET',
+                payload: null,
+                message: result.error,
+                stack: result.stack || '',
+                error_code: result.code || 2004
+            });
+            return res.status(500).json(result);
+        }
+
+        res.send(result);
+
+    } catch (err) {
+        logger.error("Error in super-admin/list:", err.message);
+        await saveErrorLog({
+            api_name: 'list-super-admin',
+            method: 'GET',
+            payload: null,
+            message: err.message,
+            stack: err.stack,
+            error_code: 2004
+        });
+        res.status(500).json({
+            header_type: "ERROR",
+            message_visibility: true,
+            status: false,
+            code: 2004,
+            message: err.message,
+            error: err.message
+        });
+    }
+});
+
+
+
+// --------------------------------------
+// UPDATE SUPER ADMIN
+// --------------------------------------
+router.post('/update-super-admin', multipartMiddleware, async (req, res) => {
+    try {
+        // FILE
+        const profileIconPath = req.files?.profile_icon_path?.path || null;
+        const result = await usersRequester.send({
+            type: 'update-super-admin',
+            body: {
+                ...req.body,
+                profile_icon: profileIconPath
+            }
+
+        });
+
+        if (!result.status) {
+            // SAVE ERROR LOG
+            await saveErrorLog({
+                api_name: 'update-super-admin',
+                method: 'POST',
+                payload: req.body,
+                message: result.error,
+                stack: result.stack || '',
+                error_code: result.code || 2004
+            });
+            return res.status(500).json(result);
+        }
+
+        res.send(result);
+
+    } catch (err) {
+        logger.error("Error in super-admin/update:", err.message);
+
+        await saveErrorLog({
+            api_name: 'update-super-admin',
+            method: 'POST',
+            payload: req.body,
+            message: err.message,
+            stack: err.stack,
+            error_code: 2004
+        });
+
+        res.status(500).json({
+            header_type: "ERROR",
+            message_visibility: true,
+            status: false,
+            code: 2004,
+            message: err.message,
+            error: err.message
+        });
+    }
+});
 
 
 module.exports = router;

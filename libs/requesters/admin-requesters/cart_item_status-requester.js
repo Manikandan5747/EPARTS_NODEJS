@@ -1,0 +1,1 @@
+module.exports = require('./base-requester')('cart_item_status');

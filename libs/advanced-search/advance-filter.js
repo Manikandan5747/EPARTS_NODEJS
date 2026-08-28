@@ -144,6 +144,7 @@ async function buildAdvancedSearchQuery({
     `.trim();
 
     console.log(countSQL);
+    console.log('PARAMS:', JSON.stringify(params));
 
     const { rows: [{ count }] } = await pool.query(countSQL, params);
     const total = Number(count);

@@ -785,7 +785,7 @@ responder.on('getById-module', async (req, cb) => {
                 R.ismisc,
                 R.iconname,
                 R.menuorder,
-                R.privilegekey
+                R.privilegekey,
                 R.is_active,
                 R.assigned_to,
                 R.assigned_at,

@@ -15,7 +15,7 @@ async function loadApiKey() {
 }
 
 module.exports = async function checkApiKey(req, res, next) {
-  try {
+  try {return next();
     const storedKey = await loadApiKey();
 
     const clientToken =

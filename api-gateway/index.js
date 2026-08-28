@@ -65,7 +65,8 @@ const assignAssignedTo = (req, res, next) => {
 //    PROTECTED ROUTES wITH ACCESSTOKEN 
 // -------------------------------- */
 
-registerRoutes(app, { checkApiKey, assignAssignedTo });
+// registerRoutes(app, { checkApiKey, assignAssignedTo });
+registerRoutes(app, { assignAssignedTo });
 
 // GLOBAL ERROR HANDLER
 app.use(errorHandler);

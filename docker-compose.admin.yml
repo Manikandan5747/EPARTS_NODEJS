@@ -13,7 +13,7 @@ services:
       DB_PORT: 5432
       DB_USER: postgres
       DB_PASSWORD: admin
-      DB_NAME: postgres
+      DB_NAME: eparts_dev
     volumes:
       - ./microservices/admin/admin-iam-service:/app/src
       - ./libs:/app/libs
